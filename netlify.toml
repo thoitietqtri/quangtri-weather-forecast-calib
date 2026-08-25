@@ -1,0 +1,22 @@
+[build]
+  base = "quangtri-weather-app"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# Khai báo tường minh cho `netlify dev` — nếu không có mục này, Netlify CLI
+# đôi khi không tự nhận ra đây là dự án Vite và quay về phục vụ tĩnh thư mục
+# "dist" (chưa build local sẽ trống → 404). Ép nó luôn tự chạy `npm run dev`
+# và proxy đúng cổng Vite mặc định (5173) qua cổng chung 8888 (kèm hot
+# reload + Netlify Functions).
+[dev]
+  command = "npm --prefix quangtri-weather-app run dev"
+  targetPort = 5173
+  framework = "#custom"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

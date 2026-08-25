@@ -1,0 +1,257 @@
+/* Layout tổng thể */
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Tiêu đề */
+.app-title {
+  text-align: center;
+  padding: 10px;
+  margin: 0;
+  background: #FFD700;
+  color: #003399;
+  border-bottom: 2px solid #e6b800;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .app-title {
+    font-size: 13px;
+    padding: 5px;
+  }
+}
+
+/* Toolbar */
+.toolbar {
+  padding: 6px 16px;
+  background: #f0f4ff;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+}
+
+.toolbar label {
+  font-weight: bold;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .toolbar label {
+    font-size: 11px;
+  }
+}
+
+.toolbar select {
+  font-size: 14px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  min-width: 160px;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .toolbar select {
+    font-size: 11px;
+    padding: 3px 5px;
+    min-width: 100px;
+  }
+}
+
+.toolbar-hint {
+  font-style: italic;
+  color: #007bff;
+  font-size: 12px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .toolbar-hint {
+    font-size: 10px;
+  }
+}
+
+button {
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  button {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+}
+
+input[type="date"] {
+  font-size: 14px;
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+}
+
+@media (max-width: 768px) {
+  input[type="date"] {
+    font-size: 11px;
+    padding: 4px;
+  }
+}
+
+.toolbar-rain-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.toolbar-rain-toggle input {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .toolbar-rain-toggle {
+    font-size: 11px;
+  }
+}
+
+/* Chú giải màu trạm mưa (theo mức mưa 24h) */
+.rain-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px 8px;
+  font-size: 12px;
+  color: #555;
+}
+
+.rain-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rain-legend__dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.rain-legend__dot--blink {
+  animation: rain-marker-blink 1s ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+  .rain-legend {
+    font-size: 10px;
+    gap: 8px;
+  }
+}
+
+/* Marker trạm đo mưa real-time */
+
+
+.rain-marker__wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.rain-marker__circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #9E9E9E;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.rain-marker__circle--blink {
+  animation: rain-marker-blink 1s ease-in-out infinite;
+}
+
+@keyframes rain-marker-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.15); }
+}
+
+.rain-marker__label {
+  background: rgba(158, 158, 158, 0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Biểu đồ */
+.chart-wrapper {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #ddd;
+}
+
+.chart-container {
+  width: 100%;
+  height: 160px;
+}
+
+@media (max-width: 768px) {
+  .chart-container {
+    height: 100px;
+  }
+}
+
+/* Bản đồ lấp đầy phần còn lại */
+.map-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.responsive-map {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
