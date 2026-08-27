@@ -43,3 +43,18 @@ CREATE TABLE IF NOT EXISTS thuc_do_hang_ngay (
 );
 
 CREATE INDEX IF NOT EXISTS idx_thucdo_ngay ON thuc_do_hang_ngay (ngay, ma_xa);
+
+-- ============ BẢNG 4: Bảng phân vị hiệu chỉnh nhiệt độ (Giai đoạn 2) ============
+CREATE TABLE IF NOT EXISTS bang_phan_vi_hieu_chinh (
+  id              BIGSERIAL PRIMARY KEY,
+  ma_xa           INTEGER NOT NULL REFERENCES xa_phuong(ma_xa),
+  cum_han_du_bao  TEXT NOT NULL,
+  bien            TEXT NOT NULL,
+  phan_vi_pct     SMALLINT NOT NULL,
+  gia_tri_du_bao  DOUBLE PRECISION NOT NULL,
+  gia_tri_thuc_do DOUBLE PRECISION NOT NULL,
+  cap_nhat_luc    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (ma_xa, cum_han_du_bao, bien, phan_vi_pct)
+);
+
+CREATE INDEX IF NOT EXISTS idx_phanvi_tra_cuu ON bang_phan_vi_hieu_chinh (ma_xa, cum_han_du_bao, bien);

@@ -137,7 +137,7 @@ function MapComponent() {
   };
 
   const fetchWeather = async (center) => {
-    let url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto`;
+    let url = `/.netlify/functions/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto`;
     if (selectedDate) url += `&start_date=${selectedDate}&end_date=${selectedDate}`;
     try {
       const res = await fetch(url);
