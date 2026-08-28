@@ -74,9 +74,13 @@ export default async (req) => {
   const lat = Number(reqUrl.searchParams.get('latitude'));
   const lng = Number(reqUrl.searchParams.get('longitude'));
 
-  // Chuyển tiếp NGUYÊN VẸN mọi tham số khác tới Open-Meteo thật.
+  // Chuyển tiếp NGUYÊN VẸN mọi tham số khác tới Open-Meteo thật, nhưng LUÔN
+  // ép dùng đúng mô hình ECMWF IFS (mô hình chính xác nhất hiện có, miễn phí
+  // qua Open-Meteo) — không phụ thuộc vào "Best Match" tự động (có thể đổi
+  // mô hình khác mà không báo trước).
   const omUrl = new URL('https://api.open-meteo.com/v1/forecast');
   for (const [k, v] of reqUrl.searchParams.entries()) omUrl.searchParams.set(k, v);
+  omUrl.searchParams.set('models', 'ecmwf_ifs');
 
   let data;
   try {

@@ -34,7 +34,7 @@ async function fetchBatchForecast() {
   const lats = XA_PHUONG.map((x) => x.lat).join(',');
   const lngs = XA_PHUONG.map((x) => x.lng).join(',');
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}`
-    + `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&forecast_days=16&timezone=auto`;
+    + `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&forecast_days=15&timezone=auto&models=ecmwf_ifs`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
