@@ -11,13 +11,23 @@
   text-align: center;
   padding: 10px;
   margin: 0;
-  background: #FFD700;
-  color: #003399;
-  border-bottom: 2px solid #e6b800;
+  background: #2E7D32;
+  color: #FFFFFF;
+  border-bottom: 2px solid #1B5E20;
   font-size: 20px;
   font-weight: bold;
   letter-spacing: 1px;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.15);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.app-title__icon {
+  font-size: 22px;
+  line-height: 1;
+}
   flex-shrink: 0;
 }
 

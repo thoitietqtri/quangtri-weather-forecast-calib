@@ -67,18 +67,25 @@ async function fetchChunk(startDate, endDate) {
   const lats = XA_PHUONG.map((x) => x.lat).join(',');
   const lngs = XA_PHUONG.map((x) => x.lng).join(',');
   const hourly = buildHourlyParam();
-  // Endpoint riêng cho Previous Runs API (KHÁC với historical-forecast-api
-  // dùng cho dự báo gốc) — chỉ endpoint này mới hiểu hậu tố "_previous_dayN".
   const url = `https://previous-runs-api.open-meteo.com/v1/forecast`
     + `?latitude=${lats}&longitude=${lngs}&start_date=${startDate}&end_date=${endDate}&hourly=${hourly}&timezone=auto`;
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} - ${text.slice(0, 300)}`);
+  const MAX_RETRIES = 6;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url);
+    if (res.status === 429) {
+      if (attempt === MAX_RETRIES) throw new Error('HTTP 429 - vẫn bị giới hạn tốc độ sau nhiều lần thử lại');
+      console.log(`  Bị giới hạn tốc độ (429), đợi 65 giây rồi thử lại (lần ${attempt + 1}/${MAX_RETRIES})...`);
+      await new Promise((r) => setTimeout(r, 65000));
+      continue;
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} - ${text.slice(0, 300)}`);
+    }
+    const json = await res.json();
+    return Array.isArray(json) ? json : [json];
   }
-  const json = await res.json();
-  return Array.isArray(json) ? json : [json];
 }
 
 // Gộp chuỗi giờ thành theo ngày cho 1 lead cụ thể: mưa = tổng cả ngày,
@@ -138,6 +145,7 @@ async function main() {
       cursor = addDays(chunkEnd, 1);
       continue;
     }
+    await new Promise((r) => setTimeout(r, 3000)); // nghỉ 3s giữa các lần gọi, tránh chạm ngưỡng giới hạn tốc độ
 
     if (results.length !== XA_PHUONG.length) {
       console.error(`  CẢNH BÁO: API trả về ${results.length} kết quả, kỳ vọng ${XA_PHUONG.length} — bỏ qua đoạn này`);
