@@ -4,3 +4,5 @@ dist/
 .netlify/
 quangtri-weather-app/data/
 quangtri-weather-app/ket-qua-hieu-chinh.csv
+*.xlsx
+quangtri-weather-app/ket-qua-hieu-chinh-mua.csv
