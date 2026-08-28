@@ -191,7 +191,7 @@ function parseTempKttv() {
 
 // ============ 3. Mưa VRain (vrain1.xlsx) — tổng theo ngày, 64 trạm khớp toạ độ ============
 function parseRainVrain() {
-  const rows = readSheetRows('vrain1.xlsx', 'wide');
+  const rows = readSheetRows('vrain1.xlsx'); // không cố định tên sheet, tự lấy sheet đầu tiên
   const headers = rows[0];
   const colToStation = headers.slice(1).map((h) => {
     const coords = VRAIN_HIST_COORDS[h];

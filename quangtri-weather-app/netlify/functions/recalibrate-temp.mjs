@@ -49,7 +49,7 @@ export default async () => {
         JOIN thuc_do_hang_ngay o ON o.ma_xa = f.ma_xa AND o.ngay = f.ngay_ap_dung
         WHERE f.ma_xa = ANY(${idsChunk}) AND f.han_du_bao BETWEEN 1 AND 7
       `;
-      allRows.push(...rows);
+      for (const r of rows) allRows.push(r); // dùng vòng lặp thay vì push(...rows) — tránh lỗi "Maximum call stack size exceeded" khi mảng quá lớn (dữ liệu giờ đã hơn nửa triệu dòng)
     }
     console.log(`[recalibrate-temp] Đã tải ${allRows.length} dòng dữ liệu ghép cặp.`);
 
