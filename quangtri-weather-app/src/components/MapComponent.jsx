@@ -5,6 +5,7 @@ import L from 'leaflet';
 import './MapComponent.css';
 import WeatherChart from './WeatherChart';
 import { getRainStations } from '../services/rainfall';
+import RainTable from './RainTable';
 
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
@@ -78,6 +79,7 @@ function MapComponent() {
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
   const [showRain, setShowRain] = useState(true);
+  const [showRainTable, setShowRainTable] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -248,7 +250,10 @@ function MapComponent() {
           <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
           💧 Trạm mưa real-time
         </label>
+        <button onClick={() => setShowRainTable(true)}>📊 Bảng mưa chi tiết</button>
       </div>
+
+      {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
 
       {showRain && (
         <div className="rain-legend">

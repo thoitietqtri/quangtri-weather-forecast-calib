@@ -22,7 +22,7 @@
 // Trị, nên KHÔNG lọc theo tên trạm huyện Hướng Hoá — giữ lại tất cả trạm mà
 // tổ chức (VRAIN_ORG_UUID) trả về.
 
-const WINDOWS = [1, 3, 6, 24, 48, 72];
+const WINDOWS = [1, 3, 6, 12, 24, 48, 72];
 const HOURS_BACK = Math.max(...WINDOWS) + 3;
 
 // Timeout mỗi request gọi API KTTV — 43 trạm gọi song song, nếu 1 trạm bị
