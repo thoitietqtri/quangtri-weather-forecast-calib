@@ -6,6 +6,7 @@ import './MapComponent.css';
 import WeatherChart from './WeatherChart';
 import { getRainStations } from '../services/rainfall';
 import RainTable from './RainTable';
+import VisitCounter from './VisitCounter';
 
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
@@ -230,6 +231,7 @@ function MapComponent() {
 
   return (
     <div className="app-wrapper">
+      <VisitCounter />
       <h2 className="app-title">
         <span className="app-title__icon" aria-hidden="true">⛅</span>
         DỰ BÁO THỜI TIẾT TỈNH QUẢNG TRỊ
