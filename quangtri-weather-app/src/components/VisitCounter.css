@@ -1,9 +1,8 @@
 .visit-counter {
   position: fixed;
   bottom: 8px;
-  right: 8px;
   left: 8px;
-  text-align: right;
+  text-align: left;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-size: 11px;
@@ -15,7 +14,7 @@
   white-space: nowrap;
   overflow-x: auto;
   width: fit-content;
-  margin-left: auto;
+  max-width: calc(100vw - 16px);
 }
 
 @media (max-width: 768px) {
@@ -23,7 +22,7 @@
     font-size: 9px;
     padding: 3px 8px;
     bottom: 4px;
-    right: 4px;
-    max-width: calc(100vw - 16px);
+    left: 4px;
+    max-width: calc(100vw - 8px);
   }
 }
