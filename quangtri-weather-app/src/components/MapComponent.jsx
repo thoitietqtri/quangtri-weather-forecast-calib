@@ -136,6 +136,13 @@ function MapComponent() {
     return { color: '#333', weight: 1.5, fillColor: getColorByTemperature(weatherById[name]), fillOpacity: 0.65 };
   };
 
+  // ECMWF IFS chỉ trả dự báo tối đa 15 ngày (hôm nay + 14 ngày tiếp theo).
+  const maxSelectableDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().slice(0, 10);
+  })();
+
   const fetchWeather = async (center) => {
     let url = `/.netlify/functions/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto`;
     if (selectedDate) url += `&start_date=${selectedDate}&end_date=${selectedDate}`;
@@ -234,7 +241,7 @@ function MapComponent() {
           {featureList.map((f, i) => <option key={i} value={f.name}>{f.name}</option>)}
         </select>
         <label>📅 Ngày:</label>
-        <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+        <input type="date" value={selectedDate} max={maxSelectableDate} onChange={(e) => setSelectedDate(e.target.value)} />
         <button onClick={() => selectedFeature && fetchWeather(selectedFeature.center)}>🔁 Làm mới</button>
         <span className="toolbar-hint">(Chọn ngày rồi nhớ click Làm mới)</span>
         <label className="toolbar-rain-toggle">
