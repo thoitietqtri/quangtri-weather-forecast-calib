@@ -189,8 +189,6 @@ input[type="date"] {
 }
 
 /* Marker trạm đo mưa real-time */
-
-
 .rain-marker__wrap {
   display: flex;
   flex-direction: column;
@@ -205,11 +203,14 @@ input[type="date"] {
   width: 30px;
   height: 30px;
   border-radius: 50%;
+  /* Màu nền giờ set trực tiếp qua inline style (JS) theo mức mưa 24h —
+     giá trị dưới đây chỉ là màu dự phòng nếu JS không set được. */
   background: #9E9E9E;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
+/* Nhấp nháy khi mưa 24h >= 100mm (mưa rất to / nguy hiểm) */
 .rain-marker__circle--blink {
   animation: rain-marker-blink 1s ease-in-out infinite;
 }
@@ -220,6 +221,7 @@ input[type="date"] {
 }
 
 .rain-marker__label {
+  /* Màu nền giờ set trực tiếp qua inline style (JS) theo mức mưa 24h. */
   background: rgba(158, 158, 158, 0.92);
   color: #fff;
   font-size: 10px;
@@ -238,11 +240,6 @@ input[type="date"] {
   flex-shrink: 0;
   background: #fff;
   border-top: 1px solid #ddd;
-}
-
-.chart-container {
-  width: 100%;
-  height: 160px;
 }
 
 @media (max-width: 768px) {
