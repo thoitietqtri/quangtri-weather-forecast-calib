@@ -293,13 +293,6 @@ function MapComponent() {
         </div>
       )}
 
-      {/* Biểu đồ đặt TRÊN bản đồ */}
-      {weatherData?.hourly && (
-        <div className="chart-wrapper">
-          <WeatherChart hourly={weatherData.hourly} regionName={selectedFeature?.name || ''} />
-        </div>
-      )}
-
       {/* Bản đồ lấp đầy phần còn lại */}
       <div className="map-wrapper">
         {geoData ? (
@@ -326,6 +319,13 @@ function MapComponent() {
           </div>
         )}
       </div>
+
+      {/* Biểu đồ đặt DƯỚI bản đồ */}
+      {weatherData?.hourly && (
+        <div className="chart-wrapper">
+          <WeatherChart hourly={weatherData.hourly} regionName={selectedFeature?.name || ''} />
+        </div>
+      )}
     </div>
   );
 }
