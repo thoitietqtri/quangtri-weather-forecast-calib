@@ -38,7 +38,7 @@ function createIslandIcon(name) {
 
 // Icon marker trạm đo mưa real-time — giọt nước xanh + nhãn tên trạm (đồng
 // bộ hình ảnh với dự án satloluquetkhesanh).
-// Phân cấp màu theo tổng mưa 24h.
+// Phân cấp màu theo tổng mưa 24h — trả về { color, blink }.
 //   = 0mm            → xám
 //   >0  – <25mm       → xanh nước biển
 //   25 – 50mm         → xanh lá
@@ -73,6 +73,7 @@ const RAIN_REFRESH_MS = 10 * 60 * 1000;
 function MapComponent() {
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [weatherData, setWeatherData] = useState(null);
+  const [weatherError, setWeatherError] = useState(null);
   const [weatherById, setWeatherById] = useState({});
   const [selectedDate, setSelectedDate] = useState('');
   const [geoData, setGeoData] = useState(null);
@@ -117,7 +118,7 @@ function MapComponent() {
       const layer = L.geoJSON(feature);
       const center = layer.getBounds().getCenter();
       try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&daily=temperature_2m_max&timezone=auto`);
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&daily=temperature_2m_max&timezone=auto&models=ecmwf_ifs`);
         const d = await res.json();
         results[name] = d.daily?.temperature_2m_max?.[0] || null;
       } catch { results[name] = null; }
@@ -139,20 +140,37 @@ function MapComponent() {
     return { color: '#333', weight: 1.5, fillColor: getColorByTemperature(weatherById[name]), fillOpacity: 0.65 };
   };
 
-  // ECMWF IFS chỉ trả dự báo tối đa 15 ngày (hôm nay + 14 ngày tiếp theo).
+  // Open-Meteo chỉ trả dự báo tối đa 16 ngày (hôm nay + 15 ngày tiếp theo).
+  // Tính ngày xa nhất được phép chọn để gắn vào thuộc tính `max` của ô lịch —
+  // trình duyệt tự làm xám/chặn click các ngày sau đó, không cần tự vẽ lịch.
   const maxSelectableDate = (() => {
     const d = new Date();
-    d.setDate(d.getDate() + 14);
+    d.setDate(d.getDate() + 15);
     return d.toISOString().slice(0, 10);
   })();
 
   const fetchWeather = async (center) => {
-    let url = `/.netlify/functions/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto`;
+    let url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto&models=ecmwf_ifs`;
     if (selectedDate) url += `&start_date=${selectedDate}&end_date=${selectedDate}`;
+    setWeatherError(null);
+    setWeatherData(null); // xoá dữ liệu cũ, hiện lại "Đang tải..." khi bắt đầu tải mới
     try {
-      const res = await fetch(url);
+      // Giới hạn thời gian chờ 12 giây — nếu quá lâu (mạng chậm/server treo),
+      // chủ động báo lỗi rõ ràng thay vì treo mãi "Đang tải...".
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      let res;
+      try {
+        res = await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) throw new Error(`Máy chủ trả lỗi HTTP ${res.status}`);
       setWeatherData(await res.json());
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setWeatherError(err.name === 'AbortError' ? 'Quá thời gian chờ, vui lòng thử lại.' : 'Không tải được dữ liệu, vui lòng thử lại.');
+    }
   };
 
   const selectFeatureByName = async (name) => {
@@ -182,6 +200,14 @@ function MapComponent() {
 
   const renderPopup = () => {
     if (!selectedFeature) return null;
+    if (weatherError) return (
+      <Popup position={selectedFeature.center}>
+        <div style={{ padding: '10px', color: '#c62828' }}>
+          ⚠️ {weatherError}<br />
+          <button onClick={() => fetchWeather(selectedFeature.center)} style={{ marginTop: 6 }}>Thử lại</button>
+        </div>
+      </Popup>
+    );
     if (!weatherData?.daily) return (
       <Popup position={selectedFeature.center}>
         <div style={{ padding: '10px' }}>⏳ Đang tải...</div>
@@ -234,7 +260,7 @@ function MapComponent() {
       <VisitCounter />
       <h2 className="app-title">
         <span className="app-title__icon" aria-hidden="true">⛅</span>
-        DỰ BÁO THỜI TIẾT TỈNH QUẢNG TRỊ
+        DỰ BÁO THỜI TIẾT CHO XÃ/PHƯỜNG TỈNH QUẢNG TRỊ
         <span className="app-title__icon" aria-hidden="true">⛅</span>
       </h2>
 
@@ -259,11 +285,11 @@ function MapComponent() {
 
       {showRain && (
         <div className="rain-legend">
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#9E9E9E' }} />0mm/24h</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#1565C0' }} />&lt;25mm/24h</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#2E7D32' }} />25-50mm/24h</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#EF6C00' }} />50-100mm/24h</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot rain-legend__dot--blink" style={{ background: '#D32F2F' }} />&gt;100mm/24h</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#9E9E9E' }} />0mm</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#1565C0' }} />&lt;25mm</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#2E7D32' }} />25-50mm</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#EF6C00' }} />50-100mm</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot rain-legend__dot--blink" style={{ background: '#D32F2F' }} />&gt;100mm</span>
         </div>
       )}
 

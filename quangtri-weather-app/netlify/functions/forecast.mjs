@@ -69,6 +69,19 @@ async function loadQuantileTables(ma_xa) {
   return tables;
 }
 
+// Gọi loadQuantileTables với giới hạn thời gian chờ RIÊNG (5 giây) — ngắn
+// hơn hẳn giới hạn 10 giây của Netlify Function. Nếu Neon phản hồi chậm
+// (vd. "ngủ đông" sau thời gian không dùng, cần vài giây "thức dậy"), chủ
+// động bỏ qua hiệu chỉnh và trả dự báo gốc, THAY VÌ để Netlify ngắt cả
+// function đột ngột giữa chừng (gây treo phía trình duyệt, không có phản
+// hồi rõ ràng).
+async function loadQuantileTablesWithTimeout(ma_xa, timeoutMs = 5000) {
+  return Promise.race([
+    loadQuantileTables(ma_xa),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Neon phản hồi quá ${timeoutMs}ms`)), timeoutMs)),
+  ]);
+}
+
 export default async (req) => {
   const reqUrl = new URL(req.url);
   const lat = Number(reqUrl.searchParams.get('latitude'));
@@ -84,7 +97,14 @@ export default async (req) => {
 
   let data;
   try {
-    const res = await fetch(omUrl.toString());
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    let res;
+    try {
+      res = await fetch(omUrl.toString(), { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     data = await res.json();
     if (!res.ok) {
       return new Response(JSON.stringify(data), { status: res.status, headers: { 'Content-Type': 'application/json' } });
@@ -102,7 +122,7 @@ export default async (req) => {
     const nearXa = nearest(lat, lng, XA_PHUONG);
     if (!nearXa) return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-    const tables = await loadQuantileTables(nearXa.point.ma_xa);
+    const tables = await loadQuantileTablesWithTimeout(nearXa.point.ma_xa);
     const today = todayVNDateStr();
 
     data.daily.time.forEach((dateStr, i) => {
