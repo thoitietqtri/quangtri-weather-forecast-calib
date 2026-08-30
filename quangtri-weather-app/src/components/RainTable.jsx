@@ -31,7 +31,7 @@ export default function RainTable({ stations, onClose }) {
     <div className="rain-table-overlay" onClick={onClose}>
       <div className="rain-table-panel" onClick={(e) => e.stopPropagation()}>
         <div className="rain-table-header">
-          <h3>📊 Bảng lượng mưa các trạm (mm)</h3>
+          <h3>📊 Lượng mưa theo thời đoạn (mm)</h3>
           <button className="rain-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
         <div className="rain-table-legend">
