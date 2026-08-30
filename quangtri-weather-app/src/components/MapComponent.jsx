@@ -149,9 +149,10 @@ function MapComponent() {
     return d.toISOString().slice(0, 10);
   })();
 
-  const fetchWeather = async (center) => {
+  const fetchWeather = async (center, dateOverride) => {
+    const dateToUse = dateOverride !== undefined ? dateOverride : selectedDate;
     let url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto&models=ecmwf_ifs`;
-    if (selectedDate) url += `&start_date=${selectedDate}&end_date=${selectedDate}`;
+    if (dateToUse) url += `&start_date=${dateToUse}&end_date=${dateToUse}`;
     setWeatherError(null);
     setWeatherData(null); // xoá dữ liệu cũ, hiện lại "Đang tải..." khi bắt đầu tải mới
     try {
@@ -271,14 +272,21 @@ function MapComponent() {
           {featureList.map((f, i) => <option key={i} value={f.name}>{f.name}</option>)}
         </select>
         <label>📅 Ngày:</label>
-        <input type="date" value={selectedDate} max={maxSelectableDate} onChange={(e) => setSelectedDate(e.target.value)} />
-        <button onClick={() => selectedFeature && fetchWeather(selectedFeature.center)}>🔁 Làm mới</button>
-        <span className="toolbar-hint">(Chọn ngày rồi nhớ click Làm mới)</span>
+        <input
+          type="date"
+          value={selectedDate}
+          max={maxSelectableDate}
+          onChange={(e) => {
+            const newDate = e.target.value;
+            setSelectedDate(newDate);
+            if (selectedFeature) fetchWeather(selectedFeature.center, newDate);
+          }}
+        />
         <label className="toolbar-rain-toggle">
           <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
           💧 Trạm mưa real-time
         </label>
-        <button onClick={() => setShowRainTable(true)}>📊 Bảng mưa chi tiết</button>
+        <button onClick={() => setShowRainTable(true)}>📊 Bảng mưa thực đo</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
