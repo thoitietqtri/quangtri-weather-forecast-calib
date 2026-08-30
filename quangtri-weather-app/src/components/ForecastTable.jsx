@@ -79,7 +79,7 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
     <div className="forecast-table-overlay" onClick={onClose}>
       <div className="forecast-table-panel" onClick={(e) => e.stopPropagation()}>
         <div className="forecast-table-header">
-          <h3>📅 Dự báo 10 ngày cho các xã/phường</h3>
+          <h3>📅 Bảng số liệu Dự báo 10 ngày tới cho các xã/phường</h3>
           <button className="forecast-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
 
