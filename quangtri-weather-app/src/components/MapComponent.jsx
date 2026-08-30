@@ -6,6 +6,7 @@ import './MapComponent.css';
 import WeatherChart from './WeatherChart';
 import { getRainStations } from '../services/rainfall';
 import RainTable from './RainTable';
+import ForecastTable from './ForecastTable';
 import VisitCounter from './VisitCounter';
 
 function getCanhBao(tmax, tmin, wind, rain) {
@@ -82,6 +83,7 @@ function MapComponent() {
   const [rainStations, setRainStations] = useState([]);
   const [showRain, setShowRain] = useState(true);
   const [showRainTable, setShowRainTable] = useState(false);
+  const [showForecastTable, setShowForecastTable] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -287,9 +289,21 @@ function MapComponent() {
           💧 Trạm mưa real-time
         </label>
         <button onClick={() => setShowRainTable(true)}>📊 Bảng mưa thực đo</button>
+        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo 10 ngày</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
+      {showForecastTable && (
+        <ForecastTable
+          xaList={featureList.map((f) => {
+            const layer = L.geoJSON(f.feature);
+            const c = layer.getBounds().getCenter();
+            return { ten_xa: f.name, lat: c.lat, lng: c.lng };
+          })}
+          forecastApiUrl="/.netlify/functions/forecast"
+          onClose={() => setShowForecastTable(false)}
+        />
+      )}
 
       {showRain && (
         <div className="rain-legend">

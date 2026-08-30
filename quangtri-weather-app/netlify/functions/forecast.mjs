@@ -1,16 +1,15 @@
 // netlify/functions/forecast.mjs
 //
 // Function THEO YÊU CẦU (không phải scheduled) — frontend gọi vào đây thay
-// vì gọi thẳng api.open-meteo.com. Chuyển tiếp y hệt các tham số tới
-// Open-Meteo, sau đó CHỈ hiệu chỉnh 2 trường daily.temperature_2m_max và
-// daily.temperature_2m_min (theo bảng phân vị đã tính sẵn trong
-// bang_phan_vi_hieu_chinh) — mọi trường khác (mưa, gió, dữ liệu hourly...)
-// giữ nguyên như Open-Meteo trả về, KHÔNG hiệu chỉnh (mưa đã kiểm chứng
-// không cải thiện bằng phương pháp này).
+// vì gọi thẳng api.open-meteo.com. Hỗ trợ 2 chế độ:
+//   - 1 xã (latitude/longitude là 1 số) — dùng cho popup chi tiết khi chọn xã.
+//   - Hàng loạt (latitude/longitude là danh sách cách nhau dấu phẩy) — dùng
+//     cho bảng "Dự báo 7 ngày" hiển thị cả 78 xã cùng lúc.
+// Cả 2 chế độ đều CHỈ hiệu chỉnh daily.temperature_2m_max/min theo bảng
+// phân vị — mọi trường khác (mưa, gió...) giữ nguyên như Open-Meteo trả về.
 //
 // Nếu không tìm được xã hoặc chưa có bảng phân vị cho ngày đó (vd. hạn dự
-// báo D+8 trở lên chưa được kiểm chứng, hoặc ngày trong quá khứ) -> TRẢ VỀ
-// NGUYÊN GIÁ TRỊ GỐC của Open-Meteo, không suy đoán, không chặn request.
+// báo D+8 trở lên, hoặc ngày trong quá khứ) -> TRẢ VỀ NGUYÊN GIÁ TRỊ GỐC.
 
 import { neon } from '@neondatabase/serverless';
 import { XA_PHUONG, nearest } from './lib/geo.js';
@@ -33,15 +32,11 @@ function leadDays(dateStr, todayStr) {
   return Math.round((d1 - d0) / 86400000);
 }
 
-// table: mảng đã sắp theo phan_vi_pct tăng dần, mỗi phần tử
-// { gia_tri_du_bao, gia_tri_thuc_do }. Nội suy tuyến tính giữa 2 điểm gần
-// nhất; ngoài khoảng thì giữ nguyên giá trị biên (không ngoại suy liều lĩnh).
 function applyQuantileMap(x, table) {
   if (x == null || !table || table.length === 0) return x;
   if (x <= table[0].gia_tri_du_bao) return table[0].gia_tri_thuc_do;
   const last = table[table.length - 1];
   if (x >= last.gia_tri_du_bao) return last.gia_tri_thuc_do;
-
   for (let i = 0; i < table.length - 1; i++) {
     const a = table[i]; const b = table[i + 1];
     if (x >= a.gia_tri_du_bao && x <= b.gia_tri_du_bao) {
@@ -50,47 +45,61 @@ function applyQuantileMap(x, table) {
       return a.gia_tri_thuc_do + frac * (b.gia_tri_thuc_do - a.gia_tri_thuc_do);
     }
   }
-  return x; // không nên tới đây, phòng hờ
+  return x;
 }
 
-async function loadQuantileTables(ma_xa) {
+// Tải bảng phân vị cho MỘT HOẶC NHIỀU xã cùng lúc — luôn đúng 1 lượt truy
+// vấn Neon duy nhất (dùng WHERE ma_xa = ANY(...)), tránh phải gọi Neon 78
+// lần riêng lẻ khi phục vụ bảng "Dự báo 7 ngày" (sẽ chậm/dễ vượt giới hạn).
+async function loadQuantileTablesForXaList(maXaList) {
   const rows = await sql`
-    SELECT cum_han_du_bao, bien, phan_vi_pct, gia_tri_du_bao, gia_tri_thuc_do
+    SELECT ma_xa, cum_han_du_bao, bien, phan_vi_pct, gia_tri_du_bao, gia_tri_thuc_do
     FROM bang_phan_vi_hieu_chinh
-    WHERE ma_xa = ${ma_xa}
-    ORDER BY cum_han_du_bao, bien, phan_vi_pct
+    WHERE ma_xa = ANY(${maXaList})
+    ORDER BY ma_xa, cum_han_du_bao, bien, phan_vi_pct
   `;
-  const tables = {}; // key: `${bucket}|${bien}` -> mảng 101 điểm
+  const byXa = {}; // ma_xa -> { "bucket|bien" -> mảng 101 điểm }
   for (const r of rows) {
+    if (!byXa[r.ma_xa]) byXa[r.ma_xa] = {};
     const key = `${r.cum_han_du_bao}|${r.bien}`;
-    if (!tables[key]) tables[key] = [];
-    tables[key].push({ gia_tri_du_bao: r.gia_tri_du_bao, gia_tri_thuc_do: r.gia_tri_thuc_do });
+    if (!byXa[r.ma_xa][key]) byXa[r.ma_xa][key] = [];
+    byXa[r.ma_xa][key].push({ gia_tri_du_bao: r.gia_tri_du_bao, gia_tri_thuc_do: r.gia_tri_thuc_do });
   }
-  return tables;
+  return byXa;
 }
 
-// Gọi loadQuantileTables với giới hạn thời gian chờ RIÊNG (5 giây) — ngắn
-// hơn hẳn giới hạn 10 giây của Netlify Function. Nếu Neon phản hồi chậm
-// (vd. "ngủ đông" sau thời gian không dùng, cần vài giây "thức dậy"), chủ
-// động bỏ qua hiệu chỉnh và trả dự báo gốc, THAY VÌ để Netlify ngắt cả
-// function đột ngột giữa chừng (gây treo phía trình duyệt, không có phản
-// hồi rõ ràng).
-async function loadQuantileTablesWithTimeout(ma_xa, timeoutMs = 5000) {
+async function loadWithTimeout(maXaList, timeoutMs = 6000) {
   return Promise.race([
-    loadQuantileTables(ma_xa),
+    loadQuantileTablesForXaList(maXaList),
     new Promise((_, reject) => setTimeout(() => reject(new Error(`Neon phản hồi quá ${timeoutMs}ms`)), timeoutMs)),
   ]);
 }
 
+// Áp hiệu chỉnh vào 1 object `daily` (theo đúng shape Open-Meteo trả về)
+// dùng đúng bảng phân vị của 1 xã cụ thể.
+function correctDailyObject(daily, tables, today) {
+  if (!daily?.time) return;
+  daily.time.forEach((dateStr, i) => {
+    const lead = leadDays(dateStr, today);
+    const bucket = LEAD_BUCKETS.find((b) => b.leads.includes(lead));
+    if (!bucket) return;
+    if (Array.isArray(daily.temperature_2m_max)) {
+      const table = tables?.[`${bucket.name}|tmax`];
+      if (table) daily.temperature_2m_max[i] = Math.round(applyQuantileMap(daily.temperature_2m_max[i], table) * 10) / 10;
+    }
+    if (Array.isArray(daily.temperature_2m_min)) {
+      const table = tables?.[`${bucket.name}|tmin`];
+      if (table) daily.temperature_2m_min[i] = Math.round(applyQuantileMap(daily.temperature_2m_min[i], table) * 10) / 10;
+    }
+  });
+}
+
 export default async (req) => {
   const reqUrl = new URL(req.url);
-  const lat = Number(reqUrl.searchParams.get('latitude'));
-  const lng = Number(reqUrl.searchParams.get('longitude'));
+  const latParam = reqUrl.searchParams.get('latitude') || '';
+  const lngParam = reqUrl.searchParams.get('longitude') || '';
+  const isBatch = latParam.includes(',');
 
-  // Chuyển tiếp NGUYÊN VẸN mọi tham số khác tới Open-Meteo thật, nhưng LUÔN
-  // ép dùng đúng mô hình ECMWF IFS (mô hình chính xác nhất hiện có, miễn phí
-  // qua Open-Meteo) — không phụ thuộc vào "Best Match" tự động (có thể đổi
-  // mô hình khác mà không báo trước).
   const omUrl = new URL('https://api.open-meteo.com/v1/forecast');
   for (const [k, v] of reqUrl.searchParams.entries()) omUrl.searchParams.set(k, v);
   omUrl.searchParams.set('models', 'ecmwf_ifs');
@@ -113,35 +122,37 @@ export default async (req) => {
     return new Response(JSON.stringify({ error: `Không gọi được Open-Meteo: ${e.message}` }), { status: 502 });
   }
 
-  // Không đủ toạ độ hoặc không có dữ liệu daily nhiệt độ -> trả nguyên gốc.
-  if (Number.isNaN(lat) || Number.isNaN(lng) || !data?.daily?.time) {
-    return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }
+  const today = todayVNDateStr();
 
   try {
-    const nearXa = nearest(lat, lng, XA_PHUONG);
-    if (!nearXa) return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
-
-    const tables = await loadQuantileTablesWithTimeout(nearXa.point.ma_xa);
-    const today = todayVNDateStr();
-
-    data.daily.time.forEach((dateStr, i) => {
-      const lead = leadDays(dateStr, today);
-      const bucket = LEAD_BUCKETS.find((b) => b.leads.includes(lead));
-      if (!bucket) return; // ngoài phạm vi đã kiểm chứng (D+0 hoặc D+8 trở lên) -> giữ nguyên
-
-      if (Array.isArray(data.daily.temperature_2m_max)) {
-        const table = tables[`${bucket.name}|tmax`];
-        if (table) data.daily.temperature_2m_max[i] = Math.round(applyQuantileMap(data.daily.temperature_2m_max[i], table) * 10) / 10;
+    if (isBatch) {
+      const lats = latParam.split(',').map(Number);
+      const lngs = lngParam.split(',').map(Number);
+      if (!Array.isArray(data) || data.length !== lats.length) {
+        return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-      if (Array.isArray(data.daily.temperature_2m_min)) {
-        const table = tables[`${bucket.name}|tmin`];
-        if (table) data.daily.temperature_2m_min[i] = Math.round(applyQuantileMap(data.daily.temperature_2m_min[i], table) * 10) / 10;
+      // Xác định đúng xã cho từng vị trí trong danh sách gửi lên.
+      const xaPerIndex = lats.map((lat, i) => nearest(lat, lngs[i], XA_PHUONG)?.point?.ma_xa).filter(Boolean);
+      const uniqueXaIds = [...new Set(xaPerIndex)];
+      const tablesByXa = await loadWithTimeout(uniqueXaIds);
+
+      data.forEach((entry, i) => {
+        const maXa = xaPerIndex[i];
+        if (maXa != null) correctDailyObject(entry.daily, tablesByXa[maXa], today);
+      });
+    } else {
+      const lat = Number(latParam);
+      const lng = Number(lngParam);
+      if (Number.isNaN(lat) || Number.isNaN(lng) || !data?.daily?.time) {
+        return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-    });
+      const nearXa = nearest(lat, lng, XA_PHUONG);
+      if (nearXa) {
+        const tablesByXa = await loadWithTimeout([nearXa.point.ma_xa]);
+        correctDailyObject(data.daily, tablesByXa[nearXa.point.ma_xa], today);
+      }
+    }
   } catch (e) {
-    // Lỗi hiệu chỉnh (vd. Neon tạm thời lỗi) -> vẫn trả dữ liệu GỐC cho
-    // người dùng thay vì báo lỗi trắng màn hình. Ghi log để biết mà kiểm tra.
     console.error('[forecast] Lỗi khi hiệu chỉnh, trả dữ liệu gốc:', e);
   }
 

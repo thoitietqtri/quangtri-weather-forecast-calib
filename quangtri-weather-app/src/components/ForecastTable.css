@@ -1,0 +1,150 @@
+.forecast-table-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.forecast-table-panel {
+  background: #fff;
+  border-radius: 10px;
+  max-width: 950px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.forecast-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.forecast-table-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.forecast-table-close {
+  border: none;
+  background: #f0f0f0;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.forecast-table-close:hover {
+  background: #e0e0e0;
+}
+
+.forecast-table-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 18px 0;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.forecast-table-tab {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  color: #555;
+}
+
+.forecast-table-tab.active {
+  background: #1565C0;
+  color: #fff;
+  font-weight: bold;
+}
+
+.forecast-table-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 8px 18px;
+  font-size: 12px;
+  color: #555;
+  border-bottom: 1px solid #eee;
+}
+
+.forecast-table-legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.forecast-table-loading, .forecast-table-error {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+}
+
+.forecast-table-error {
+  color: #c62828;
+}
+
+.forecast-table-scroll {
+  overflow: auto;
+  flex: 1;
+}
+
+.forecast-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.forecast-table th, .forecast-table td {
+  padding: 6px 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+  white-space: nowrap;
+}
+
+.forecast-table thead th {
+  position: sticky;
+  top: 0;
+  background: #000;
+  color: #fff;
+  z-index: 1;
+}
+
+.forecast-table-station-col {
+  text-align: left !important;
+  position: sticky;
+  left: 0;
+  background: #000;
+  color: #fff;
+  z-index: 1;
+  min-width: 170px;
+}
+
+.forecast-table thead .forecast-table-station-col {
+  z-index: 2;
+}
+
+@media (max-width: 768px) {
+  .forecast-table { font-size: 11px; }
+  .forecast-table th, .forecast-table td { padding: 4px 6px; }
+  .forecast-table-station-col { min-width: 120px; }
+  .forecast-table-tab { font-size: 11px; padding: 6px 10px; }
+}
