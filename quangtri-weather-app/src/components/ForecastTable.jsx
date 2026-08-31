@@ -22,9 +22,10 @@ function rainColor(mm) {
 }
 function tempColor(c) {
   if (c == null) return { bg: '#f0f0f0', fg: '#999' };
-  if (c < 20) return { bg: '#1565C0', fg: '#fff' };
-  if (c < 27) return { bg: '#2E7D32', fg: '#fff' };
-  if (c < 33) return { bg: '#F9A825', fg: '#000' };
+  if (c < 15) return { bg: '#9C27B0', fg: '#fff' };
+  if (c <= 20) return { bg: '#1565C0', fg: '#fff' };
+  if (c <= 30) return { bg: '#2E7D32', fg: '#fff' };
+  if (c < 35) return { bg: '#F9A825', fg: '#000' };
   return { bg: '#D32F2F', fg: '#fff' };
 }
 function windColor(ms) {
@@ -38,8 +39,8 @@ const COLOR_FN = { rain: rainColor, accum: rainColor, tmax: tempColor, tmin: tem
 const LEGEND = {
   rain: [['#1565C0', '0-25mm'], ['#2E7D32', '>25-50mm'], ['#F9A825', '>50-100mm'], ['#D32F2F', '>100mm']],
   accum: [['#1565C0', '0-25mm'], ['#2E7D32', '>25-50mm'], ['#F9A825', '>50-100mm'], ['#D32F2F', '>100mm']],
-  tmax: [['#1565C0', '<20°C'], ['#2E7D32', '20-27°C'], ['#F9A825', '27-33°C'], ['#D32F2F', '>33°C']],
-  tmin: [['#1565C0', '<20°C'], ['#2E7D32', '20-27°C'], ['#F9A825', '27-33°C'], ['#D32F2F', '>33°C']],
+  tmax: [['#9C27B0', '<15°C'], ['#1565C0', '15-20°C'], ['#2E7D32', '>20-30°C'], ['#F9A825', '30-35°C'], ['#D32F2F', '>35°C']],
+  tmin: [['#9C27B0', '<15°C'], ['#1565C0', '15-20°C'], ['#2E7D32', '>20-30°C'], ['#F9A825', '30-35°C'], ['#D32F2F', '>35°C']],
   wind: [['#2E7D32', '<6m/s'], ['#F9A825', '6-11m/s'], ['#EF6C00', '11-17m/s'], ['#D32F2F', '>17m/s']],
 };
 
