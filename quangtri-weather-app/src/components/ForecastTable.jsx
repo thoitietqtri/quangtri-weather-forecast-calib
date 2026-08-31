@@ -3,10 +3,13 @@ import './ForecastTable.css';
 
 const TABS = [
   { key: 'rain', label: '🌧️ Mưa (mm)' },
+  { key: 'accum', label: '💧 Mưa tích lũy (mm)' },
   { key: 'tmax', label: '🌡️ Tmax (°C)' },
   { key: 'tmin', label: '❄️ Tmin (°C)' },
   { key: 'wind', label: '💨 Gió (m/s)' },
 ];
+
+const ACCUM_DAYS = [1, 2, 3, 4, 5]; // số ngày tích luỹ
 
 // Ngưỡng màu — mưa dùng ĐÚNG thang đã thống nhất ở Bảng mưa chi tiết, nhiệt
 // độ/gió dùng thang riêng phù hợp với khí hậu Quảng Trị.
@@ -31,13 +34,21 @@ function windColor(ms) {
   if (ms < 17) return { bg: '#EF6C00', fg: '#fff' };
   return { bg: '#D32F2F', fg: '#fff' };
 }
-const COLOR_FN = { rain: rainColor, tmax: tempColor, tmin: tempColor, wind: windColor };
+const COLOR_FN = { rain: rainColor, accum: rainColor, tmax: tempColor, tmin: tempColor, wind: windColor };
 const LEGEND = {
   rain: [['#1565C0', '0-25mm'], ['#2E7D32', '>25-50mm'], ['#F9A825', '>50-100mm'], ['#D32F2F', '>100mm']],
+  accum: [['#1565C0', '0-25mm'], ['#2E7D32', '>25-50mm'], ['#F9A825', '>50-100mm'], ['#D32F2F', '>100mm']],
   tmax: [['#1565C0', '<20°C'], ['#2E7D32', '20-27°C'], ['#F9A825', '27-33°C'], ['#D32F2F', '>33°C']],
   tmin: [['#1565C0', '<20°C'], ['#2E7D32', '20-27°C'], ['#F9A825', '27-33°C'], ['#D32F2F', '>33°C']],
   wind: [['#2E7D32', '<6m/s'], ['#F9A825', '6-11m/s'], ['#EF6C00', '11-17m/s'], ['#D32F2F', '>17m/s']],
 };
+
+// Tính mưa tích luỹ từ ngày đầu tiên (hôm nay) đến hết ngày thứ n.
+function cumulativeRain(rainArr, n) {
+  const slice = rainArr.slice(0, n);
+  if (slice.some((v) => v == null)) return null;
+  return Math.round(slice.reduce((s, v) => s + v, 0) * 10) / 10;
+}
 
 function formatDateLabel(iso) {
   const [y, m, d] = iso.split('-');
@@ -79,7 +90,7 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
     <div className="forecast-table-overlay" onClick={onClose}>
       <div className="forecast-table-panel" onClick={(e) => e.stopPropagation()}>
         <div className="forecast-table-header">
-          <h3>📅 Bảng số liệu Dự báo 10 ngày tới cho các xã/phường</h3>
+          <h3>📅 Dự báo 10 ngày cho các xã/phường</h3>
           <button className="forecast-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
 
@@ -110,22 +121,34 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
               <thead>
                 <tr>
                   <th className="forecast-table-station-col">Xã/Phường</th>
-                  {dates.map((d) => <th key={d}>{formatDateLabel(d)}</th>)}
+                  {tab === 'accum'
+                    ? ACCUM_DAYS.map((n) => <th key={n}>{n} ngày</th>)
+                    : dates.map((d) => <th key={d}>{formatDateLabel(d)}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.name}>
                     <td className="forecast-table-station-col">{row.name}</td>
-                    {dates.map((_, i) => {
-                      const v = row[tab][i];
-                      const { bg, fg } = COLOR_FN[tab](v);
-                      return (
-                        <td key={i} style={{ background: bg, color: fg }}>
-                          {v == null ? '—' : v}
-                        </td>
-                      );
-                    })}
+                    {tab === 'accum'
+                      ? ACCUM_DAYS.map((n) => {
+                          const v = cumulativeRain(row.rain, n);
+                          const { bg, fg } = rainColor(v);
+                          return (
+                            <td key={n} style={{ background: bg, color: fg }}>
+                              {v == null ? '—' : v}
+                            </td>
+                          );
+                        })
+                      : dates.map((_, i) => {
+                          const v = row[tab][i];
+                          const { bg, fg } = COLOR_FN[tab](v);
+                          return (
+                            <td key={i} style={{ background: bg, color: fg }}>
+                              {v == null ? '—' : v}
+                            </td>
+                          );
+                        })}
                   </tr>
                 ))}
               </tbody>
