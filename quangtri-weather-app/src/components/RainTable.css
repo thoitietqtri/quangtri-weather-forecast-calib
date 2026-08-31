@@ -36,17 +36,20 @@
 
 .rain-table-close {
   border: none;
-  background: #f0f0f0;
+  background: #D32F2F;
+  color: #fff;
   border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  font-weight: bold;
   cursor: pointer;
   line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .rain-table-close:hover {
-  background: #e0e0e0;
+  background: #B71C1C;
 }
 
 .rain-table-legend {
