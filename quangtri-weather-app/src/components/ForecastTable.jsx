@@ -63,18 +63,30 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
   const [rows, setRows] = useState(null);
   const [dates, setDates] = useState([]);
   const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setError(null);
+    setRows(null);
     const lats = xaList.map((x) => x.lat).join(',');
     const lngs = xaList.map((x) => x.lng).join(',');
     const url = `${forecastApiUrl}?latitude=${lats}&longitude=${lngs}`
       + `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,windspeed_10m_max&forecast_days=10&timezone=auto&models=ecmwf_ifs&wind_speed_unit=ms`;
 
     fetch(url)
-      .then((r) => r.json())
+      .then(async (r) => {
+        const body = await r.json().catch(() => null);
+        if (!r.ok) {
+          const reason = body?.reason || body?.error?.message || `HTTP ${r.status}`;
+          throw new Error(reason);
+        }
+        return body;
+      })
       .then((data) => {
         const arr = Array.isArray(data) ? data : [data];
-        if (arr.length !== xaList.length) throw new Error('Số kết quả không khớp số xã');
+        if (arr.length !== xaList.length) {
+          throw new Error(`Máy chủ dự báo đang quá tải (nhận ${arr.length}/${xaList.length} xã) — vui lòng thử lại`);
+        }
         setDates(arr[0]?.daily?.time || []);
         setRows(xaList.map((xa, i) => ({
           name: xa.ten_xa || xa.name,
@@ -85,7 +97,7 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
         })));
       })
       .catch((e) => setError(e.message));
-  }, [xaList, forecastApiUrl]);
+  }, [xaList, forecastApiUrl, reloadKey]);
 
   return (
     <div className="forecast-table-overlay" onClick={onClose}>
@@ -113,7 +125,12 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
           ))}
         </div>
 
-        {error && <div className="forecast-table-error">⚠️ Không tải được dữ liệu: {error}</div>}
+        {error && (
+          <div className="forecast-table-error">
+            ⚠️ Không tải được dữ liệu: {error}<br />
+            <button onClick={() => setReloadKey((k) => k + 1)} style={{ marginTop: 8 }}>🔁 Thử lại</button>
+          </div>
+        )}
         {!error && !rows && <div className="forecast-table-loading">⏳ Đang tải...</div>}
 
         {rows && (

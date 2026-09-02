@@ -68,7 +68,7 @@ async function loadQuantileTablesForXaList(maXaList) {
   return byXa;
 }
 
-async function loadWithTimeout(maXaList, timeoutMs = 6000) {
+async function loadWithTimeout(maXaList, timeoutMs = 2500) {
   return Promise.race([
     loadQuantileTablesForXaList(maXaList),
     new Promise((_, reject) => setTimeout(() => reject(new Error(`Neon phản hồi quá ${timeoutMs}ms`)), timeoutMs)),
@@ -107,7 +107,11 @@ export default async (req) => {
   let data;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    // Chế độ hàng loạt (78 xã) cần payload lớn hơn nhiều so với 1 xã -> cho
+    // thêm thời gian, nhưng bù lại giảm thời gian chờ Neon ở bước sau để
+    // tổng cộng vẫn nằm trong giới hạn cứng 10 giây của Netlify Function.
+    const omTimeoutMs = isBatch ? 7000 : 6000;
+    const timer = setTimeout(() => controller.abort(), omTimeoutMs);
     let res;
     try {
       res = await fetch(omUrl.toString(), { signal: controller.signal });
