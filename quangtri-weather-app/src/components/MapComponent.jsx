@@ -77,6 +77,8 @@ function MapComponent() {
   const [weatherError, setWeatherError] = useState(null);
   const [weatherById, setWeatherById] = useState({});
   const [selectedDate, setSelectedDate] = useState('');
+  const selectedDateRef = useRef('');
+  useEffect(() => { selectedDateRef.current = selectedDate; }, [selectedDate]);
   const [geoData, setGeoData] = useState(null);
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
@@ -152,7 +154,7 @@ function MapComponent() {
   })();
 
   const fetchWeather = async (center, dateOverride) => {
-    const dateToUse = dateOverride !== undefined ? dateOverride : selectedDate;
+    const dateToUse = dateOverride !== undefined ? dateOverride : selectedDateRef.current;
     let url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&hourly=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto&models=ecmwf_ifs`;
     if (dateToUse) url += `&start_date=${dateToUse}&end_date=${dateToUse}`;
     setWeatherError(null);
@@ -263,7 +265,7 @@ function MapComponent() {
       <VisitCounter />
       <h2 className="app-title">
         <span className="app-title__icon" aria-hidden="true">⛅</span>
-        DỰ BÁO THỜI TIẾT TỈNH QUẢNG TRỊ
+        THỜI TIẾT TỈNH QUẢNG TRỊ
         <span className="app-title__icon" aria-hidden="true">⛅</span>
       </h2>
 
@@ -307,11 +309,11 @@ function MapComponent() {
 
       {showRain && (
         <div className="rain-legend">
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#9E9E9E' }} />0mm</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#1565C0' }} />&lt;25mm</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#2E7D32' }} />25-50mm</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#EF6C00' }} />50-100mm</span>
-          <span className="rain-legend__item"><span className="rain-legend__dot rain-legend__dot--blink" style={{ background: '#D32F2F' }} />&gt;100mm</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#9E9E9E' }} />0mm/24h</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#1565C0' }} />&lt;25mm/24h</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#2E7D32' }} />25-50mm/24h</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot" style={{ background: '#EF6C00' }} />50-100mm/24h</span>
+          <span className="rain-legend__item"><span className="rain-legend__dot rain-legend__dot--blink" style={{ background: '#D32F2F' }} />&gt;100mm/24h</span>
         </div>
       )}
 
