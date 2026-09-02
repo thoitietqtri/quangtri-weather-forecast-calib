@@ -265,7 +265,7 @@ function MapComponent() {
       <VisitCounter />
       <h2 className="app-title">
         <span className="app-title__icon" aria-hidden="true">⛅</span>
-        THỜI TIẾT TỈNH QUẢNG TRỊ
+        THỜI TIẾT QUẢNG TRỊ
         <span className="app-title__icon" aria-hidden="true">⛅</span>
       </h2>
 
@@ -281,7 +281,8 @@ function MapComponent() {
           value={selectedDate}
           max={maxSelectableDate}
           onChange={(e) => {
-            const newDate = e.target.value;
+            let newDate = e.target.value;
+            if (newDate > maxSelectableDate) newDate = maxSelectableDate;
             setSelectedDate(newDate);
             if (selectedFeature) fetchWeather(selectedFeature.center, newDate);
           }}
@@ -290,8 +291,8 @@ function MapComponent() {
           <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
           💧 Trạm mưa real-time
         </label>
-        <button onClick={() => setShowRainTable(true)}>📊 Bảng mưa thực đo</button>
-        <button onClick={() => setShowForecastTable(true)}>📅 Bảng Dự báo 10 ngày tới</button>
+        <button onClick={() => setShowRainTable(true)}>📊 Số liệu mưa thực đo</button>
+        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo 10 ngày tới</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
