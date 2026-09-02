@@ -149,7 +149,7 @@ function MapComponent() {
   // trình duyệt tự làm xám/chặn click các ngày sau đó, không cần tự vẽ lịch.
   const maxSelectableDate = (() => {
     const d = new Date();
-    d.setDate(d.getDate() + 15);
+    d.setDate(d.getDate() + 14);
     return d.toISOString().slice(0, 10);
   })();
 
