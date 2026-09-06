@@ -295,10 +295,10 @@ function MapComponent() {
         </div>
         <label className="toolbar-rain-toggle">
           <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
-          💧 Trạm mưa real-time
+          💧 Trạm mưa
         </label>
-        <button onClick={() => setShowRainTable(true)}>📊 Số liệu mưa thực đo</button>
-        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo 10 ngày</button>
+        <button onClick={() => setShowRainTable(true)}>📊 Mưa thực đo</button>
+        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
