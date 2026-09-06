@@ -121,4 +121,17 @@
   .rain-table { font-size: 11px; }
   .rain-table th, .rain-table td { padding: 4px 6px; }
   .rain-table-station-col { min-width: 110px; }
+
+  /* Toàn màn hình trên điện thoại — bỏ khoảng đệm/viền bo tròn để chiếm
+     trọn màn hình, thay vì chỉ hiện dạng thẻ nhỏ căn giữa như trên máy tính. */
+  .rain-table-overlay {
+    padding: 0;
+  }
+  .rain-table-panel {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }

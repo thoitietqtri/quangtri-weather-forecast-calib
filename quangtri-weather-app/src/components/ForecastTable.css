@@ -155,4 +155,16 @@
   .forecast-table th, .forecast-table td { padding: 4px 6px; }
   .forecast-table-station-col { min-width: 120px; }
   .forecast-table-tab { font-size: 11px; padding: 6px 10px; }
+
+  /* Toàn màn hình trên điện thoại — bỏ khoảng đệm/viền bo tròn. */
+  .forecast-table-overlay {
+    padding: 0;
+  }
+  .forecast-table-panel {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }

@@ -144,12 +144,13 @@ function MapComponent() {
     return { color: '#333', weight: 1.5, fillColor: getColorByTemperature(weatherById[name]), fillOpacity: 0.65 };
   };
 
-  // ECMWF IFS chỉ trả dự báo tối đa 15 ngày (hôm nay + 14 ngày tiếp theo).
-  // Tính ngày xa nhất được phép chọn để gắn vào thuộc tính `max` của ô lịch —
-  // trình duyệt tự làm xám/chặn click các ngày sau đó, không cần tự vẽ lịch.
+  // ECMWF IFS chỉ trả dự báo tối đa 15 ngày (hôm nay + 14 ngày tiếp theo),
+  // nhưng đúng ngày biên cuối cùng (index 14) đôi khi CHƯA có đủ dữ liệu tại
+  // thời điểm gọi (rìa giới hạn mô hình) -> chừa thêm 1 ngày đệm an toàn,
+  // chỉ cho chọn tối đa +13 ngày để luôn chắc chắn có dữ liệu.
   const maxSelectableDate = (() => {
     const d = new Date();
-    d.setDate(d.getDate() + 14);
+    d.setDate(d.getDate() + 13);
     return d.toISOString().slice(0, 10);
   })();
 
@@ -296,7 +297,7 @@ function MapComponent() {
           <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
           💧 Trạm mưa real-time
         </label>
-        <button onClick={() => setShowRainTable(true)}>📊 Mưa thực đo</button>
+        <button onClick={() => setShowRainTable(true)}>📊 Số liệu mưa thực đo</button>
         <button onClick={() => setShowForecastTable(true)}>📅 Dự báo 10 ngày</button>
       </div>
 
