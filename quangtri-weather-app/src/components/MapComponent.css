@@ -11,9 +11,9 @@
   text-align: center;
   padding: 10px;
   margin: 0;
-  background: #2E7D32;
+  background: #0D1B2A;
   color: #FFFFFF;
-  border-bottom: 2px solid #1B5E20;
+  border-bottom: 2px solid #060E17;
   font-size: 20px;
   font-weight: bold;
   letter-spacing: 1px;
@@ -41,7 +41,7 @@
 /* Toolbar */
 .toolbar {
   padding: 6px 16px;
-  background: #f0f4ff;
+  background: #0D1B2A;
   border-bottom: 1px solid #ddd;
   display: flex;
   align-items: center;
@@ -59,7 +59,7 @@
 
 .toolbar label {
   font-weight: bold;
-  color: #333;
+  color: #fff;
   font-size: 14px;
   white-space: nowrap;
 }
@@ -240,12 +240,6 @@ input[type="date"] {
   flex-shrink: 0;
   background: #fff;
   border-top: 1px solid #ddd;
-}
-
-@media (max-width: 768px) {
-  .chart-container {
-    height: 100px;
-  }
 }
 
 /* Bản đồ lấp đầy phần còn lại */
