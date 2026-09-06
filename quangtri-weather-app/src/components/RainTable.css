@@ -27,11 +27,14 @@
   justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid #e0e0e0;
+  background: #0D1B2A;
+  color: #fff;
 }
 
 .rain-table-header h3 {
   margin: 0;
   font-size: 16px;
+  color: #fff;
 }
 
 .rain-table-close {
