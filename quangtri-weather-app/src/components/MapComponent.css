@@ -79,6 +79,33 @@
   max-width: 240px;
 }
 
+/* Nhóm "chọn xã + chọn ngày" luôn giữ chung 1 hàng, không cho toolbar tách
+   rời chúng ra 2 dòng khi màn hình hẹp — trên điện thoại sẽ ẩn bớt chữ nhãn
+   (chỉ giữ icon) và thu nhỏ 2 ô để đủ chỗ nằm chung 1 hàng. */
+.toolbar-row-xa-ngay {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .toolbar-label-text {
+    display: none;
+  }
+  .toolbar-row-xa-ngay select {
+    min-width: 0;
+    max-width: 120px;
+    flex: 1 1 auto;
+  }
+  .toolbar-row-xa-ngay input[type="date"] {
+    max-width: 105px;
+    padding: 3px 2px;
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .toolbar select {
     font-size: 11px;
