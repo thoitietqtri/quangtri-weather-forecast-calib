@@ -39,6 +39,7 @@ export default function RainTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#2E7D32' }} />&gt;25–50mm</span>
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
+          <span style={{ fontStyle: 'italic' }}>Tên nghiêng = trạm VRain</span>
         </div>
         <div className="rain-table-scroll">
           <table className="rain-table">
@@ -49,20 +50,23 @@ export default function RainTable({ stations, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s) => (
-                <tr key={s.id}>
-                  <td className="rain-table-station-col">{s.name}</td>
-                  {WINDOWS.map((w) => {
-                    const v = s[w.key];
-                    const { bg, fg } = cellColor(v);
-                    return (
-                      <td key={w.key} style={{ background: bg, color: fg }}>
-                        {v == null ? '—' : v}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {sorted.map((s) => {
+                const isVrain = s.id?.startsWith('vrain_');
+                return (
+                  <tr key={s.id}>
+                    <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}</td>
+                    {WINDOWS.map((w) => {
+                      const v = s[w.key];
+                      const { bg, fg } = cellColor(v);
+                      return (
+                        <td key={w.key} style={{ background: bg, color: fg }}>
+                          {v == null ? '—' : v}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
