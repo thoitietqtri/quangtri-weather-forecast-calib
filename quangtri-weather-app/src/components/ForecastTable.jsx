@@ -151,8 +151,8 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
 
         {modelInfo && (
           <div className="forecast-table-model-info">
-            🕐 Mô hình ECMWF cập nhật gần nhất: {formatVNDateTime(modelInfo.lastAvail)} (giờ VN)
-            {' · '}Dự kiến bản tiếp theo: {formatVNDateTime(modelInfo.nextAvailEst)} ({formatCountdown(modelInfo.nextAvailEst)})
+            🕐 Cập nhật gần nhất: {formatVNDateTime(modelInfo.lastAvail)} 
+            {' · '}Phiên tiếp theo: {formatVNDateTime(modelInfo.nextAvailEst)} 
           </div>
         )}
 
