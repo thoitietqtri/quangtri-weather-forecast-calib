@@ -56,6 +56,23 @@ function formatDateLabel(iso) {
   return `${d}/${m}`;
 }
 
+// Định dạng ngày giờ Việt Nam kiểu "08/09 07:33".
+function formatVNDateTime(d) {
+  const vn = new Date(d.getTime() + 7 * 3600 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(vn.getUTCDate())}/${p(vn.getUTCMonth() + 1)} ${p(vn.getUTCHours())}:${p(vn.getUTCMinutes())}`;
+}
+
+// Đếm ngược "còn X giờ Y phút" tới 1 thời điểm trong tương lai.
+function formatCountdown(target) {
+  const diffMs = target.getTime() - Date.now();
+  if (diffMs <= 0) return 'sắp có (đang chờ cập nhật)';
+  const totalMin = Math.round(diffMs / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `còn khoảng ${h} giờ ${m} phút nữa` : `còn khoảng ${m} phút nữa`;
+}
+
 // forecastApiUrl: cho phép mỗi dự án tự truyền đúng URL nền (production gọi
 // thẳng Open-Meteo, calib gọi qua function forecast.mjs để có hiệu chỉnh).
 export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
@@ -64,6 +81,31 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
   const [dates, setDates] = useState([]);
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [modelInfo, setModelInfo] = useState(null);
+
+  // Lấy THẬT thông tin phiên chạy mô hình ECMWF gần nhất từ chính Open-Meteo
+  // (KHÔNG đoán theo lịch cố định 00/06/12/18h UTC) — vì mô hình trên thực tế
+  // hay bị trễ so với lịch, dùng dữ liệu thật mới phản ánh đúng thực tế.
+  useEffect(() => {
+    fetch('https://api.open-meteo.com/data/ecmwf_ifs/static/meta.json')
+      .then((r) => r.json())
+      .then((meta) => {
+        const initSec = meta.last_run_initialisation_time;
+        const availSec = meta.last_run_availability_time;
+        const intervalSec = meta.update_interval_seconds || 21600; // 6 giờ mặc định nếu thiếu
+        const observedDelaySec = availSec - initSec; // độ trễ THẬT của lần gần nhất (init -> có thể dùng)
+        const nextInitSec = initSec + intervalSec;
+        // Ước tính giờ sẵn sàng của phiên tiếp theo = giờ chạy dự kiến + đúng
+        // độ trễ vừa quan sát được ở lần gần nhất (thực tế hơn nhiều so với
+        // giả định "luôn đúng giờ").
+        const nextAvailEstSec = nextInitSec + observedDelaySec;
+        setModelInfo({
+          lastAvail: new Date(availSec * 1000),
+          nextAvailEst: new Date(nextAvailEstSec * 1000),
+        });
+      })
+      .catch(() => {}); // lỗi lấy thông tin phiên chạy không ảnh hưởng chức năng chính của bảng
+  }, []);
 
   useEffect(() => {
     setError(null);
@@ -106,6 +148,13 @@ export default function ForecastTable({ xaList, forecastApiUrl, onClose }) {
           <h3>📅 Dự báo 10 ngày cho các xã/phường</h3>
           <button className="forecast-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
+
+        {modelInfo && (
+          <div className="forecast-table-model-info">
+            🕐 Mô hình ECMWF cập nhật gần nhất: {formatVNDateTime(modelInfo.lastAvail)} (giờ VN)
+            {' · '}Dự kiến bản tiếp theo: {formatVNDateTime(modelInfo.nextAvailEst)} ({formatCountdown(modelInfo.nextAvailEst)})
+          </div>
+        )}
 
         <div className="forecast-table-tabs">
           {TABS.map((t) => (

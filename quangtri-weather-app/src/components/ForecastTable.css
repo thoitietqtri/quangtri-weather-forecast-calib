@@ -55,6 +55,16 @@
   background: #B71C1C;
 }
 
+/* Dòng thông tin phiên chạy mô hình ECMWF — nằm ngay dưới tiêu đề, cùng
+   tông navy, chữ nhỏ hơn tiêu đề để không lấn át. */
+.forecast-table-model-info {
+  padding: 5px 18px;
+  font-size: 11px;
+  color: #B0C4D8;
+  background: #0D1B2A;
+  border-bottom: 1px solid #1c3350;
+}
+
 .forecast-table-tabs {
   display: flex;
   gap: 4px;
@@ -155,6 +165,7 @@
   .forecast-table th, .forecast-table td { padding: 4px 6px; }
   .forecast-table-station-col { min-width: 120px; }
   .forecast-table-tab { font-size: 11px; padding: 6px 10px; }
+  .forecast-table-model-info { font-size: 9px; padding: 4px 10px; }
 
   /* Toàn màn hình trên điện thoại — bỏ khoảng đệm/viền bo tròn. */
   .forecast-table-overlay {
