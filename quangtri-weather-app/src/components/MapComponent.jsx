@@ -8,6 +8,7 @@ import { getRainStations } from '../services/rainfall';
 import RainTable from './RainTable';
 import ForecastTable from './ForecastTable';
 import MucNuocTable from './MucNuocTable';
+import MucNuocChart from './MucNuocChart';
 import VisitCounter from './VisitCounter';
 
 function getCanhBao(tmax, tmin, wind, rain) {
@@ -138,6 +139,7 @@ function MapComponent() {
   const [mucNuocStations, setMucNuocStations] = useState([]);
   const [showMucNuoc, setShowMucNuoc] = useState(true);
   const [showMucNuocTable, setShowMucNuocTable] = useState(false);
+  const [showMucNuocChart, setShowMucNuocChart] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -369,11 +371,13 @@ function MapComponent() {
         </label>
         <button onClick={() => setShowRainTable(true)}>📊 Mưa </button>
         <button onClick={() => setShowMucNuocTable(true)}>📈 Mực nước</button>
+        <button onClick={() => setShowMucNuocChart(true)}>📉 Biểu đồ MN</button>
         <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
+      {showMucNuocChart && <MucNuocChart stations={mucNuocStations} onClose={() => setShowMucNuocChart(false)} />}
       {showForecastTable && (
         <ForecastTable
           xaList={featureList.map((f) => {
