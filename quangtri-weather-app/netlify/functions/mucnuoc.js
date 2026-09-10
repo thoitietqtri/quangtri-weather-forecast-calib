@@ -113,12 +113,24 @@ async function fetchKttvStation(station) {
 
 // ============ VRain mực nước (đăng nhập + lấy 1 lượt cho toàn bộ nhóm trạm) ============
 async function vrainMnLogin() {
+  // Gửi ĐẦY ĐỦ header giống hệt bản Python gốc đã chạy được — server VRain
+  // có vẻ kiểm tra các header này (thiếu là bị từ chối 400).
   const res = await fetchWithTimeout(VRAIN_MN_LOGIN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'accept': 'application/json, text/plain, */*',
+      'content-type': 'application/json;charset=UTF-8',
+      'origin': VRAIN_MN_BASE_URL,
+      'referer': `${VRAIN_MN_BASE_URL}/home/${VRAIN_MN_GROUP_ID}/details`,
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    },
     body: JSON.stringify({ username: VRAIN_MN_USERNAME, password: VRAIN_MN_PASSWORD }),
   }, 8000);
-  if (!res.ok) throw new Error(`VRain mực nước đăng nhập lỗi HTTP ${res.status}`);
+  if (!res.ok) {
+    const bodyText = await res.text().catch(() => '');
+    throw new Error(`VRain mực nước đăng nhập lỗi HTTP ${res.status} - ${bodyText.slice(0, 200)}`);
+  }
   // Đọc cookie sid — thử cả 2 cách vì môi trường Node/Netlify có thể khác
   // nhau cách trả về header set-cookie (1 chuỗi hay nhiều dòng).
   let setCookieRaw = '';
@@ -157,7 +169,15 @@ async function fetchVrainMnAll() {
   const dateTo = fmtVN(end).slice(0, 10);
   const url = `${VRAIN_MN_DETAILS_URL}?groupID=${VRAIN_MN_GROUP_ID}&from=${dateFrom}&to=${dateTo}&i=_1h&sid=${sid}`;
 
-  const res = await fetchWithTimeout(url, { headers: { Cookie: `sid=${sid}` } }, 8000);
+  const res = await fetchWithTimeout(url, {
+    headers: {
+      Cookie: `sid=${sid}`,
+      'accept': 'application/json, text/plain, */*',
+      'referer': `${VRAIN_MN_BASE_URL}/home/${VRAIN_MN_GROUP_ID}/details`,
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    },
+  }, 8000);
   if (!res.ok) throw new Error(`VRain mực nước lấy dữ liệu lỗi HTTP ${res.status}`);
   const data = await res.json();
 
