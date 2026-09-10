@@ -73,8 +73,10 @@ function fetchWithTimeout(url, opts = {}, timeoutMs = 8000) {
 }
 
 // Phân tích thời gian VRain — dữ liệu thô có thể là epoch (ms/s) hoặc chuỗi
-// nhiều định dạng khác nhau (đã thấy code Python gốc phải thử nhiều kiểu),
-// nên xử lý cẩn trọng hơn là tin thẳng vào new Date(tRaw).
+// nhiều định dạng khác nhau. Đã xác nhận qua log thật: hệ mực nước VRain trả
+// về dạng "HH:mm DD/MM" (KHÔNG có năm, giờ:phút trước, ngày/tháng sau — khác
+// hẳn định dạng chuẩn) — cần tự suy ra năm (dùng năm hiện tại, đủ an toàn vì
+// khoảng lấy dữ liệu chỉ trải dài vài ngày gần đây, không lệch năm).
 function parseVrainTimestamp(tRaw) {
   if (tRaw == null) return NaN;
   if (typeof tRaw === 'number') {
@@ -84,6 +86,13 @@ function parseVrainTimestamp(tRaw) {
   if (/^\d{9,16}$/.test(s)) {
     const n = Number(s);
     return n > 10 ** 11 ? n : n * 1000;
+  }
+  const mHM = /^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})$/.exec(s);
+  if (mHM) {
+    const [, hh, mm, dd, mo] = mHM;
+    const year = new Date().getFullYear();
+    // Dựng mốc UTC từ giờ VN local (VN = UTC+7) — trừ 7 giờ để ra đúng UTC.
+    return Date.UTC(year, Number(mo) - 1, Number(dd), Number(hh), Number(mm)) - 7 * 3600 * 1000;
   }
   const t = new Date(s.replace(' ', 'T')).getTime();
   return Number.isFinite(t) ? t : NaN;
