@@ -181,9 +181,16 @@ async function fetchVrainMnAll() {
   if (!res.ok) throw new Error(`VRain mực nước lấy dữ liệu lỗi HTTP ${res.status}`);
   const data = await res.json();
 
+  // Log chẩn đoán — xem cấu trúc dữ liệu thật trả về (chỉ log 1 lần rút gọn,
+  // không log toàn bộ vì có thể rất dài).
+  console.log('[mucnuoc][debug] Kiểu dữ liệu trả về:', Array.isArray(data) ? 'array' : typeof data);
+  console.log('[mucnuoc][debug] Các khoá cấp 1 (nếu là object):', typeof data === 'object' && !Array.isArray(data) ? Object.keys(data) : 'N/A');
+  console.log('[mucnuoc][debug] 1000 ký tự đầu của response:', JSON.stringify(data).slice(0, 1000));
+
   // seriesByName: tên trạm -> mảng {t, v}
   const seriesByName = {};
   const entries = Array.isArray(data) ? data : (data?.data || data?.stats || []);
+  console.log('[mucnuoc][debug] Số entries (theo thời điểm) tìm được:', entries.length);
   for (const ent of entries) {
     if (!ent || typeof ent !== 'object') continue;
     const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
@@ -200,6 +207,8 @@ async function fetchVrainMnAll() {
       seriesByName[name].push({ t, v });
     }
   }
+  console.log('[mucnuoc][debug] Tên trạm tìm được trong dữ liệu (tối đa 20):', Object.keys(seriesByName).slice(0, 20));
+  console.log('[mucnuoc][debug] Tên trạm mong đợi (trong VRAIN_MUCNUOC_COORDS):', Object.keys(VRAIN_MUCNUOC_COORDS));
 
   const results = [];
   for (const [name, coords] of Object.entries(VRAIN_MUCNUOC_COORDS)) {
