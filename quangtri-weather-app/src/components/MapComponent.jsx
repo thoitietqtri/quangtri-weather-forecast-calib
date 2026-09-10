@@ -109,7 +109,7 @@ function mucNuocIcon(name, current, change24h) {
   return L.divIcon({
     className: 'mucnuoc-marker',
     html: `<div class="mucnuoc-marker__wrap">
-      <span class="mucnuoc-marker__circle" style="background:${color}"><svg viewBox="0 0 24 24" width="15" height="15" fill="#fff"><path d="M2 17c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1v2c-1.5 0-1.5 1-3 1s-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1v-2z"/><path d="M2 12c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1v2c-1.5 0-1.5 1-3 1s-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1v-2z" opacity="0.6"/></svg></span>
+      <span class="mucnuoc-marker__circle" style="background:${color}"><span style="color:#D32F2F;font-weight:900;font-size:15px;line-height:1;font-family:Arial,sans-serif;">H</span></span>
       <span class="mucnuoc-marker__label" style="background:${color}">${name}${current != null ? ` (${current}m)` : ''}</span>
     </div>`,
     iconSize: [130, 48],
@@ -367,9 +367,9 @@ function MapComponent() {
           <input type="checkbox" checked={showMucNuoc} onChange={(e) => setShowMucNuoc(e.target.checked)} />
           🌊 Trạm mực nước
         </label>
-        <button onClick={() => setShowRainTable(true)}>📊 Mưa thực đo</button>
-        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
+        <button onClick={() => setShowRainTable(true)}>📊 Mưa </button>
         <button onClick={() => setShowMucNuocTable(true)}>📈 Mực nước</button>
+        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
