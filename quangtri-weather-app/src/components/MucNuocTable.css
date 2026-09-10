@@ -84,7 +84,7 @@
   z-index: 1;
 }
 
-.mucnuoc-table-time-col {
+.mucnuoc-table .mucnuoc-table-time-col {
   text-align: left !important;
   position: sticky;
   left: 0;
