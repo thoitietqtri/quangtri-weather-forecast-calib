@@ -95,12 +95,13 @@ function mucNuocSummary(series) {
   return { current, change24h };
 }
 
+// Mực nước không có ngưỡng chung giữa các trạm (phụ thuộc cao độ nền địa
+// hình từng sông) — nên tạm dùng 1 màu cố định cho mọi trạm, KHÔNG tô theo
+// xu hướng biến động nữa. Khi có cấp báo động riêng cho từng trạm cụ thể,
+// sẽ đổi sang tô theo đúng cấp báo động đó (mã màu #1565C0 là màu mặc định
+// tạm thời).
 function mucNuocColor(change24h) {
-  if (change24h == null) return '#9E9E9E';
-  if (change24h <= 0) return '#1565C0';
-  if (change24h <= 0.5) return '#2E7D32';
-  if (change24h <= 1) return '#F9A825';
-  return '#D32F2F';
+  return '#1565C0';
 }
 
 function mucNuocIcon(name, current, change24h) {

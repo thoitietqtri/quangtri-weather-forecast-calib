@@ -70,8 +70,10 @@
 .mucnuoc-table th, .mucnuoc-table td {
   padding: 6px 10px;
   text-align: center;
-  border: 1px solid #ddd;
+  border: 1px solid #0d3868;
   white-space: nowrap;
+  background: #1565C0;
+  color: #fff;
 }
 
 .mucnuoc-table thead th {

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import './MucNuocTable.css';
 
 function formatTime(t) {
-  const d = new Date(t);
+  const d = new Date(t + 7 * 3600 * 1000); // dịch sang giờ VN trước khi đọc, tránh hiện giờ UTC
   const p = (n) => String(n).padStart(2, '0');
   return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 }
