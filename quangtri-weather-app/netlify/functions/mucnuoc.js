@@ -191,6 +191,12 @@ async function fetchVrainMnAll() {
   const seriesByName = {};
   const entries = Array.isArray(data) ? data : (data?.data || data?.stats || []);
   console.log('[mucnuoc][debug] Số entries (theo thời điểm) tìm được:', entries.length);
+  if (entries.length > 0) {
+    const first = entries[0];
+    const { stations, ...firstWithoutStations } = first || {};
+    console.log('[mucnuoc][debug] Các khoá của 1 entry:', Object.keys(first || {}));
+    console.log('[mucnuoc][debug] Nội dung entry (đã bỏ mảng stations cho ngắn):', JSON.stringify(firstWithoutStations));
+  }
   for (const ent of entries) {
     if (!ent || typeof ent !== 'object') continue;
     const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
