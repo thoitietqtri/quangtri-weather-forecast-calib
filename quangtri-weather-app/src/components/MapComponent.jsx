@@ -7,6 +7,7 @@ import WeatherChart from './WeatherChart';
 import { getRainStations } from '../services/rainfall';
 import RainTable from './RainTable';
 import ForecastTable from './ForecastTable';
+import MucNuocTable from './MucNuocTable';
 import VisitCounter from './VisitCounter';
 
 function getCanhBao(tmax, tmin, wind, rain) {
@@ -71,6 +72,53 @@ function rainIcon(name, mm24h) {
 // Trạm mưa cập nhật lại sau mỗi khoảng thời gian này (mili-giây).
 const RAIN_REFRESH_MS = 10 * 60 * 1000;
 
+// ============ Icon marker trạm mực nước ============
+// Tự tính "hiện tại" (điểm cuối chuỗi) + "mức thay đổi 24h" từ chính chuỗi
+// thời gian trả về — không có ngưỡng "báo động" cố định như mưa, nên dùng
+// XU HƯỚNG biến động (tăng nhanh/chậm) làm tín hiệu màu:
+//   giảm/không đổi   → xanh dương (ổn định)
+//   tăng 0 - 0.5m     → xanh lá
+//   tăng 0.5 - 1m     → vàng
+//   tăng > 1m          → đỏ
+function mucNuocSummary(series) {
+  if (!series || series.length === 0) return { current: null, change24h: null };
+  const sorted = [...series].sort((a, b) => a.t - b.t);
+  const current = sorted[sorted.length - 1].v;
+  const nowT = sorted[sorted.length - 1].t;
+  const target = nowT - 24 * 3600 * 1000;
+  let best = null; let bestDiff = Infinity;
+  for (const p of sorted) {
+    const diff = Math.abs(p.t - target);
+    if (diff < bestDiff) { bestDiff = diff; best = p; }
+  }
+  const change24h = best && bestDiff <= 40 * 60 * 1000 ? Math.round((current - best.v) * 100) / 100 : null;
+  return { current, change24h };
+}
+
+function mucNuocColor(change24h) {
+  if (change24h == null) return '#9E9E9E';
+  if (change24h <= 0) return '#1565C0';
+  if (change24h <= 0.5) return '#2E7D32';
+  if (change24h <= 1) return '#F9A825';
+  return '#D32F2F';
+}
+
+function mucNuocIcon(name, current, change24h) {
+  const color = mucNuocColor(change24h);
+  return L.divIcon({
+    className: 'mucnuoc-marker',
+    html: `<div class="mucnuoc-marker__wrap">
+      <span class="mucnuoc-marker__circle" style="background:${color}"><svg viewBox="0 0 24 24" width="15" height="15" fill="#fff"><path d="M2 17c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1v2c-1.5 0-1.5 1-3 1s-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1v-2z"/><path d="M2 12c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1v2c-1.5 0-1.5 1-3 1s-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1v-2z" opacity="0.6"/></svg></span>
+      <span class="mucnuoc-marker__label" style="background:${color}">${name}${current != null ? ` (${current}m)` : ''}</span>
+    </div>`,
+    iconSize: [130, 48],
+    iconAnchor: [65, 15],
+  });
+}
+
+// Trạm mực nước cập nhật lại sau mỗi khoảng thời gian này (mili-giây).
+const MUCNUOC_REFRESH_MS = 15 * 60 * 1000;
+
 function MapComponent() {
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [weatherData, setWeatherData] = useState(null);
@@ -86,6 +134,9 @@ function MapComponent() {
   const [showRain, setShowRain] = useState(true);
   const [showRainTable, setShowRainTable] = useState(false);
   const [showForecastTable, setShowForecastTable] = useState(false);
+  const [mucNuocStations, setMucNuocStations] = useState([]);
+  const [showMucNuoc, setShowMucNuoc] = useState(true);
+  const [showMucNuocTable, setShowMucNuocTable] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -112,6 +163,20 @@ function MapComponent() {
     };
     loadRain();
     const timer = setInterval(loadRain, RAIN_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  // Trạm mực nước real-time: tải lần đầu rồi tự làm mới định kỳ.
+  useEffect(() => {
+    let cancelled = false;
+    const loadMucNuoc = () => {
+      fetch('/.netlify/functions/mucnuoc')
+        .then((r) => r.json())
+        .then((stations) => { if (!cancelled && Array.isArray(stations)) setMucNuocStations(stations); })
+        .catch((err) => console.error('[Mực nước] Lỗi tải trạm:', err));
+    };
+    loadMucNuoc();
+    const timer = setInterval(loadMucNuoc, MUCNUOC_REFRESH_MS);
     return () => { cancelled = true; clearInterval(timer); };
   }, []);
 
@@ -297,11 +362,17 @@ function MapComponent() {
           <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
           💧 Trạm mưa
         </label>
+        <label className="toolbar-rain-toggle">
+          <input type="checkbox" checked={showMucNuoc} onChange={(e) => setShowMucNuoc(e.target.checked)} />
+          🌊 Trạm mực nước
+        </label>
         <button onClick={() => setShowRainTable(true)}>📊 Mưa thực đo</button>
         <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
+        <button onClick={() => setShowMucNuocTable(true)}>📈 Mực nước</button>
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
+      {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
       {showForecastTable && (
         <ForecastTable
           xaList={featureList.map((f) => {
@@ -342,6 +413,18 @@ function MapComponent() {
                 </Popup>
               </Marker>
             ))}
+            {showMucNuoc && mucNuocStations.map((s) => {
+              const { current, change24h } = mucNuocSummary(s.series);
+              return (
+                <Marker key={s.id} position={[s.coords.lat, s.coords.lng]} icon={mucNuocIcon(s.name, current, change24h)}>
+                  <Popup>
+                    <b>{s.name}</b><br />
+                    Hiện tại: {current ?? '—'}m<br />
+                    Thay đổi 24h: {change24h == null ? '—' : (change24h > 0 ? `+${change24h}` : change24h)}m
+                  </Popup>
+                </Marker>
+              );
+            })}
             {renderPopup()}
           </MapContainer>
         ) : (

@@ -28,8 +28,6 @@
   font-size: 22px;
   line-height: 1;
 }
-  flex-shrink: 0;
-}
 
 @media (max-width: 768px) {
   .app-title {
@@ -259,6 +257,42 @@ input[type="date"] {
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Marker trạm đo mực nước real-time — cùng khuôn mẫu marker trạm mưa, khác
+   biểu tượng (sóng nước) và tô màu theo mức thay đổi 24h (không phải giá
+   trị tuyệt đối, vì mực nước không có ngưỡng cố định như mưa). */
+.mucnuoc-marker__wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.mucnuoc-marker__circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #9E9E9E;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.mucnuoc-marker__label {
+  background: rgba(158, 158, 158, 0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  max-width: 128px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
