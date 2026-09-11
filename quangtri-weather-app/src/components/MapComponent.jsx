@@ -130,6 +130,8 @@ function MapComponent() {
   const selectedDateRef = useRef('');
   useEffect(() => { selectedDateRef.current = selectedDate; }, [selectedDate]);
   const [geoData, setGeoData] = useState(null);
+  const [riverGeoData, setRiverGeoData] = useState(null);
+  const [showRiver, setShowRiver] = useState(true);
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
@@ -141,6 +143,14 @@ function MapComponent() {
   const [showMucNuocTable, setShowMucNuocTable] = useState(false);
   const [showMucNuocChart, setShowMucNuocChart] = useState(false);
   const mapRef = useRef(null);
+
+  // Tải lớp mạng lưới sông — độc lập, không chặn việc tải ranh giới xã.
+  useEffect(() => {
+    fetch('/mangsong.geojson')
+      .then((r) => r.json())
+      .then((data) => setRiverGeoData(data))
+      .catch((err) => console.error('[Sông] Lỗi tải mạng lưới sông:', err));
+  }, []);
 
   useEffect(() => {
     fetch('/PX_QUANGTRI.geojson')
@@ -369,6 +379,10 @@ function MapComponent() {
           <input type="checkbox" checked={showMucNuoc} onChange={(e) => setShowMucNuoc(e.target.checked)} />
           🌊 Trạm mực nước
         </label>
+        <label className="toolbar-rain-toggle">
+          <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
+          🏞️ Mạng lưới sông
+        </label>
         <button onClick={() => setShowRainTable(true)}>📊 Mưa </button>
         <button onClick={() => setShowMucNuocTable(true)}>📈 Mực nước</button>
         <button onClick={() => setShowMucNuocChart(true)}>📉 Biểu đồ MN</button>
@@ -405,6 +419,16 @@ function MapComponent() {
         {geoData ? (
           <MapContainer center={[16.75, 107.1]} zoom={8} className="responsive-map" ref={mapRef}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            {showRiver && riverGeoData && (
+              <GeoJSON
+                data={riverGeoData}
+                style={{ color: '#1565C0', weight: 1, fillColor: '#1565C0', fillOpacity: 0.55 }}
+                onEachFeature={(feature, layer) => {
+                  const ten = feature.properties?.TENSONG;
+                  if (ten) layer.bindPopup(`<b>${ten}</b>`);
+                }}
+              />
+            )}
             <GeoJSON data={geoData} onEachFeature={onEachFeature} style={geoJsonStyle} key={JSON.stringify(weatherById)} />
             {renderLabels()}
             <Marker position={[16.5, 112.0]} icon={createIslandIcon('Đặc khu Hoàng Sa - Việt Nam')} interactive={false} />
