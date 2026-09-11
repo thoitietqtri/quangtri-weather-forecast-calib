@@ -36,23 +36,28 @@ const KTTV_STATIONS = [
 // ============ 16 trạm VRain mực nước — toạ độ CHÍNH THỨC do anh Hudson
 // cung cấp trực tiếp (file Tọa_độ_trạm_mục_nước_Vrain.xlsx) — không qua
 // tính chuyển đổi hệ toạ độ nữa, đáng tin cậy hơn bản tự convert trước đó.
+// ============ 16 trạm VRain mực nước — CHÌA KHOÁ (key) phải giữ NGUYÊN VĂN
+// đúng tên VRain thực sự trả về (dùng để đối chiếu dữ liệu) — KHÔNG được rút
+// gọn ở đây, dù chỉ khác 1 chữ cũng làm mất trạm đó âm thầm không báo lỗi.
+// Muốn hiển thị tên ngắn gọn cho người xem, dùng trường "displayName" riêng
+// (an toàn để đổi tuỳ ý, không ảnh hưởng đến việc đối chiếu dữ liệu).
 const VRAIN_MUCNUOC_COORDS = {
-  'Cam Tuyền': { lat: 16.813958, lng: 106.990685 },
-  'Cây Da': { lat: 16.69245, lng: 107.29286 },
-  'Bến Quan': { lat: 17.017347, lng: 106.909303 },
-  'Hàm Ninh': { lat: 17.353189, lng: 106.673588 },
-  'Hải Tân': { lat: 16.652225, lng: 107.317347 },
-  'Hồ Nam Thạch Hãn': { lat: 16.694444, lng: 107.145278 },
-  'Quảng Thanh': { lat: 17.754514, lng: 106.392017 },
-  'Triệu Đại': { lat: 16.83263, lng: 107.176 },
-  'Triệu Độ': { lat: 16.8392, lng: 107.12947 },
-  'Lý Hòa': { lat: 17.632823, lng: 106.516056 },
-  'Roòn': { lat: 17.893153, lng: 106.424542 },
-  'Rào Nan': { lat: 17.769464, lng: 106.188409 },
-  'Liên Trạch': { lat: 17.6792, lng: 106.394843 },
-  'Vĩnh Phước': { lat: 16.777778, lng: 107.120278 },
-  'Hồ Trúc Kinh': { lat: 16.879722, lng: 107.063611 },
-  'Hồ Ái Tử': { lat: 16.76475, lng: 107.129889 },
+  'Cam Tuyền': { lat: 16.813958, lng: 106.990685, displayName: 'Cam Tuyền' },
+  'Cây Da': { lat: 16.69245, lng: 107.29286, displayName: 'Cây Da' },
+  'Cầu Bến Quan': { lat: 17.017347, lng: 106.909303, displayName: 'Bến Quan' },
+  'Hàm Ninh': { lat: 17.353189, lng: 106.673588, displayName: 'Hàm Ninh' },
+  'Hải Tân': { lat: 16.652225, lng: 107.317347, displayName: 'Hải Tân' },
+  'NQL vận hành hồ Nam Thạch Hãn': { lat: 16.694444, lng: 107.145278, displayName: 'Hồ Nam Thạch Hãn' },
+  'Quảng Thanh': { lat: 17.754514, lng: 106.392017, displayName: 'Quảng Thanh' },
+  'Triệu Đại': { lat: 16.83263, lng: 107.176, displayName: 'Triệu Đại' },
+  'Triệu Độ': { lat: 16.8392, lng: 107.12947, displayName: 'Triệu Độ' },
+  'Trạm Thủy văn Lý Hòa': { lat: 17.632823, lng: 106.516056, displayName: 'Lý Hòa' },
+  'Trạm Thủy văn Roòn': { lat: 17.893153, lng: 106.424542, displayName: 'Roòn' },
+  'Trạm Thủy văn Rào Nan': { lat: 17.769464, lng: 106.188409, displayName: 'Rào Nan' },
+  'Trạm thủy văn Liên Trạch': { lat: 17.6792, lng: 106.394843, displayName: 'Liên Trạch' },
+  'Vĩnh Phước': { lat: 16.777778, lng: 107.120278, displayName: 'Vĩnh Phước' },
+  'Đầu mối HCN Trúc Kinh': { lat: 16.879722, lng: 107.063611, displayName: 'Hồ Trúc Kinh' },
+  'Đầu mối HCN Ái Tử': { lat: 16.76475, lng: 107.129889, displayName: 'Hồ Ái Tử' },
 };
 
 const VRAIN_MN_BASE_URL = 'https://mucnuoc.vrain.vn';
@@ -228,10 +233,12 @@ async function fetchVrainMnAll() {
   console.log('[mucnuoc][debug] Tên trạm mong đợi (trong VRAIN_MUCNUOC_COORDS):', Object.keys(VRAIN_MUCNUOC_COORDS));
 
   const results = [];
-  for (const [name, coords] of Object.entries(VRAIN_MUCNUOC_COORDS)) {
-    const series = (seriesByName[name] || []).sort((a, b) => a.t - b.t);
+  for (const [matchName, coords] of Object.entries(VRAIN_MUCNUOC_COORDS)) {
+    const series = (seriesByName[matchName] || []).sort((a, b) => a.t - b.t);
     if (series.length === 0) continue;
-    results.push(buildStationResult(name, coords.lat, coords.lng, `vrain_mn_${name}`, series));
+    // Đối chiếu dùng matchName (tên gốc VRain) — hiển thị dùng displayName
+    // (tên ngắn gọn) nếu có, không có thì fallback về tên gốc.
+    results.push(buildStationResult(coords.displayName || matchName, coords.lat, coords.lng, `vrain_mn_${matchName}`, series));
   }
   return results;
 }
