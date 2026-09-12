@@ -10,6 +10,7 @@ import ForecastTable from './ForecastTable';
 import MucNuocTable from './MucNuocTable';
 import MucNuocChart from './MucNuocChart';
 import VisitCounter from './VisitCounter';
+import InstallButton from './InstallButton';
 
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
@@ -143,6 +144,14 @@ function MapComponent() {
   const [showMucNuocTable, setShowMucNuocTable] = useState(false);
   const [showMucNuocChart, setShowMucNuocChart] = useState(false);
   const mapRef = useRef(null);
+
+  // Đăng ký Service Worker (chỉ cache giao diện tĩnh, không đụng dữ liệu —
+  // xem chi tiết trong file sw.js).
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => console.error('[SW] Đăng ký thất bại:', err));
+    }
+  }, []);
 
   // Tải lớp mạng lưới sông — độc lập, không chặn việc tải ranh giới xã.
   useEffect(() => {
@@ -387,6 +396,7 @@ function MapComponent() {
         <button onClick={() => setShowMucNuocTable(true)}>📈 Mực nước</button>
         <button onClick={() => setShowMucNuocChart(true)}>📉 Biểu đồ MN</button>
         <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
+        <InstallButton />
       </div>
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
