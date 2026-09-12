@@ -405,8 +405,8 @@ function MapComponent() {
             <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo</button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
-            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo khí tượng</button>
-            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo Thủy văn</button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo thời tiết</button>
+            
           </div>
         </div>
       )}
