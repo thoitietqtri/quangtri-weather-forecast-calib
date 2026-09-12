@@ -353,6 +353,7 @@ function MapComponent() {
     <div className="app-wrapper">
       <VisitCounter />
       <h2 className="app-title">
+        <button onClick={() => setShowMenu(true)} className="hamburger-btn" aria-label="Mở menu chức năng">☰</button>
         <span className="app-title__icon" aria-hidden="true">⛅</span>
         THỜI TIẾT QUẢNG TRỊ
         <span className="app-title__icon" aria-hidden="true">⛅</span>
@@ -393,7 +394,6 @@ function MapComponent() {
           <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
           🏞️ Mạng lưới sông
         </label>
-        <button onClick={() => setShowMenu(true)} className="hamburger-btn" aria-label="Mở menu chức năng">☰</button>
         <InstallButton />
       </div>
 

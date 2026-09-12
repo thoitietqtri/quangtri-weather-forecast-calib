@@ -22,6 +22,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  position: relative;
 }
 
 .app-title__icon {
@@ -33,6 +34,11 @@
   .app-title {
     font-size: 13px;
     padding: 5px;
+  }
+  .hamburger-btn {
+    left: 6px;
+    font-size: 15px;
+    padding: 3px 8px;
   }
 }
 
@@ -319,13 +325,18 @@ input[type="date"] {
   left: 0;
 }
 
-/* Nút hamburger (☰) mở menu chức năng — gom các nút mở cửa sổ để đỡ rối
-   thanh công cụ chính, nhất là trên màn hình điện thoại nhỏ. */
+/* Nút hamburger (☰) mở menu chức năng — đặt cố định góc trái, ngang hàng
+   tiêu đề "Thời tiết Quảng Trị", không ảnh hưởng chữ tiêu đề vẫn căn giữa. */
 .hamburger-btn {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 20px;
   font-weight: bold;
   padding: 4px 12px;
   background-color: #1565C0;
+  z-index: 1;
 }
 
 .hamburger-menu-overlay {
@@ -337,8 +348,8 @@ input[type="date"] {
 
 .hamburger-menu-panel {
   position: absolute;
-  top: 56px;
-  right: 16px;
+  top: 52px;
+  left: 10px;
   background: #0D1B2A;
   border-radius: 10px;
   padding: 8px;
@@ -365,8 +376,8 @@ input[type="date"] {
 
 @media (max-width: 768px) {
   .hamburger-menu-panel {
-    top: 48px;
-    right: 8px;
+    top: 36px;
+    left: 6px;
     min-width: 160px;
   }
   .hamburger-menu-panel button {
