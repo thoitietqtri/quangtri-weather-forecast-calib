@@ -138,6 +138,7 @@ function MapComponent() {
   const [rainStations, setRainStations] = useState([]);
   const [showRain, setShowRain] = useState(true);
   const [showRainTable, setShowRainTable] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [showForecastTable, setShowForecastTable] = useState(false);
   const [mucNuocStations, setMucNuocStations] = useState([]);
   const [showMucNuoc, setShowMucNuoc] = useState(true);
@@ -392,12 +393,20 @@ function MapComponent() {
           <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
           🏞️ Mạng lưới sông
         </label>
-        <button onClick={() => setShowRainTable(true)}>📊 Mưa </button>
-        <button onClick={() => setShowMucNuocTable(true)}>📈 Mực nước</button>
-        <button onClick={() => setShowMucNuocChart(true)}>📉 Biểu đồ MN</button>
-        <button onClick={() => setShowForecastTable(true)}>📅 Dự báo</button>
+        <button onClick={() => setShowMenu(true)} className="hamburger-btn" aria-label="Mở menu chức năng">☰</button>
         <InstallButton />
       </div>
+
+      {showMenu && (
+        <div className="hamburger-menu-overlay" onClick={() => setShowMenu(false)}>
+          <div className="hamburger-menu-panel" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa</button>
+            <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước</button>
+            <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ MN</button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo</button>
+          </div>
+        </div>
+      )}
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
