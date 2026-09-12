@@ -382,28 +382,31 @@ function MapComponent() {
             }}
           />
         </div>
-        <label className="toolbar-rain-toggle">
-          <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
-          💧 Trạm mưa
-        </label>
-        <label className="toolbar-rain-toggle">
-          <input type="checkbox" checked={showMucNuoc} onChange={(e) => setShowMucNuoc(e.target.checked)} />
-          🌊 Trạm mực nước
-        </label>
-        <label className="toolbar-rain-toggle">
-          <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
-          🏞️ Mạng lưới sông
-        </label>
+        <div className="toolbar-row-checkboxes">
+          <label className="toolbar-rain-toggle">
+            <input type="checkbox" checked={showRain} onChange={(e) => setShowRain(e.target.checked)} />
+            💧 Trạm mưa
+          </label>
+          <label className="toolbar-rain-toggle">
+            <input type="checkbox" checked={showMucNuoc} onChange={(e) => setShowMucNuoc(e.target.checked)} />
+            🌊 Trạm mực nước
+          </label>
+          <label className="toolbar-rain-toggle">
+            <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
+            🏞️ Mạng lưới sông
+          </label>
+        </div>
         <InstallButton />
       </div>
 
       {showMenu && (
         <div className="hamburger-menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="hamburger-menu-panel" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa</button>
-            <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước</button>
-            <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ MN</button>
-            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo</button>
+            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo</button>
+            <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
+            <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo khí tượng</button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo Thủy văn</button>
           </div>
         </div>
       )}
