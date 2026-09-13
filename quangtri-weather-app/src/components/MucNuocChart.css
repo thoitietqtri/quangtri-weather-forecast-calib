@@ -78,6 +78,14 @@
   border: 1px solid #aaa;
 }
 
+.mucnuoc-chart-rain-note {
+  padding: 6px 18px;
+  font-size: 12px;
+  color: #90CAF9;
+  background: #0D1B2A;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
 .mucnuoc-chart-body {
   padding: 10px 12px 0;
   overflow: auto;
