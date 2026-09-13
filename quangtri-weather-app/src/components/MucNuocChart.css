@@ -10,7 +10,8 @@
 }
 
 .mucnuoc-chart-panel {
-  background: #fff;
+  background: #0D1B2A;
+  color: #fff;
   border-radius: 10px;
   max-width: 700px;
   width: 100%;
@@ -26,7 +27,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
   background: #0D1B2A;
   color: #fff;
 }
@@ -60,12 +61,13 @@
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
 }
 
 .mucnuoc-chart-controls label {
   font-weight: bold;
   font-size: 14px;
+  color: #fff;
 }
 
 .mucnuoc-chart-controls select {
@@ -79,12 +81,13 @@
 .mucnuoc-chart-body {
   padding: 10px 12px 0;
   overflow: auto;
+  background: #0D1B2A;
 }
 
 .mucnuoc-chart-empty {
   padding: 40px;
   text-align: center;
-  color: #666;
+  color: #cfd8e3;
 }
 
 .mucnuoc-chart-cuongsuat {
@@ -93,7 +96,9 @@
   gap: 4px;
   padding: 12px 18px 16px;
   font-size: 14px;
-  border-top: 1px solid #eee;
+  color: #fff;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  background: #0D1B2A;
 }
 
 @media (max-width: 768px) {

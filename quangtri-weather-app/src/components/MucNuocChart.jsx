@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import './MucNuocChart.css';
 
 function formatTimeVN(t) {
@@ -33,8 +33,30 @@ function trendText(cs) {
   return `${sign}${cs} m/h (${arrow})`;
 }
 
-// stations: [{ id, name, series: [{t, v}, ...] }, ...] — dùng chung dữ liệu
-// đã tải cho MucNuocTable, không cần gọi thêm API.
+// Vạch ngưỡng ngang trên biểu đồ — 3 vạch (BĐI/II/III) cho trạm có cấp báo
+// động chính thức, 2 vạch (bình thường/nguy hiểm) cho trạm dùng ngưỡng tự
+// quy định, không có vạch nào cho trạm chưa phân cấp (hồ chứa).
+function AlertReferenceLines({ alertInfo }) {
+  if (!alertInfo) return null;
+  if (alertInfo.type === 'official') {
+    return (
+      <>
+        <ReferenceLine y={alertInfo.bd1} stroke="#F9A825" strokeDasharray="4 4" label={{ value: 'BĐ I', position: 'insideTopLeft', fill: '#F9A825', fontSize: 10 }} />
+        <ReferenceLine y={alertInfo.bd2} stroke="#EF6C00" strokeDasharray="4 4" label={{ value: 'BĐ II', position: 'insideTopLeft', fill: '#EF6C00', fontSize: 10 }} />
+        <ReferenceLine y={alertInfo.bd3} stroke="#D32F2F" strokeDasharray="4 4" label={{ value: 'BĐ III', position: 'insideTopLeft', fill: '#D32F2F', fontSize: 10 }} />
+      </>
+    );
+  }
+  return (
+    <>
+      <ReferenceLine y={alertInfo.binhThuongMax} stroke="#EF6C00" strokeDasharray="4 4" label={{ value: 'Cảnh báo', position: 'insideTopLeft', fill: '#EF6C00', fontSize: 10 }} />
+      <ReferenceLine y={alertInfo.nguyHiemMin} stroke="#D32F2F" strokeDasharray="4 4" label={{ value: 'Nguy hiểm', position: 'insideTopLeft', fill: '#D32F2F', fontSize: 10 }} />
+    </>
+  );
+}
+
+// stations: [{ id, name, alertInfo, series: [{t, v}, ...] }, ...] — dùng
+// chung dữ liệu đã tải cho MucNuocTable, không cần gọi thêm API.
 export default function MucNuocChart({ stations, onClose }) {
   const [stationId, setStationId] = useState(stations[0]?.id || '');
   const station = stations.find((s) => s.id === stationId);
@@ -69,13 +91,14 @@ export default function MucNuocChart({ stations, onClose }) {
             <div className="mucnuoc-chart-empty">⏳ Không có dữ liệu cho trạm này</div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" angle={-45} textAnchor="end" height={60} interval="preserveStartEnd" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} label={{ value: 'm', angle: -90, position: 'insideLeft' }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#1565C0" strokeWidth={2} dot={false} />
-              </LineChart>
+              <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
+                <XAxis dataKey="time" angle={-45} textAnchor="end" height={60} interval="preserveStartEnd" tick={{ fontSize: 10, fill: '#fff' }} stroke="rgba(255,255,255,0.4)" />
+                <YAxis tick={{ fontSize: 11, fill: '#fff' }} stroke="rgba(255,255,255,0.4)" label={{ value: 'm', angle: -90, position: 'insideLeft', fill: '#fff' }} />
+                <Tooltip contentStyle={{ background: '#0D1B2A', border: '1px solid #1565C0', color: '#fff' }} />
+                <AlertReferenceLines alertInfo={station?.alertInfo} />
+                <Area type="monotone" dataKey="value" stroke="#42A5F5" strokeWidth={2} fill="#1565C0" fillOpacity={0.55} />
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
