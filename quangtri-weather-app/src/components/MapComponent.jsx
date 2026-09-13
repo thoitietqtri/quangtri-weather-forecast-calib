@@ -186,6 +186,7 @@ function MapComponent() {
   const [geoData, setGeoData] = useState(null);
   const [riverGeoData, setRiverGeoData] = useState(null);
   const [showRiver, setShowRiver] = useState(true);
+  const [showTempColor, setShowTempColor] = useState(false);
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
@@ -301,7 +302,12 @@ function MapComponent() {
 
   const geoJsonStyle = (feature) => {
     const name = feature.properties.ten || feature.properties.Ten || feature.properties.name || '';
-    return { color: '#333', weight: 1.5, fillColor: getColorByTemperature(weatherById[name]), fillOpacity: 0.65 };
+    if (!showTempColor) {
+      // Tắt màu nhiệt -> chỉ còn viền ranh giới, trong suốt hoàn toàn để
+      // thấy rõ bản đồ địa hình bên dưới.
+      return { color: '#333', weight: 1.5, fillOpacity: 0 };
+    }
+    return { color: '#333', weight: 1.5, fillColor: getColorByTemperature(weatherById[name]), fillOpacity: 0.35 };
   };
 
   // ECMWF IFS chỉ trả dự báo tối đa 15 ngày (hôm nay + 14 ngày tiếp theo),
@@ -467,6 +473,10 @@ function MapComponent() {
             <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
             🏞️ Mạng lưới sông
           </label>
+          <label className="toolbar-rain-toggle">
+            <input type="checkbox" checked={showTempColor} onChange={(e) => setShowTempColor(e.target.checked)} />
+            🌡️ Màu nhiệt độ xã
+          </label>
         </div>
         <InstallButton />
       </div>
@@ -479,7 +489,7 @@ function MapComponent() {
             <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}>📊 Biểu đồ mưa theo giờ</button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
-            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố mưa/nhiệt/gió</button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
             
           </div>
         </div>
@@ -527,7 +537,7 @@ function MapComponent() {
                 }}
               />
             )}
-            <GeoJSON data={geoData} onEachFeature={onEachFeature} style={geoJsonStyle} key={JSON.stringify(weatherById)} />
+            <GeoJSON data={geoData} onEachFeature={onEachFeature} style={geoJsonStyle} key={`${JSON.stringify(weatherById)}_${showTempColor}`} />
             {renderLabels()}
             <Marker position={[16.5, 112.0]} icon={createIslandIcon('Đặc khu Hoàng Sa - Việt Nam')} interactive={false} />
             <Marker position={[10.5, 114.5]} icon={createIslandIcon('Đặc khu Trường Sa - Việt Nam')} interactive={false} />
