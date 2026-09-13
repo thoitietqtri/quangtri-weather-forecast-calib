@@ -77,7 +77,7 @@ export default function MucNuocChart({ stations, onClose }) {
         </div>
 
         <div className="mucnuoc-chart-controls">
-          <label>Chọn trạm:</label>
+          <label>Trạm:</label>
           <select value={stationId} onChange={(e) => setStationId(e.target.value)}>
             {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
@@ -87,11 +87,11 @@ export default function MucNuocChart({ stations, onClose }) {
           {chartData.length === 0 ? (
             <div className="mucnuoc-chart-empty">⏳ Không có dữ liệu cho trạm này</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
                 <XAxis dataKey="time" angle={-45} textAnchor="end" height={60} interval="preserveStartEnd" tick={{ fontSize: 10, fill: '#fff' }} stroke="rgba(255,255,255,0.4)" />
-                <YAxis tick={{ fontSize: 11, fill: '#fff' }} stroke="rgba(255,255,255,0.4)" label={{ value: 'm', angle: -90, position: 'insideLeft', fill: '#fff' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#fff' }} stroke="rgba(255,255,255,0.4)" tickFormatter={(v) => `${v}m`} width={38} />
                 <Tooltip contentStyle={{ background: '#0D1B2A', border: '1px solid #1565C0', color: '#fff' }} />
                 {alertLines.map((line) => (
                   <ReferenceLine
