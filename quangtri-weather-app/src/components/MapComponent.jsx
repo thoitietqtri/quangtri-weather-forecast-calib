@@ -9,6 +9,8 @@ import RainTable from './RainTable';
 import ForecastTable from './ForecastTable';
 import MucNuocTable from './MucNuocTable';
 import MucNuocChart from './MucNuocChart';
+import RainHourlyTable from './RainHourlyTable';
+import RainHourlyChart from './RainHourlyChart';
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
 
@@ -195,6 +197,9 @@ function MapComponent() {
   const [showMucNuoc, setShowMucNuoc] = useState(true);
   const [showMucNuocTable, setShowMucNuocTable] = useState(false);
   const [showMucNuocChart, setShowMucNuocChart] = useState(false);
+  const [rainHourlyStations, setRainHourlyStations] = useState([]);
+  const [showRainHourlyTable, setShowRainHourlyTable] = useState(false);
+  const [showRainHourlyChart, setShowRainHourlyChart] = useState(false);
   const mapRef = useRef(null);
 
   // Đăng ký Service Worker (chỉ cache giao diện tĩnh, không đụng dữ liệu —
@@ -251,6 +256,22 @@ function MapComponent() {
     };
     loadMucNuoc();
     const timer = setInterval(loadMucNuoc, MUCNUOC_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  // Mưa theo giờ (72h qua, khớp khung mực nước): tải lần đầu rồi tự làm mới
+  // định kỳ — endpoint RIÊNG (rainfall-hourly), không đụng vào rainfall.js
+  // (bảng mưa thực đo theo thời đoạn) đang chạy tốt.
+  useEffect(() => {
+    let cancelled = false;
+    const loadRainHourly = () => {
+      fetch('/.netlify/functions/rainfall-hourly')
+        .then((r) => r.json())
+        .then((stations) => { if (!cancelled && Array.isArray(stations)) setRainHourlyStations(stations); })
+        .catch((err) => console.error('[Mưa theo giờ] Lỗi tải trạm:', err));
+    };
+    loadRainHourly();
+    const timer = setInterval(loadRainHourly, MUCNUOC_REFRESH_MS);
     return () => { cancelled = true; clearInterval(timer); };
   }, []);
 
@@ -454,6 +475,8 @@ function MapComponent() {
         <div className="hamburger-menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="hamburger-menu-panel" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo</button>
+            <button onClick={() => { setShowRainHourlyTable(true); setShowMenu(false); }}>🌧️ Mưa theo giờ</button>
+            <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}>📊 Biểu đồ mưa theo giờ</button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo thời tiết</button>
@@ -463,6 +486,8 @@ function MapComponent() {
       )}
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
+      {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
+      {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
       {showMucNuocChart && <MucNuocChart stations={mucNuocStations} onClose={() => setShowMucNuocChart(false)} />}
       {showForecastTable && (

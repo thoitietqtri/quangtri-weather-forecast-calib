@@ -1,0 +1,135 @@
+.rain-hourly-table-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.rain-hourly-table-panel {
+  background: #fff;
+  border-radius: 10px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.rain-hourly-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #0D1B2A;
+  color: #fff;
+}
+
+.rain-hourly-table-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.rain-hourly-table-close {
+  border: none;
+  background: #D32F2F;
+  color: #fff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.rain-hourly-table-close:hover {
+  background: #B71C1C;
+}
+
+.rain-hourly-table-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 18px;
+  font-size: 11px;
+  color: #fff;
+  background: #0D1B2A;
+  border-bottom: 1px solid #eee;
+}
+
+.rain-hourly-table-legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* Cuộn cả 2 chiều — ngang (nhiều trạm) và dọc (nhiều mốc giờ) */
+.rain-hourly-table-scroll {
+  overflow: auto;
+  flex: 1;
+}
+
+.rain-hourly-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.rain-hourly-table th, .rain-hourly-table td {
+  padding: 6px 10px;
+  text-align: center;
+  border: 1px solid #0d3868;
+  white-space: nowrap;
+  background: #1565C0;
+  color: #fff;
+}
+
+.rain-hourly-table thead th {
+  position: sticky;
+  top: 0;
+  background: #0D1B2A;
+  color: #fff;
+  z-index: 1;
+}
+
+.rain-hourly-table .rain-hourly-table-time-col {
+  text-align: left !important;
+  position: sticky;
+  left: 0;
+  background: #000;
+  color: #fff;
+  z-index: 1;
+  min-width: 130px;
+}
+
+.rain-hourly-table thead .rain-hourly-table-time-col {
+  z-index: 2;
+  background: #000;
+}
+
+@media (max-width: 768px) {
+  .rain-hourly-table { font-size: 11px; }
+  .rain-hourly-table th, .rain-hourly-table td { padding: 4px 6px; }
+  .rain-hourly-table-time-col { min-width: 100px; }
+
+  .rain-hourly-table-overlay { padding: 0; }
+  .rain-hourly-table-panel {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}
