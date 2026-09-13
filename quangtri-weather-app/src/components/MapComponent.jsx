@@ -474,8 +474,8 @@ function MapComponent() {
       {showMenu && (
         <div className="hamburger-menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="hamburger-menu-panel" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo</button>
-            <button onClick={() => { setShowRainHourlyTable(true); setShowMenu(false); }}>🌧️ Mưa theo giờ</button>
+            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo theo thời đoạn</button>
+            <button onClick={() => { setShowRainHourlyTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo theo giờ</button>
             <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}>📊 Biểu đồ mưa theo giờ</button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
@@ -489,7 +489,7 @@ function MapComponent() {
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
-      {showMucNuocChart && <MucNuocChart stations={mucNuocStations} onClose={() => setShowMucNuocChart(false)} />}
+      {showMucNuocChart && <MucNuocChart stations={mucNuocStations} rainStations={rainHourlyStations} onClose={() => setShowMucNuocChart(false)} />}
       {showForecastTable && (
         <ForecastTable
           xaList={featureList.map((f) => {
