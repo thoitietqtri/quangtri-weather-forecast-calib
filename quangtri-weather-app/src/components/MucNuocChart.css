@@ -87,9 +87,16 @@
 }
 
 .mucnuoc-chart-body {
-  padding: 10px 12px 0;
-  overflow: auto;
+  padding: 10px 12px 4px;
+  overflow: hidden;
   background: #0D1B2A;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.mucnuoc-chart-body > div {
+  width: 100%;
 }
 
 .mucnuoc-chart-empty {
@@ -117,5 +124,19 @@
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+  }
+  .mucnuoc-chart-controls {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  .mucnuoc-chart-controls label {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .mucnuoc-chart-cuongsuat {
+    padding: 8px 12px 10px;
+    font-size: 12px;
   }
 }
