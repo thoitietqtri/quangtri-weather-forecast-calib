@@ -186,7 +186,7 @@ function MapComponent() {
   const [geoData, setGeoData] = useState(null);
   const [riverGeoData, setRiverGeoData] = useState(null);
   const [showRiver, setShowRiver] = useState(true);
-  const [showTempColor, setShowTempColor] = useState(false);
+  const [showTempColor, setShowTempColor] = useState(true);
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
