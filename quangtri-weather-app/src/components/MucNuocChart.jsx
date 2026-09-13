@@ -57,26 +57,26 @@ function findNearestRainStation(waterStation, rainStations) {
 }
 
 // Vạch ngưỡng ngang — 3 vạch (BĐI/II/III) cho trạm có cấp báo động chính
+// Vạch ngưỡng ngang — 3 vạch (BĐI/II/III) cho trạm có cấp báo động chính
 // thức, 2 vạch (bình thường/nguy hiểm) cho trạm dùng ngưỡng tự quy định,
 // không có vạch nào cho trạm chưa phân cấp (hồ chứa). Dùng ĐÚNG màu đã
 // thống nhất trong toàn app (icon bản đồ, bảng dữ liệu) để nhất quán.
-function AlertReferenceLines({ alertInfo }) {
-  if (!alertInfo) return null;
+// LƯU Ý: trả về MẢNG cấu hình thuần (không phải JSX) — recharts KHÔNG nhận
+// diện được <ReferenceLine> nếu đặt trong 1 component tự viết bọc ngoài,
+// bắt buộc phải gọi <ReferenceLine> trực tiếp làm con của <ComposedChart>.
+function getAlertLines(alertInfo) {
+  if (!alertInfo) return [];
   if (alertInfo.type === 'official') {
-    return (
-      <>
-        <ReferenceLine yAxisId="level" y={alertInfo.bd1} stroke="#F9A825" strokeDasharray="4 4" label={{ value: 'BĐ I', position: 'insideTopLeft', fill: '#F9A825', fontSize: 10 }} />
-        <ReferenceLine yAxisId="level" y={alertInfo.bd2} stroke="#EF6C00" strokeDasharray="4 4" label={{ value: 'BĐ II', position: 'insideTopLeft', fill: '#EF6C00', fontSize: 10 }} />
-        <ReferenceLine yAxisId="level" y={alertInfo.bd3} stroke="#D32F2F" strokeDasharray="4 4" label={{ value: 'BĐ III', position: 'insideTopLeft', fill: '#D32F2F', fontSize: 10 }} />
-      </>
-    );
+    return [
+      { y: alertInfo.bd1, color: '#F9A825', label: 'BĐ I' },
+      { y: alertInfo.bd2, color: '#EF6C00', label: 'BĐ II' },
+      { y: alertInfo.bd3, color: '#D32F2F', label: 'BĐ III' },
+    ];
   }
-  return (
-    <>
-      <ReferenceLine yAxisId="level" y={alertInfo.binhThuongMax} stroke="#EF6C00" strokeDasharray="4 4" label={{ value: 'Cảnh báo', position: 'insideTopLeft', fill: '#EF6C00', fontSize: 10 }} />
-      <ReferenceLine yAxisId="level" y={alertInfo.nguyHiemMin} stroke="#D32F2F" strokeDasharray="4 4" label={{ value: 'Nguy hiểm', position: 'insideTopLeft', fill: '#D32F2F', fontSize: 10 }} />
-    </>
-  );
+  return [
+    { y: alertInfo.binhThuongMax, color: '#EF6C00', label: 'Cảnh báo' },
+    { y: alertInfo.nguyHiemMin, color: '#D32F2F', label: 'Nguy hiểm' },
+  ];
 }
 
 // stations: trạm mực nước [{ id, name, alertInfo, series: [{t, v}] }, ...]
@@ -114,6 +114,7 @@ export default function MucNuocChart({ stations, rainStations = [], onClose }) {
   const cuongSuat1h = computeCuongSuat(sorted, 1);
   const cuongSuat3h = computeCuongSuat(sorted, 3);
   const cuongSuat6h = computeCuongSuat(sorted, 6);
+  const alertLines = getAlertLines(station?.alertInfo);
 
   return (
     <div className="mucnuoc-chart-overlay" onClick={onClose}>
@@ -154,7 +155,16 @@ export default function MucNuocChart({ stations, rainStations = [], onClose }) {
                 <YAxis yAxisId="rain" orientation="right" reversed domain={[0, maxRain * 4]} tick={{ fontSize: 11, fill: '#90CAF9' }} stroke="rgba(255,255,255,0.4)" label={{ value: 'Mưa (mm)', angle: 90, position: 'insideRight', fill: '#90CAF9' }} />
                 <Tooltip contentStyle={{ background: '#0D1B2A', border: '1px solid #1565C0', color: '#fff' }} />
                 <Legend wrapperStyle={{ color: '#fff', fontSize: 12 }} />
-                <AlertReferenceLines alertInfo={station?.alertInfo} />
+                {alertLines.map((line) => (
+                  <ReferenceLine
+                    key={line.label}
+                    yAxisId="level"
+                    y={line.y}
+                    stroke={line.color}
+                    strokeDasharray="4 4"
+                    label={{ value: line.label, position: 'insideTopLeft', fill: line.color, fontSize: 10 }}
+                  />
+                ))}
                 <Bar yAxisId="rain" dataKey="rain" name="Mưa (mm)" fill="#42A5F5" barSize={12} />
                 <Area yAxisId="level" type="monotone" dataKey="level" name="Mực nước (m)" stroke="#42A5F5" strokeWidth={2} fill="#1565C0" fillOpacity={0.55} />
               </ComposedChart>
