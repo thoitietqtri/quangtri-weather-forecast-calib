@@ -97,17 +97,34 @@ function mucNuocSummary(series) {
   return { current, change24h };
 }
 
-// Mực nước không có ngưỡng chung giữa các trạm (phụ thuộc cao độ nền địa
-// hình từng sông) — nên tạm dùng 1 màu cố định cho mọi trạm, KHÔNG tô theo
-// xu hướng biến động nữa. Khi có cấp báo động riêng cho từng trạm cụ thể,
-// sẽ đổi sang tô theo đúng cấp báo động đó (mã màu #1565C0 là màu mặc định
-// tạm thời).
-function mucNuocColor(change24h) {
-  return '#1565C0';
+// Tô màu mực nước theo cấp báo động — khác hẳn cách tô mưa (mưa dùng chung
+// 1 ngưỡng cho mọi trạm; mực nước phụ thuộc cao độ nền địa hình từng sông
+// nên PHẢI so với đúng ngưỡng riêng của từng trạm):
+//   - Trạm có cấp báo động chính thức (BĐI/II/III): 4 mức — dưới BĐI (an
+//     toàn) / BĐI-BĐII (cấp 1) / BĐII-BĐIII (cấp 2) / từ BĐIII (cấp 3, cao
+//     nhất).
+//   - Trạm chỉ có ngưỡng tự quy định (bình thường/cảnh báo/nguy hiểm): 3 mức.
+//   - Trạm không phân cấp (hồ chứa, chưa có ngưỡng nào) -> màu xám trung
+//     tính, không suy diễn mức nguy hiểm khi chưa có căn cứ.
+function mucNuocColor(current, alertInfo) {
+  if (current == null) return '#9E9E9E';
+  if (!alertInfo) return '#9E9E9E'; // không phân cấp — giữ trung tính, không đoán mò
+  if (alertInfo.type === 'official') {
+    const { bd1, bd2, bd3 } = alertInfo;
+    if (current >= bd3) return '#D32F2F'; // cấp III — đỏ
+    if (current >= bd2) return '#EF6C00'; // cấp II — cam
+    if (current >= bd1) return '#F9A825'; // cấp I — vàng
+    return '#1565C0'; // dưới cấp I — an toàn
+  }
+  // type === 'custom'
+  const { binhThuongMax, nguyHiemMin } = alertInfo;
+  if (current >= nguyHiemMin) return '#D32F2F'; // nguy hiểm — đỏ
+  if (current >= binhThuongMax) return '#EF6C00'; // cảnh báo — cam
+  return '#1565C0'; // bình thường
 }
 
-function mucNuocIcon(name, current, change24h) {
-  const color = mucNuocColor(change24h);
+function mucNuocIcon(name, current, alertInfo) {
+  const color = mucNuocColor(current, alertInfo);
   return L.divIcon({
     className: 'mucnuoc-marker',
     html: `<div class="mucnuoc-marker__wrap">
@@ -121,6 +138,23 @@ function mucNuocIcon(name, current, change24h) {
 
 // Trạm mực nước cập nhật lại sau mỗi khoảng thời gian này (mili-giây).
 const MUCNUOC_REFRESH_MS = 15 * 60 * 1000;
+
+// Mô tả cấp báo động bằng chữ cho popup — không chỉ dựa vào màu icon.
+function mucNuocAlertText(current, alertInfo) {
+  if (!alertInfo) return '⚪ Trạm hồ chứa — chưa phân cấp báo động';
+  if (current == null) return '';
+  if (alertInfo.type === 'official') {
+    const { bd1, bd2, bd3 } = alertInfo;
+    if (current >= bd3) return `🔴 Trên báo động III (${bd3}m)`;
+    if (current >= bd2) return `🟠 Trên báo động II (${bd2}m)`;
+    if (current >= bd1) return `🟡 Trên báo động I (${bd1}m)`;
+    return `🔵 Dưới báo động I (${bd1}m)`;
+  }
+  const { binhThuongMax, nguyHiemMin } = alertInfo;
+  if (current >= nguyHiemMin) return `🔴 Mức nguy hiểm (≥${nguyHiemMin}m)`;
+  if (current >= binhThuongMax) return `🟠 Mức cảnh báo (${binhThuongMax}-${nguyHiemMin}m)`;
+  return `🔵 Mức bình thường (<${binhThuongMax}m)`;
+}
 
 function MapComponent() {
   const [selectedFeature, setSelectedFeature] = useState(null);
@@ -467,11 +501,12 @@ function MapComponent() {
             {showMucNuoc && mucNuocStations.map((s) => {
               const { current, change24h } = mucNuocSummary(s.series);
               return (
-                <Marker key={s.id} position={[s.coords.lat, s.coords.lng]} icon={mucNuocIcon(s.name, current, change24h)}>
+                <Marker key={s.id} position={[s.coords.lat, s.coords.lng]} icon={mucNuocIcon(s.name, current, s.alertInfo)}>
                   <Popup>
                     <b>{s.name}</b><br />
                     Hiện tại: {current ?? '—'}m<br />
-                    Thay đổi 24h: {change24h == null ? '—' : (change24h > 0 ? `+${change24h}` : change24h)}m
+                    Thay đổi 24h: {change24h == null ? '—' : (change24h > 0 ? `+${change24h}` : change24h)}m<br />
+                    {mucNuocAlertText(current, s.alertInfo)}
                   </Popup>
                 </Marker>
               );

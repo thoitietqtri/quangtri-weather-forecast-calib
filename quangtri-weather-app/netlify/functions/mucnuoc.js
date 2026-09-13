@@ -60,6 +60,59 @@ const VRAIN_MUCNUOC_COORDS = {
   'Đầu mối HCN Ái Tử': { lat: 16.76475, lng: 107.129889, displayName: 'Hồ Ái Tử' },
 };
 
+// ============ Cấp báo động / ngưỡng nguy hiểm — key dùng ĐÚNG mã trạm
+// (matram cho KTTV) hoặc đúng tên đối chiếu VRain (giữ nguyên như trong
+// VRAIN_MUCNUOC_COORDS, KHÔNG dùng displayName). Trạm không có entry ở đây
+// = trạm hồ chứa, không phân cấp (theo đúng yêu cầu anh Hudson).
+//   type 'official' — có quyết định cấp báo động chính thức (BĐI/II/III).
+//   type 'custom'   — chưa có quyết định, dùng ngưỡng tự quy định thực tế.
+const ALERT_THRESHOLDS = {
+  // --- KTTV (key = matram) — CÓ cấp báo động chính thức ---
+  '555300': { type: 'official', bd1: 7, bd2: 13, bd3: 16, luLichSu: 18.45 },        // Đông Tâm
+  '555400': { type: 'official', bd1: 3, bd2: 5, bd3: 6.5, luLichSu: 9.47 },         // Mai Hóa
+  '555800': { type: 'official', bd1: 1.1, bd2: 1.3, bd3: 1.5, luLichSu: 2.79 },     // Tân Mỹ
+  '557600': { type: 'official', bd1: 1, bd2: 1.5, bd3: 2, luLichSu: 2.17 },         // Đồng Hới
+  '555500': { type: 'official', bd1: 8, bd2: 11, bd3: 13, luLichSu: 17.71 },        // Kiến Giang
+  '556100': { type: 'official', bd1: 1.2, bd2: 2.2, bd3: 2.7, luLichSu: 4.88 },     // Lệ Thủy
+  '555700': { type: 'official', bd1: 3.5, bd2: 5, bd3: 6.5, luLichSu: 8.98 },       // Phong Nha
+  '554900': { type: 'official', bd1: 5, bd2: 8, bd3: 11, luLichSu: 17.41 },         // Gia Vòng
+  '555000': { type: 'official', bd1: 1, bd2: 2, bd3: 2.5, luLichSu: 2.96 },         // Hiền Lương
+  '555200': { type: 'official', bd1: 21, bd2: 22.5, bd3: 23.5, luLichSu: 25.62 },   // Đầu Mầu
+  '554700': { type: 'official', bd1: 2, bd2: 3, bd3: 4, luLichSu: 5.36 },           // Đông Hà
+  '554500': { type: 'official', bd1: 29.5, bd2: 31.5, bd3: 33.5, luLichSu: 41.42 }, // Dakrong
+  '554600': { type: 'official', bd1: 3, bd2: 4.5, bd3: 6, luLichSu: 7.4 },          // Thạch Hãn
+  '554800': { type: 'official', bd1: 1, bd2: 1.5, bd3: 2, luLichSu: 2.72 },         // Cửa Việt
+  '555100': { type: 'official', bd1: 2.5, bd2: 4, bd3: 5.3, luLichSu: 6.81 },       // Mỹ Chánh
+
+  // --- KTTV (key = matram) — ngưỡng tự quy định ---
+  '555900': { type: 'custom', binhThuongMax: 15.0, nguyHiemMin: 18.0, luLichSu: 31.27 }, // Tân Lâm
+  '559200': { type: 'custom', binhThuongMax: 21.0, nguyHiemMin: 23.0, luLichSu: 30.46 }, // Trường Sơn
+
+  // --- VRain (key = tên đối chiếu gốc) — CÓ cấp báo động chính thức ---
+  'Trạm Thủy văn Roòn': { type: 'official', bd1: 1.3, bd2: 2.1, bd3: 2.7 },
+  'Trạm Thủy văn Rào Nan': { type: 'official', bd1: 28.5, bd2: 31, bd3: 33 },
+  'Quảng Thanh': { type: 'official', bd1: 1.2, bd2: 2.1, bd3: 2.7, luLichSu: 3.83 },
+  'Trạm Thủy văn Lý Hòa': { type: 'official', bd1: 1.2, bd2: 2, bd3: 2.6 },
+  'Hàm Ninh': { type: 'official', bd1: 1.2, bd2: 2, bd3: 2.6, luLichSu: 4.48 },
+  'Cầu Bến Quan': { type: 'official', bd1: 4, bd2: 5.5, bd3: 6.5, luLichSu: 11.02 },
+  'Hải Tân': { type: 'official', bd1: 1.8, bd2: 2.8, bd3: 3.4, luLichSu: 3.93 },
+
+  // --- VRain (key = tên đối chiếu gốc) — ngưỡng tự quy định ---
+  'Trạm thủy văn Liên Trạch': { type: 'custom', binhThuongMax: 1.5, nguyHiemMin: 2.5, luLichSu: 6.31 },
+  'Cam Tuyền': { type: 'custom', binhThuongMax: 5.0, nguyHiemMin: 6.0 },
+  'Vĩnh Phước': { type: 'custom', binhThuongMax: 3.0, nguyHiemMin: 4.0 },
+  'Triệu Độ': { type: 'custom', binhThuongMax: 1.0, nguyHiemMin: 1.6 },
+  'Triệu Đại': { type: 'custom', binhThuongMax: 1.1, nguyHiemMin: 1.7 },
+  'Cây Da': { type: 'custom', binhThuongMax: 1.2, nguyHiemMin: 1.8 },
+};
+
+// Thứ tự ưu tiên hiển thị: có cấp báo động chính thức -> có ngưỡng tự quy
+// định -> không phân cấp (hồ chứa), theo đúng yêu cầu anh Hudson.
+function alertPriority(alertInfo) {
+  if (!alertInfo) return 2;
+  return alertInfo.type === 'official' ? 0 : 1;
+}
+
 const VRAIN_MN_BASE_URL = 'https://mucnuoc.vrain.vn';
 const VRAIN_MN_LOGIN_URL = `${VRAIN_MN_BASE_URL}/api/vwater/public/v1/login`;
 const VRAIN_MN_DETAILS_URL = `${VRAIN_MN_BASE_URL}/api/vwater/private/v1/stats/details`;
@@ -121,7 +174,7 @@ async function fetchKttvStation(station) {
       .map((r) => ({ t: new Date(`${r.Thoigian_SL}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: parseFloat(r.Solieu) }))
       .filter((r) => Number.isFinite(r.v))
       .sort((a, b) => a.t - b.t);
-    return buildStationResult(station.name, station.lat, station.lng, `kttv_${station.matram}`, series);
+    return buildStationResult(station.name, station.lat, station.lng, `kttv_${station.matram}`, series, ALERT_THRESHOLDS[station.matram] || null);
   } catch (e) {
     return null;
   }
@@ -238,7 +291,7 @@ async function fetchVrainMnAll() {
     if (series.length === 0) continue;
     // Đối chiếu dùng matchName (tên gốc VRain) — hiển thị dùng displayName
     // (tên ngắn gọn) nếu có, không có thì fallback về tên gốc.
-    results.push(buildStationResult(coords.displayName || matchName, coords.lat, coords.lng, `vrain_mn_${matchName}`, series));
+    results.push(buildStationResult(coords.displayName || matchName, coords.lat, coords.lng, `vrain_mn_${matchName}`, series, ALERT_THRESHOLDS[matchName] || null));
   }
   return results;
 }
@@ -247,10 +300,10 @@ async function fetchVrainMnAll() {
 // gọn thành mức thay đổi) — để hiển thị dạng bảng hàng=giờ, cột=trạm giống
 // đúng kiểu bảng Python cũ (mucnuoc_wide.xlsx). Mức thay đổi cho icon bản đồ
 // sẽ tự tính ở phía frontend từ chính chuỗi này.
-function buildStationResult(name, lat, lng, id, series) {
+function buildStationResult(name, lat, lng, id, series, alertInfo = null) {
   if (series.length === 0) return null;
   return {
-    id, name, coords: { lat, lng },
+    id, name, coords: { lat, lng }, alertInfo,
     series: series.map((p) => ({ t: p.t, v: Math.round(p.v * 100) / 100 })),
   };
 }
@@ -265,7 +318,8 @@ export default async () => {
       console.error('[mucnuoc] Lỗi VRain mực nước:', e.message);
     }
 
-    const stations = [...kttvResults.filter(Boolean), ...vrainResults.filter(Boolean)];
+    const stations = [...kttvResults.filter(Boolean), ...vrainResults.filter(Boolean)]
+      .sort((a, b) => alertPriority(a.alertInfo) - alertPriority(b.alertInfo));
     return new Response(JSON.stringify(stations), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
