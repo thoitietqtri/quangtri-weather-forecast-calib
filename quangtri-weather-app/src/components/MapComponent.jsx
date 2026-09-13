@@ -479,7 +479,7 @@ function MapComponent() {
             <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}>📊 Biểu đồ mưa theo giờ</button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
-            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo thời tiết</button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố mưa/nhiệt/gió</button>
             
           </div>
         </div>
