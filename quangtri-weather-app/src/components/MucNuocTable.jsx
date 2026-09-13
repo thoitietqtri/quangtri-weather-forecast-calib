@@ -7,7 +7,27 @@ function formatTime(t) {
   return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 }
 
-// stations: [{ id, name, series: [{t, v}, ...] }, ...]
+// Tô màu từng ô theo ĐÚNG ngưỡng riêng của trạm đó (không phải 1 ngưỡng
+// chung như mưa) — khớp đúng logic đã dùng cho icon bản đồ trong
+// MapComponent.jsx (cố tình lặp lại ở đây thay vì import chung, theo đúng
+// khuôn mẫu sẵn có của dự án — mỗi file tự chứa logic màu riêng của nó).
+function alertColor(value, alertInfo) {
+  if (value == null) return { bg: '#1565C0', fg: '#fff' };
+  if (!alertInfo) return { bg: '#9E9E9E', fg: '#fff' }; // không phân cấp (hồ chứa)
+  if (alertInfo.type === 'official') {
+    const { bd1, bd2, bd3 } = alertInfo;
+    if (value >= bd3) return { bg: '#D32F2F', fg: '#fff' };
+    if (value >= bd2) return { bg: '#EF6C00', fg: '#fff' };
+    if (value >= bd1) return { bg: '#F9A825', fg: '#000' };
+    return { bg: '#1565C0', fg: '#fff' };
+  }
+  const { binhThuongMax, nguyHiemMin } = alertInfo;
+  if (value >= nguyHiemMin) return { bg: '#D32F2F', fg: '#fff' };
+  if (value >= binhThuongMax) return { bg: '#EF6C00', fg: '#fff' };
+  return { bg: '#1565C0', fg: '#fff' };
+}
+
+// stations: [{ id, name, alertInfo, series: [{t, v}, ...] }, ...]
 // Bảng dạng hàng=giờ (thời gian), cột=trạm — giống bảng Python cũ
 // (mucnuoc_wide.xlsx), nền navy cho khung/tiêu đề, có thanh trượt ngang+dọc.
 export default function MucNuocTable({ stations, onClose }) {
@@ -29,6 +49,13 @@ export default function MucNuocTable({ stations, onClose }) {
           <h3>🌊 Mực nước thực đo theo giờ (m)</h3>
           <button className="mucnuoc-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
+        <div className="mucnuoc-table-legend">
+          <span><span className="dot" style={{ background: '#1565C0' }} />An toàn/bình thường</span>
+          <span><span className="dot" style={{ background: '#F9A825' }} />Trên BĐ I</span>
+          <span><span className="dot" style={{ background: '#EF6C00' }} />Trên BĐ II / cảnh báo</span>
+          <span><span className="dot" style={{ background: '#D32F2F' }} />Trên BĐ III / nguy hiểm</span>
+          <span><span className="dot" style={{ background: '#9E9E9E' }} />Chưa phân cấp (hồ chứa)</span>
+        </div>
         <div className="mucnuoc-table-scroll">
           <table className="mucnuoc-table">
             <thead>
@@ -47,7 +74,12 @@ export default function MucNuocTable({ stations, onClose }) {
                   <td className="mucnuoc-table-time-col">{formatTime(t)}</td>
                   {stations.map((s) => {
                     const v = rows[`${t}|${s.id}`];
-                    return <td key={s.id}>{v == null ? '—' : v}</td>;
+                    const { bg, fg } = alertColor(v, s.alertInfo);
+                    return (
+                      <td key={s.id} style={{ background: bg, color: fg }}>
+                        {v == null ? '—' : v}
+                      </td>
+                    );
                   })}
                 </tr>
               ))}

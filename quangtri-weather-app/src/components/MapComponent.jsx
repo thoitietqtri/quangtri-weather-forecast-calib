@@ -139,21 +139,38 @@ function mucNuocIcon(name, current, alertInfo) {
 // Trạm mực nước cập nhật lại sau mỗi khoảng thời gian này (mili-giây).
 const MUCNUOC_REFRESH_MS = 15 * 60 * 1000;
 
-// Mô tả cấp báo động bằng chữ cho popup — không chỉ dựa vào màu icon.
+// Mô tả cấp báo động cho popup — hiện rõ VƯỢT/DƯỚI ngưỡng bao nhiêu mét,
+// không chỉ lặp lại giá trị ngưỡng. Thêm dòng so sánh với lũ lịch sử nếu
+// trạm có số liệu này.
 function mucNuocAlertText(current, alertInfo) {
-  if (!alertInfo) return '⚪ Trạm hồ chứa — chưa phân cấp báo động';
-  if (current == null) return '';
+  if (!alertInfo) return <>⚪ Trạm hồ chứa — chưa phân cấp báo động</>;
+  if (current == null) return null;
+
+  let mainLine;
   if (alertInfo.type === 'official') {
     const { bd1, bd2, bd3 } = alertInfo;
-    if (current >= bd3) return `🔴 Trên báo động III (${bd3}m)`;
-    if (current >= bd2) return `🟠 Trên báo động II (${bd2}m)`;
-    if (current >= bd1) return `🟡 Trên báo động I (${bd1}m)`;
-    return `🔵 Dưới báo động I (${bd1}m)`;
+    if (current >= bd3) mainLine = `🔴 Trên báo động III: +${(current - bd3).toFixed(2)}m`;
+    else if (current >= bd2) mainLine = `🟠 Trên báo động II: +${(current - bd2).toFixed(2)}m`;
+    else if (current >= bd1) mainLine = `🟡 Trên báo động I: +${(current - bd1).toFixed(2)}m`;
+    else mainLine = `🔵 Dưới báo động I: -${(bd1 - current).toFixed(2)}m`;
+  } else {
+    const { binhThuongMax, nguyHiemMin } = alertInfo;
+    if (current >= nguyHiemMin) mainLine = `🔴 Trên mức nguy hiểm: +${(current - nguyHiemMin).toFixed(2)}m`;
+    else if (current >= binhThuongMax) mainLine = `🟠 Mức cảnh báo: +${(current - binhThuongMax).toFixed(2)}m so với ngưỡng bình thường`;
+    else mainLine = `🔵 Dưới mức bình thường: -${(binhThuongMax - current).toFixed(2)}m`;
   }
-  const { binhThuongMax, nguyHiemMin } = alertInfo;
-  if (current >= nguyHiemMin) return `🔴 Mức nguy hiểm (≥${nguyHiemMin}m)`;
-  if (current >= binhThuongMax) return `🟠 Mức cảnh báo (${binhThuongMax}-${nguyHiemMin}m)`;
-  return `🔵 Mức bình thường (<${binhThuongMax}m)`;
+
+  const luLichSu = alertInfo.luLichSu;
+  const luLichSuLine = luLichSu != null
+    ? `📏 So với lũ lịch sử (${luLichSu}m): ${(current - luLichSu) >= 0 ? '+' : ''}${(current - luLichSu).toFixed(2)}m`
+    : null;
+
+  return (
+    <>
+      {mainLine}
+      {luLichSuLine && <><br />{luLichSuLine}</>}
+    </>
+  );
 }
 
 function MapComponent() {

@@ -55,6 +55,26 @@
   background: #B71C1C;
 }
 
+.mucnuoc-table-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 18px;
+  font-size: 11px;
+  color: #fff;
+  background: #0D1B2A;
+  border-bottom: 1px solid #eee;
+}
+
+.mucnuoc-table-legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
 /* Cuộn cả 2 chiều — ngang (nhiều trạm) và dọc (nhiều mốc giờ) */
 .mucnuoc-table-scroll {
   overflow: auto;
