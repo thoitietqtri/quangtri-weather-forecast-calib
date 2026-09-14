@@ -48,9 +48,15 @@ async function fetchKttvSeries(station, tinhtong = '1') {
     const res = await fetchWithTimeout(url);
     if (!res.ok) return [];
     const js = await res.json();
-    if (!Array.isArray(js)) return [];
+    if (!Array.isArray(js) || js.length === 0) return [];
+    // Tên trường trả về KHÔNG đồng nhất chữ hoa/thường giữa các bảng khác
+    // nhau của KTTV (mực nước: "Solieu", mưa: "SoLieu") — tìm không phân
+    // biệt hoa/thường để chắc chắn đọc đúng bất kể bảng nào.
+    const sampleKeys = Object.keys(js[0]).reduce((acc, k) => ({ ...acc, [k.toLowerCase()]: k }), {});
+    const valKey = sampleKeys['solieu'] || 'Solieu';
+    const timeKey = sampleKeys['thoigian_sl'] || 'Thoigian_SL';
     return js
-      .map((r) => ({ t: new Date(`${r.Thoigian_SL}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: parseFloat(r.Solieu) }))
+      .map((r) => ({ t: new Date(`${r[timeKey]}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: parseFloat(r[valKey]) }))
       .filter((r) => Number.isFinite(r.v))
       .sort((a, b) => a.t - b.t);
   } catch {
@@ -70,16 +76,28 @@ function findValueAt(series, targetT, toleranceMs = 40 * 60 * 1000) {
 // Tìm đỉnh lũ GẦN NHẤT đã được "xác nhận" — mực nước đã giảm/đi ngang liên
 // tục ít nhất 3 giờ sau đỉnh (tránh báo nhầm lúc lũ còn đang lên, mới tạm
 // chững lại).
+// Tìm đỉnh lũ GẦN NHẤT đã được "xác nhận" — PHẢI là giá trị LỚN NHẤT trong
+// toàn bộ chuỗi (không phải đỉnh cục bộ nhỏ lẻ, tránh nhầm 1 dao động tạm
+// thời giữa lúc lũ đang lên thành "đỉnh đã qua"), và có ít nhất 3 giờ liên
+// tiếp SAU đó đều KHÔNG vượt qua giá trị này (xác nhận nước đã thực sự qua
+// đỉnh, đang xuống).
 function findConfirmedPeak(series) {
-  if (series.length < 30) return null;
-  for (let i = series.length - 4; i >= 3; i--) {
-    const isLocalMax = series[i].v >= series[i - 1].v && series[i].v >= series[i - 2].v && series[i].v >= series[i - 3].v;
-    const confirmedDecline = series[i + 1].v <= series[i].v && series[i + 2].v <= series[i].v && series[i + 3].v <= series[i].v;
-    if (isLocalMax && confirmedDecline) {
-      return series[i];
-    }
+  if (series.length < 10) return null;
+
+  let maxIdx = 0;
+  for (let i = 1; i < series.length; i++) {
+    if (series[i].v > series[maxIdx].v) maxIdx = i;
   }
-  return null;
+
+  // Đỉnh còn quá gần "hiện tại" (chưa đủ 3 giờ dữ liệu sau nó để xác nhận)
+  // -> lũ có thể vẫn đang lên, CHƯA xác nhận được đỉnh, không báo vội.
+  if (maxIdx > series.length - 4) return null;
+
+  for (let k = 1; k <= 3; k++) {
+    if (series[maxIdx + k].v > series[maxIdx].v) return null;
+  }
+
+  return series[maxIdx];
 }
 
 export default async () => {
