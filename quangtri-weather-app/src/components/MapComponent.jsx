@@ -11,6 +11,7 @@ import MucNuocTable from './MucNuocTable';
 import MucNuocChart from './MucNuocChart';
 import RainHourlyTable from './RainHourlyTable';
 import RainHourlyChart from './RainHourlyChart';
+import MaiHoaForecast from './MaiHoaForecast';
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
 
@@ -187,6 +188,7 @@ function MapComponent() {
   const [riverGeoData, setRiverGeoData] = useState(null);
   const [showRiver, setShowRiver] = useState(true);
   const [showTempColor, setShowTempColor] = useState(true);
+  const [showMaiHoaForecast, setShowMaiHoaForecast] = useState(false);
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
@@ -490,12 +492,14 @@ function MapComponent() {
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
+            <button onClick={() => { setShowMaiHoaForecast(true); setShowMenu(false); }}>🔮 Dự báo đỉnh lũ Mai Hóa</button>
             
           </div>
         </div>
       )}
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
+      {showMaiHoaForecast && <MaiHoaForecast onClose={() => setShowMaiHoaForecast(false)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
