@@ -39,7 +39,6 @@ export default function RainTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#2E7D32' }} />&gt;25–50mm</span>
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
-          <span style={{ fontStyle: 'italic' }}>Tên nghiêng = trạm VRain</span>
         </div>
         <div className="rain-table-scroll">
           <table className="rain-table">
