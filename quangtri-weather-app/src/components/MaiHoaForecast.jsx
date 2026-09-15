@@ -34,7 +34,18 @@ export default function MaiHoaForecast({ onClose }) {
           {data && !data.available && (
             <div className="maihoa-forecast-empty">
               ℹ️ {data.reason}
-              <p className="maihoa-forecast-hint">Dự báo chỉ xuất hiện khi Đồng Tâm vừa đạt đỉnh lũ được xác nhận (đã bắt đầu giảm ổn định).</p>
+              {data.dongtamCurrentValue != null && (
+                <div className="maihoa-forecast-context">
+                  <div className="maihoa-forecast-row"><span>Đồng Tâm hiện tại:</span><b>{data.dongtamCurrentValue}m</b></div>
+                  {data.rainLast6h != null && (
+                    <div className="maihoa-forecast-row"><span>Mưa 6h gần nhất / 6h trước đó:</span><b>{data.rainLast6h}mm / {data.rainPrev6h}mm</b></div>
+                  )}
+                  {data.forecastNext24h != null && (
+                    <div className="maihoa-forecast-row"><span>Mưa dự báo ECMWF 12h / 24h tới:</span><b>{data.forecastNext12h}mm / {data.forecastNext24h}mm</b></div>
+                  )}
+                </div>
+              )}
+              <p className="maihoa-forecast-hint">Dự báo chỉ xuất hiện khi Đồng Tâm đã vượt báo động I, đạt đỉnh, VÀ mưa (thực đo + dự báo ECMWF) đều xác nhận không còn tăng thêm.</p>
             </div>
           )}
 
@@ -55,6 +66,7 @@ export default function MaiHoaForecast({ onClose }) {
                 <div className="maihoa-forecast-row"><span>Đỉnh Đồng Tâm:</span><b>{data.dongtamPeakValue}m</b></div>
                 <div className="maihoa-forecast-row"><span>Mưa lưu vực 48h trước đỉnh:</span><b>{data.rain48h}mm</b></div>
                 <div className="maihoa-forecast-row"><span>Tốc độ lên Đồng Tâm (24h trước đỉnh):</span><b>{data.riseRate24h}m/h</b></div>
+                <div className="maihoa-forecast-row"><span>Mưa dự báo ECMWF 12h / 24h tới:</span><b>{data.forecastNext12h}mm / {data.forecastNext24h}mm</b></div>
               </div>
 
               <div className="maihoa-forecast-note">

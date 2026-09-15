@@ -77,6 +77,11 @@
   margin-top: 10px;
 }
 
+.maihoa-forecast-context {
+  margin-top: 14px;
+  text-align: left;
+}
+
 .maihoa-forecast-main {
   text-align: center;
   padding: 12px 0 20px;

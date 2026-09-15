@@ -18,16 +18,16 @@ function rainColor(mm) {
 }
 
 // stations: [{ id, name, series: [{t, v}, ...] }, ...]
-// Bảng dạng hàng=giờ, cột=trạm — giống hệt bố cục MucNuocTable, nhưng đây
-// là mưa THEO TỪNG GIỜ (không cộng dồn cửa sổ như Bảng mưa thực đo cũ).
+// Bảng dạng hàng=TRẠM, cột=GIỜ — giống đúng bố cục bảng "Mưa thực đo theo
+// thời đoạn" đã có (trạm cố định bên trái, cuộn ngang xem các mốc giờ).
 export default function RainHourlyTable({ stations, onClose }) {
   const { times, rows } = useMemo(() => {
     const timeSet = new Set();
     for (const s of stations) for (const p of s.series) timeSet.add(p.t);
-    const sortedTimes = [...timeSet].sort((a, b) => b - a); // mới nhất lên đầu
+    const sortedTimes = [...timeSet].sort((a, b) => b - a); // mới nhất bên trái
 
     const valueMap = {};
-    for (const s of stations) for (const p of s.series) valueMap[`${p.t}|${s.id}`] = p.v;
+    for (const s of stations) for (const p of s.series) valueMap[`${s.id}|${p.t}`] = p.v;
 
     return { times: sortedTimes, rows: valueMap };
   }, [stations]);
@@ -44,28 +44,27 @@ export default function RainHourlyTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#2E7D32' }} />&gt;25–50mm</span>
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
+          <span style={{ fontStyle: 'italic' }}>Tên nghiêng = trạm VRain</span>
         </div>
         <div className="rain-hourly-table-scroll">
           <table className="rain-hourly-table">
             <thead>
               <tr>
-                <th className="rain-hourly-table-time-col">Thời gian</th>
-                {stations.map((s) => (
-                  <th key={s.id} style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
-                    {s.name}
-                  </th>
-                ))}
+                <th className="rain-hourly-table-station-col">Trạm</th>
+                {times.map((t) => <th key={t}>{formatTime(t)}</th>)}
               </tr>
             </thead>
             <tbody>
-              {times.map((t) => (
-                <tr key={t}>
-                  <td className="rain-hourly-table-time-col">{formatTime(t)}</td>
-                  {stations.map((s) => {
-                    const v = rows[`${t}|${s.id}`];
+              {stations.map((s) => (
+                <tr key={s.id}>
+                  <td className="rain-hourly-table-station-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
+                    {s.name}
+                  </td>
+                  {times.map((t) => {
+                    const v = rows[`${s.id}|${t}`];
                     const { bg, fg } = rainColor(v);
                     return (
-                      <td key={s.id} style={{ background: bg, color: fg }}>
+                      <td key={t} style={{ background: bg, color: fg }}>
                         {v == null ? '—' : v}
                       </td>
                     );
