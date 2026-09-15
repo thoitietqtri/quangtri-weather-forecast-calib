@@ -28,16 +28,16 @@ function alertColor(value, alertInfo) {
 }
 
 // stations: [{ id, name, alertInfo, series: [{t, v}, ...] }, ...]
-// Bảng dạng hàng=giờ (thời gian), cột=trạm — giống bảng Python cũ
-// (mucnuoc_wide.xlsx), nền navy cho khung/tiêu đề, có thanh trượt ngang+dọc.
+// Bảng dạng hàng=TRẠM, cột=GIỜ — giống đúng bố cục "Mưa thực đo theo thời
+// đoạn" / "Mưa theo giờ" đã có, trạm cố định bên trái khi cuộn ngang.
 export default function MucNuocTable({ stations, onClose }) {
   const { times, rows } = useMemo(() => {
     const timeSet = new Set();
     for (const s of stations) for (const p of s.series) timeSet.add(p.t);
-    const sortedTimes = [...timeSet].sort((a, b) => b - a); // mới nhất lên đầu
+    const sortedTimes = [...timeSet].sort((a, b) => b - a); // mới nhất bên trái
 
-    const valueMap = {}; // `${t}|${stationId}` -> value
-    for (const s of stations) for (const p of s.series) valueMap[`${p.t}|${s.id}`] = p.v;
+    const valueMap = {}; // `${stationId}|${t}` -> value
+    for (const s of stations) for (const p of s.series) valueMap[`${s.id}|${p.t}`] = p.v;
 
     return { times: sortedTimes, rows: valueMap };
   }, [stations]);
@@ -60,23 +60,21 @@ export default function MucNuocTable({ stations, onClose }) {
           <table className="mucnuoc-table">
             <thead>
               <tr>
-                <th className="mucnuoc-table-time-col">Thời gian</th>
-                {stations.map((s) => (
-                  <th key={s.id} style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
-                    {s.name}
-                  </th>
-                ))}
+                <th className="mucnuoc-table-time-col">Trạm</th>
+                {times.map((t) => <th key={t}>{formatTime(t)}</th>)}
               </tr>
             </thead>
             <tbody>
-              {times.map((t) => (
-                <tr key={t}>
-                  <td className="mucnuoc-table-time-col">{formatTime(t)}</td>
-                  {stations.map((s) => {
-                    const v = rows[`${t}|${s.id}`];
+              {stations.map((s) => (
+                <tr key={s.id}>
+                  <td className="mucnuoc-table-time-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
+                    {s.name}
+                  </td>
+                  {times.map((t) => {
+                    const v = rows[`${s.id}|${t}`];
                     const { bg, fg } = alertColor(v, s.alertInfo);
                     return (
-                      <td key={s.id} style={{ background: bg, color: fg }}>
+                      <td key={t} style={{ background: bg, color: fg }}>
                         {v == null ? '—' : v}
                       </td>
                     );
