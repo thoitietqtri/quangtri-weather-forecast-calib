@@ -27,7 +27,7 @@
 const KTTV_BASE_URL = 'http://203.209.181.170:2018/API_TTB/JSON/solieu.php';
 const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOURS_BACK = 168; // 7 ngày
-const BDI_DONGTAM_CM = 700; // Báo động I Đồng Tâm = 7m = 700cm
+const BDI_DONGTAM_M = 7; // Báo động I Đồng Tâm = 7m (dữ liệu API trả về ĐÃ LÀ MÉT, không phải cm)
 
 const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', tinhtong: '0' };
 const RAIN_STATIONS = [
@@ -128,19 +128,19 @@ export default async () => {
     // Bước 1: tìm đợt lũ GẦN NHẤT (liên tục >= BĐI = 7m)
     let episodeStart = -1;
     for (let i = dongtamSeries.length - 1; i >= 0; i--) {
-      if (dongtamSeries[i].v >= BDI_DONGTAM_CM) {
+      if (dongtamSeries[i].v >= BDI_DONGTAM_M) {
         episodeStart = i;
       } else if (episodeStart !== -1) {
         break; // đã lùi ra khỏi đợt lũ gần nhất
       }
     }
     if (episodeStart === -1) {
-      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_CM / 100}m) trong 7 ngày qua — chưa có lũ` });
+      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) trong 7 ngày qua — chưa có lũ` });
     }
     // Tìm điểm kết thúc đợt lũ (lùi từ cuối chuỗi về, hoặc hết chuỗi nếu vẫn đang lũ)
     let episodeEnd = dongtamSeries.length - 1;
     for (let i = episodeStart; i < dongtamSeries.length; i++) {
-      if (dongtamSeries[i].v < BDI_DONGTAM_CM) { episodeEnd = i - 1; break; }
+      if (dongtamSeries[i].v < BDI_DONGTAM_M) { episodeEnd = i - 1; break; }
     }
 
     // Bước 2: đỉnh khả nghi = điểm cao nhất trong đợt lũ này
@@ -152,11 +152,11 @@ export default async () => {
 
     // Điều kiện (a): ít nhất 3 giờ sau đỉnh không vượt qua
     if (peakIdx > dongtamSeries.length - 4) {
-      return json({ available: false, reason: 'Đồng Tâm đang trên báo động I nhưng chưa đủ dữ liệu xác nhận đã qua đỉnh (lũ có thể vẫn đang lên)', dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v) / 100 });
+      return json({ available: false, reason: 'Đồng Tâm đang trên báo động I nhưng chưa đủ dữ liệu xác nhận đã qua đỉnh (lũ có thể vẫn đang lên)', dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v * 100) / 100 });
     }
     for (let k = 1; k <= 3; k++) {
       if (dongtamSeries[peakIdx + k].v > peak.v) {
-        return json({ available: false, reason: 'Đồng Tâm đang trên báo động I nhưng chưa xác nhận đã qua đỉnh (mực nước vừa vượt lại)', dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v) / 100 });
+        return json({ available: false, reason: 'Đồng Tâm đang trên báo động I nhưng chưa xác nhận đã qua đỉnh (mực nước vừa vượt lại)', dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v * 100) / 100 });
       }
     }
 
@@ -189,7 +189,7 @@ export default async () => {
       return json({
         available: false,
         reason: `Đồng Tâm có dấu hiệu tạm ngưng lên nhưng CHƯA đủ điều kiện xác nhận đỉnh: ${reasons.join('; ')}`,
-        dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v) / 100,
+        dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v * 100) / 100,
         rainLast6h: Math.round(rainLast6h * 10) / 10,
         rainPrev6h: Math.round(rainPrev6h * 10) / 10,
         forecastNext12h: forecastRain.next12h,
@@ -200,9 +200,9 @@ export default async () => {
     // Đủ điều kiện — chốt đỉnh thật, tính các biến đầu vào phương trình
     let rain48h = sumRainInWindow(rainByHour, peak.t, 48);
     const val24hBefore = findValueAt(dongtamSeries, peak.t - 24 * 3600000);
-    const riseRate24h = val24hBefore != null ? (peak.v - val24hBefore) / 100 / 24 : 0;
+    const riseRate24h = val24hBefore != null ? (peak.v - val24hBefore) / 24 : 0;
 
-    const dongtamPeakM = Math.round(peak.v) / 100;
+    const dongtamPeakM = peak.v;
     const predicted = MODEL.intercept
       + MODEL.dongtam * dongtamPeakM
       + MODEL.rain48h * rain48h
