@@ -22,7 +22,10 @@ export default function MaiHoaForecast({ onClose }) {
     <div className="maihoa-forecast-overlay" onClick={onClose}>
       <div className="maihoa-forecast-panel" onClick={(e) => e.stopPropagation()}>
         <div className="maihoa-forecast-header">
-          <h3>🔮 Dự báo đỉnh lũ Mai Hóa</h3>
+          <div>
+            <h3>🔮 Dự báo mực nước Mai Hóa</h3>
+            <div className="maihoa-forecast-wip">(Chức năng này chưa xong, đang trong giai đoạn xây dựng)</div>
+          </div>
           <button className="maihoa-forecast-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
 
@@ -35,17 +38,8 @@ export default function MaiHoaForecast({ onClose }) {
             <div className="maihoa-forecast-empty">
               ℹ️ {data.reason}
               {data.dongtamCurrentValue != null && (
-                <div className="maihoa-forecast-context">
-                  <div className="maihoa-forecast-row"><span>Đồng Tâm hiện tại:</span><b>{data.dongtamCurrentValue}m</b></div>
-                  {data.rainLast6h != null && (
-                    <div className="maihoa-forecast-row"><span>Mưa 6h gần nhất / 6h trước đó:</span><b>{data.rainLast6h}mm / {data.rainPrev6h}mm</b></div>
-                  )}
-                  {data.forecastNext24h != null && (
-                    <div className="maihoa-forecast-row"><span>Mưa dự báo ECMWF 12h / 24h tới:</span><b>{data.forecastNext12h}mm / {data.forecastNext24h}mm</b></div>
-                  )}
-                </div>
+                <div className="maihoa-forecast-row" style={{ marginTop: 10 }}><span>Đồng Tâm hiện tại:</span><b>{data.dongtamCurrentValue}m</b></div>
               )}
-              <p className="maihoa-forecast-hint">Dự báo chỉ xuất hiện khi Đồng Tâm đã vượt báo động I, đạt đỉnh, VÀ mưa (thực đo + dự báo ECMWF) đều xác nhận không còn tăng thêm.</p>
             </div>
           )}
 
@@ -53,24 +47,34 @@ export default function MaiHoaForecast({ onClose }) {
             <>
               <div className="maihoa-forecast-main">
                 <div className="maihoa-forecast-predicted">
-                  <span className="label">Đỉnh Mai Hóa dự báo</span>
+                  <span className="label">Mai Hóa ước tính (theo mực nước Đồng Tâm hiện tại)</span>
                   <span className="value">{data.predictedMaiHoaPeak}m</span>
                 </div>
                 <div className="maihoa-forecast-since">
-                  Dựa vào đỉnh Đồng Tâm lúc {formatTimeVN(data.dongtamPeakTime)} ({data.hoursSincePeak}h trước)
+                  Đồng Tâm hiện tại ({formatTimeVN(data.dongtamCurrentTime)}): <b>{data.dongtamCurrentValue}m</b>
                 </div>
+                <div className="maihoa-forecast-warn">⚠️ Đây là ước tính theo mực nước Đồng Tâm NGAY LÚC NÀY — nếu lũ Đồng Tâm còn tiếp tục lên, con số này cũng sẽ còn tăng theo, chưa phải giá trị đỉnh cuối cùng.</div>
+              </div>
+
+              <div className="maihoa-forecast-trend">
+                <div className="maihoa-forecast-trend-row">
+                  <b>Đồng Tâm ({data.dongtamCurrentValue}m):</b> {data.dongtamTrend.icon} {data.dongtamTrend.verdict}
+                </div>
+                {data.maihoaTrend && (
+                  <div className="maihoa-forecast-trend-row">
+                    <b>Mai Hóa ({data.maihoaCurrentValue}m):</b> {data.maihoaTrend.icon} {data.maihoaTrend.verdict}
+                  </div>
+                )}
               </div>
 
               <div className="maihoa-forecast-inputs">
-                <h4>Số liệu đầu vào:</h4>
-                <div className="maihoa-forecast-row"><span>Đỉnh Đồng Tâm:</span><b>{data.dongtamPeakValue}m</b></div>
-                <div className="maihoa-forecast-row"><span>Mưa lưu vực 48h trước đỉnh:</span><b>{data.rain48h}mm</b></div>
-                <div className="maihoa-forecast-row"><span>Tốc độ lên Đồng Tâm (24h trước đỉnh):</span><b>{data.riseRate24h}m/h</b></div>
-                <div className="maihoa-forecast-row"><span>Mưa dự báo ECMWF 12h / 24h tới:</span><b>{data.forecastNext12h}mm / {data.forecastNext24h}mm</b></div>
+                <h4>Số liệu khác:</h4>
+                <div className="maihoa-forecast-row"><span>Mưa lưu vực 48h qua:</span><b>{data.rain48h}mm</b></div>
+                <div className="maihoa-forecast-row"><span>Tốc độ lên Đồng Tâm (24h qua):</span><b>{data.riseRate24h}m/h</b></div>
               </div>
 
               <div className="maihoa-forecast-note">
-                📊 Mô hình xây dựng từ 144 trận lũ lịch sử (2006-2025), kiểm định chéo R²=0.83, sai số trung bình ~0.6m.
+                📊 Phương trình xây dựng từ 144 trận lũ lịch sử (2006-2025), kiểm định chéo R²=0.83, sai số trung bình ~0.6m (tính trên đỉnh lũ thật, không phải mực nước hiện hành).
                 Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>

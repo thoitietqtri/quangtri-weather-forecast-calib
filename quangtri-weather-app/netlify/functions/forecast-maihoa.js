@@ -1,35 +1,25 @@
 // netlify/functions/forecast-maihoa.js
 //
-// Dự báo đỉnh lũ trạm Mai Hóa dựa vào đỉnh lũ trạm Đồng Tâm — theo đúng
-// phương pháp anh Hudson dùng thực tế (tương quan đỉnh-đỉnh), xây dựng từ
-// 144 trận lũ lịch sử mưa-sinh-lũ (2006-2025), kiểm định chéo R²=0.833.
+// Dự báo mực nước Mai Hóa dựa vào mực nước HIỆN HÀNH của Đồng Tâm (coi mực
+// nước hiện tại là "đỉnh" — có thể còn tăng thêm nếu lũ vẫn đang lên) — theo
+// đúng cách đơn giản hoá anh Hudson chốt ngày 15/09/2026.
 //
-// Phương trình:
-//   Đỉnh Mai Hóa (m) = -1.463 + 0.5713×(Đỉnh Đồng Tâm)
-//                       + 0.0014×(Mưa lưu vực 48h trước đỉnh, mm)
-//                       - 2.0315×(Tốc độ lên Đồng Tâm 24h trước đỉnh, m/h)
+// Phương trình (xây từ 144 trận lũ lịch sử 2006-2025, kiểm định chéo R²=0.833):
+//   Đỉnh Mai Hóa (m) = -1.463 + 0.5713×(Đồng Tâm hiện tại)
+//                       + 0.0014×(Mưa lưu vực 48h qua) - 2.0315×(Tốc độ lên 24h qua)
 //
-// LOGIC XÁC ĐỊNH "ĐÃ CÓ LŨ" VÀ "ĐÃ QUA ĐỈNH" (theo đúng yêu cầu 15/09):
-//   1. CHỈ coi là đang có lũ khi Đồng Tâm đã vượt BĐI (7m). Dưới ngưỡng này
-//      không xét, tránh báo nhầm dao động nhỏ bình thường thành "đỉnh lũ".
-//   2. Trong đợt lũ gần nhất (liên tục >= BĐI), lấy điểm cao nhất làm "đỉnh
-//      khả nghi" — CHƯA chốt ngay.
-//   3. Chỉ CHỐT là đỉnh thật khi ĐỦ CẢ 3 điều kiện:
-//      a. Mực nước đã không vượt qua đỉnh khả nghi trong ít nhất 3 giờ liên
-//         tiếp gần nhất (dấu hiệu cơ bản đã qua đỉnh).
-//      b. Mưa thực đo lưu vực đang giảm dần (tổng 6h gần nhất < tổng 6h
-//         trước đó).
-//      c. Mưa DỰ BÁO ECMWF lưu vực (trung bình 4 trạm) cho 24h tới < 50mm
-//         HOẶC 12h tới < 25mm (không còn đợt mưa lớn mới sắp tới).
-//   Nếu thiếu bất kỳ điều kiện nào -> CHƯA chốt đỉnh, không đưa ra dự báo
-//   (tránh báo sớm khi lũ có thể còn tiếp tục lên).
+// KHÁC BẢN TRƯỚC: KHÔNG còn chờ "xác nhận đỉnh" (bỏ hết điều kiện 3h/mưa
+// giảm/ECMWF thấp) — chỉ cần đang trên BĐI là tính và hiện luôn, kèm nhận
+// định xu thế tăng/giảm dựa vào mưa từng thời đoạn (1h/3h/6h/12h) — cả thực
+// đo 24h qua lẫn dự báo ECMWF 24h tới — để dự báo viên tự đánh giá thêm.
 
 const KTTV_BASE_URL = 'http://203.209.181.170:2018/API_TTB/JSON/solieu.php';
 const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
-const HOURS_BACK = 168; // 7 ngày
-const BDI_DONGTAM_M = 7; // Báo động I Đồng Tâm = 7m (dữ liệu API trả về ĐÃ LÀ MÉT, không phải cm)
+const HOURS_BACK = 168;
+const BDI_DONGTAM_M = 7; // Báo động I Đồng Tâm = 7m (dữ liệu API trả về ĐÃ LÀ MÉT)
 
 const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', tinhtong: '0' };
+const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', tinhtong: '0' };
 const RAIN_STATIONS = [
   { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969 },  // Minh Hóa
   { matram: '557500', ten_table: 'mua_oday_khituong', lat: 17.8833, lng: 106.017 }, // Tuyên Hóa
@@ -38,6 +28,7 @@ const RAIN_STATIONS = [
 ];
 
 const MODEL = { intercept: -1.463, dongtam: 0.5713, rain48h: 0.0014, riseRate24h: -2.0315 };
+const WINDOWS_H = [1, 3, 6, 12];
 
 function vnNow() {
   return new Date(Date.now() + 7 * 3600 * 1000);
@@ -92,8 +83,9 @@ function sumRainInWindow(rainByHour, endT, hours) {
   return sum;
 }
 
-// Mưa dự báo ECMWF (Open-Meteo) — trung bình 4 trạm, tổng 12h và 24h tới.
-async function fetchForecastRain() {
+// Mưa dự báo ECMWF (Open-Meteo, trung bình 4 trạm) — trả về mảng giờ tương
+// lai để tự cộng dồn theo từng thời đoạn.
+async function fetchForecastRainHourly() {
   const results = await Promise.all(RAIN_STATIONS.map(async (s) => {
     try {
       const url = `${OPENMETEO_FORECAST_URL}?latitude=${s.lat}&longitude=${s.lng}`
@@ -107,60 +99,54 @@ async function fetchForecastRain() {
     }
   }));
   const valid = results.filter(Boolean);
-  if (valid.length === 0) return { next12h: null, next24h: null };
+  if (valid.length === 0) return null;
   const hoursCount = Math.min(...valid.map((v) => v.length));
-  let sum12 = 0, sum24 = 0;
-  for (let h = 0; h < Math.min(24, hoursCount); h++) {
-    const avgHour = valid.reduce((a, v) => a + (v[h] || 0), 0) / valid.length;
-    if (h < 12) sum12 += avgHour;
-    sum24 += avgHour;
+  const avgHourly = [];
+  for (let h = 0; h < hoursCount; h++) {
+    avgHourly.push(valid.reduce((a, v) => a + (v[h] || 0), 0) / valid.length);
   }
-  return { next12h: Math.round(sum12 * 10) / 10, next24h: Math.round(sum24 * 10) / 10 };
+  return avgHourly; // avgHourly[0] = giờ hiện tại trở đi (theo giờ VN, do đã truyền timezone)
+}
+
+function sumWindow(arr, hours) {
+  if (!arr) return null;
+  return Math.round(arr.slice(0, hours).reduce((a, b) => a + b, 0) * 10) / 10;
+}
+
+// Nhận định xu thế mực nước 24h TỚI cho 1 trạm — kết hợp tốc độ lên/xuống 6h
+// gần đây của CHÍNH trạm đó với mưa lưu vực (thực đo gần đây + dự báo ECMWF
+// sắp tới, dùng ngầm bên trong, không hiển thị số thô ra giao diện).
+function assessStationTrend(riseRate6h, obsRain6h, fcRain12h, fcRain24h) {
+  const rising = riseRate6h > 0.02; // đang lên rõ rệt (>2cm/h)
+  const falling = riseRate6h < -0.02; // đang xuống rõ rệt
+  const moreRainComing = (fcRain24h != null && fcRain24h >= 30) || (fcRain12h != null && fcRain12h >= 20);
+  const rainEnding = (fcRain24h != null && fcRain24h < 15) && (fcRain12h != null && fcRain12h < 10);
+
+  if (rising && moreRainComing) return { verdict: 'Khả năng TIẾP TỤC TĂNG mạnh', icon: '📈' };
+  if (rising && rainEnding) return { verdict: 'Đang lên nhưng mưa sắp dứt — khả năng sắp đạt đỉnh, tốc độ lên chậm dần', icon: '↗️' };
+  if (rising) return { verdict: 'Đang lên, xu thế mưa chưa rõ ràng — cần theo dõi thêm', icon: '↗️' };
+  if (falling && moreRainComing) return { verdict: 'Đang xuống nhưng dự báo còn mưa lớn — có thể LÊN TRỞ LẠI', icon: '⚠️' };
+  if (falling) return { verdict: 'Khả năng TIẾP TỤC GIẢM', icon: '📉' };
+  // gần như đi ngang
+  if (moreRainComing) return { verdict: 'Đang ổn định nhưng dự báo còn mưa lớn — có thể bắt đầu lên', icon: '⚠️' };
+  return { verdict: 'Tương đối ổn định', icon: '➡️' };
 }
 
 export default async () => {
   try {
-    const dongtamSeries = await fetchKttvSeries(DONGTAM, '0');
+    const [dongtamSeries, maihoaSeries] = await Promise.all([
+      fetchKttvSeries(DONGTAM, '0'),
+      fetchKttvSeries(MAIHOA, '0'),
+    ]);
     if (dongtamSeries.length === 0) {
       return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm' });
     }
-
-    // Bước 1: tìm đợt lũ GẦN NHẤT (liên tục >= BĐI = 7m)
-    let episodeStart = -1;
-    for (let i = dongtamSeries.length - 1; i >= 0; i--) {
-      if (dongtamSeries[i].v >= BDI_DONGTAM_M) {
-        episodeStart = i;
-      } else if (episodeStart !== -1) {
-        break; // đã lùi ra khỏi đợt lũ gần nhất
-      }
-    }
-    if (episodeStart === -1) {
-      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) trong 7 ngày qua — chưa có lũ` });
-    }
-    // Tìm điểm kết thúc đợt lũ (lùi từ cuối chuỗi về, hoặc hết chuỗi nếu vẫn đang lũ)
-    let episodeEnd = dongtamSeries.length - 1;
-    for (let i = episodeStart; i < dongtamSeries.length; i++) {
-      if (dongtamSeries[i].v < BDI_DONGTAM_M) { episodeEnd = i - 1; break; }
+    const current = dongtamSeries[dongtamSeries.length - 1];
+    if (current.v < BDI_DONGTAM_M) {
+      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100 });
     }
 
-    // Bước 2: đỉnh khả nghi = điểm cao nhất trong đợt lũ này
-    let peakIdx = episodeStart;
-    for (let i = episodeStart; i <= episodeEnd; i++) {
-      if (dongtamSeries[i].v > dongtamSeries[peakIdx].v) peakIdx = i;
-    }
-    const peak = dongtamSeries[peakIdx];
-
-    // Điều kiện (a): ít nhất 3 giờ sau đỉnh không vượt qua
-    if (peakIdx > dongtamSeries.length - 4) {
-      return json({ available: false, reason: 'Đồng Tâm đang trên báo động I nhưng chưa đủ dữ liệu xác nhận đã qua đỉnh (lũ có thể vẫn đang lên)', dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v * 100) / 100 });
-    }
-    for (let k = 1; k <= 3; k++) {
-      if (dongtamSeries[peakIdx + k].v > peak.v) {
-        return json({ available: false, reason: 'Đồng Tâm đang trên báo động I nhưng chưa xác nhận đã qua đỉnh (mực nước vừa vượt lại)', dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v * 100) / 100 });
-      }
-    }
-
-    // Chuẩn bị dữ liệu mưa thực đo (4 trạm, gộp theo giờ)
+    // Mưa thực đo (4 trạm, gộp theo giờ)
     const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchKttvSeries(s, '1')));
     const rainByHour = new Map();
     for (const series of rainSeriesArr) {
@@ -171,53 +157,47 @@ export default async () => {
       }
     }
 
-    // Điều kiện (b): mưa thực đo đang giảm dần (tổng 6h gần nhất < 6h trước đó)
-    const nowT = Date.now();
-    const rainLast6h = sumRainInWindow(rainByHour, nowT, 6);
-    const rainPrev6h = sumRainInWindow(rainByHour, nowT - 6 * 3600000, 6);
-    const rainDeclining = rainLast6h < rainPrev6h;
+    const obsRain6h = sumRainInWindow(rainByHour, current.t, 6);
+    const forecastHourly = await fetchForecastRainHourly();
+    const fcRain12h = sumWindow(forecastHourly, 12);
+    const fcRain24h = sumWindow(forecastHourly, 24);
 
-    // Điều kiện (c): mưa dự báo ECMWF đủ thấp
-    const forecastRain = await fetchForecastRain();
-    const forecastLow = (forecastRain.next24h != null && forecastRain.next24h < 50)
-      || (forecastRain.next12h != null && forecastRain.next12h < 25);
+    // Coi mực nước HIỆN TẠI là "đỉnh" (có thể còn tăng thêm)
+    const rain48h = sumRainInWindow(rainByHour, current.t, 48);
+    const val24hBefore = findValueAt(dongtamSeries, current.t - 24 * 3600000);
+    const riseRate24h = val24hBefore != null ? (current.v - val24hBefore) / 24 : 0;
 
-    if (!rainDeclining || !forecastLow) {
-      const reasons = [];
-      if (!rainDeclining) reasons.push(`mưa thực đo 6h gần nhất (${Math.round(rainLast6h * 10) / 10}mm) chưa giảm so với 6h trước (${Math.round(rainPrev6h * 10) / 10}mm)`);
-      if (!forecastLow) reasons.push(`mưa dự báo ECMWF còn lớn (24h tới: ${forecastRain.next24h ?? '—'}mm, 12h tới: ${forecastRain.next12h ?? '—'}mm)`);
-      return json({
-        available: false,
-        reason: `Đồng Tâm có dấu hiệu tạm ngưng lên nhưng CHƯA đủ điều kiện xác nhận đỉnh: ${reasons.join('; ')}`,
-        dongtamCurrentValue: Math.round(dongtamSeries[dongtamSeries.length - 1].v * 100) / 100,
-        rainLast6h: Math.round(rainLast6h * 10) / 10,
-        rainPrev6h: Math.round(rainPrev6h * 10) / 10,
-        forecastNext12h: forecastRain.next12h,
-        forecastNext24h: forecastRain.next24h,
-      });
-    }
-
-    // Đủ điều kiện — chốt đỉnh thật, tính các biến đầu vào phương trình
-    let rain48h = sumRainInWindow(rainByHour, peak.t, 48);
-    const val24hBefore = findValueAt(dongtamSeries, peak.t - 24 * 3600000);
-    const riseRate24h = val24hBefore != null ? (peak.v - val24hBefore) / 24 : 0;
-
-    const dongtamPeakM = peak.v;
     const predicted = MODEL.intercept
-      + MODEL.dongtam * dongtamPeakM
+      + MODEL.dongtam * current.v
       + MODEL.rain48h * rain48h
       + MODEL.riseRate24h * riseRate24h;
 
+    // Xu thế 24h tới — tính RIÊNG cho từng trạm, dựa vào tốc độ lên/xuống 6h
+    // gần đây của CHÍNH trạm đó + mưa lưu vực (thực đo + dự báo, dùng ngầm).
+    const dongtamRise6h = findValueAt(dongtamSeries, current.t - 6 * 3600000) != null
+      ? (current.v - findValueAt(dongtamSeries, current.t - 6 * 3600000)) / 6 : 0;
+    const dongtamTrend = assessStationTrend(dongtamRise6h, obsRain6h, fcRain12h, fcRain24h);
+
+    let maihoaTrend = null;
+    let maihoaCurrentValue = null;
+    if (maihoaSeries.length > 0) {
+      const mhCurrent = maihoaSeries[maihoaSeries.length - 1];
+      maihoaCurrentValue = Math.round(mhCurrent.v * 100) / 100;
+      const mh6hAgo = findValueAt(maihoaSeries, mhCurrent.t - 6 * 3600000);
+      const maihoaRise6h = mh6hAgo != null ? (mhCurrent.v - mh6hAgo) / 6 : 0;
+      maihoaTrend = assessStationTrend(maihoaRise6h, obsRain6h, fcRain12h, fcRain24h);
+    }
+
     return json({
       available: true,
-      dongtamPeakTime: peak.t,
-      dongtamPeakValue: Math.round(dongtamPeakM * 100) / 100,
+      dongtamCurrentTime: current.t,
+      dongtamCurrentValue: Math.round(current.v * 100) / 100,
       rain48h: Math.round(rain48h * 10) / 10,
       riseRate24h: Math.round(riseRate24h * 1000) / 1000,
       predictedMaiHoaPeak: Math.round(predicted * 100) / 100,
-      hoursSincePeak: Math.round(((Date.now() - peak.t) / 3600000) * 10) / 10,
-      forecastNext12h: forecastRain.next12h,
-      forecastNext24h: forecastRain.next24h,
+      dongtamTrend,
+      maihoaTrend,
+      maihoaCurrentValue,
     });
   } catch (e) {
     return json({ available: false, reason: `Lỗi: ${e.message}` });

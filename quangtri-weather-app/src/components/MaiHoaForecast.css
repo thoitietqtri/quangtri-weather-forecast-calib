@@ -30,6 +30,51 @@
   border-bottom: 1px solid rgba(255,255,255,0.15);
 }
 
+
+.maihoa-forecast-wip {
+  color: #FF5252;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 3px;
+}
+
+.maihoa-forecast-warn {
+  font-size: 11px;
+  color: #F9A825;
+  margin-top: 10px;
+  padding: 0 10px;
+}
+
+.maihoa-forecast-trend {
+  font-size: 14px;
+  padding: 10px;
+  margin-bottom: 16px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+}
+
+.maihoa-forecast-trend-row {
+  padding: 4px 0;
+}
+
+.maihoa-forecast-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.maihoa-forecast-table th, .maihoa-forecast-table td {
+  padding: 6px 8px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.maihoa-forecast-table td:first-child {
+  text-align: left;
+  color: #90CAF9;
+}
+
 .maihoa-forecast-header h3 {
   margin: 0;
   font-size: 16px;
