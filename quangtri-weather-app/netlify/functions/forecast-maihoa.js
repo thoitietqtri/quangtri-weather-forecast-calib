@@ -25,6 +25,7 @@ const RAIN_STATIONS = [
   { matram: '557500', ten_table: 'mua_oday_khituong', lat: 17.8833, lng: 106.017 }, // Tuyên Hóa
   { matram: '091402', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967 },      // Thượng Hóa
   { matram: '091401', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8 },        // Hóa Thanh
+  { matram: '555900', ten_table: 'mua_oday_thuyvan', lat: 17.9128, lng: 106.234 }, // Tân Lâm (nhánh Rào Trổ, phụ lưu cấp 1 — cùng đổ về Mai Hóa)
 ];
 
 const MODEL = { intercept: -1.463, dongtam: 0.5713, rain48h: 0.0014, riseRate24h: -2.0315 };
@@ -83,7 +84,7 @@ function sumRainInWindow(rainByHour, endT, hours) {
   return sum;
 }
 
-// Mưa dự báo ECMWF (Open-Meteo, trung bình 4 trạm) — trả về mảng giờ tương
+// Mưa dự báo ECMWF (Open-Meteo, trung bình 5 trạm) — trả về mảng giờ tương
 // lai để tự cộng dồn theo từng thời đoạn.
 async function fetchForecastRainHourly() {
   const results = await Promise.all(RAIN_STATIONS.map(async (s) => {
@@ -146,7 +147,7 @@ export default async () => {
       return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100 });
     }
 
-    // Mưa thực đo (4 trạm, gộp theo giờ)
+    // Mưa thực đo (5 trạm, gộp theo giờ)
     const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchKttvSeries(s, '1')));
     const rainByHour = new Map();
     for (const series of rainSeriesArr) {
