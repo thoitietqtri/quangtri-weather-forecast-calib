@@ -8,24 +8,27 @@
 //   Đỉnh Mai Hóa (m) = -1.463 + 0.5713×(Đồng Tâm hiện tại)
 //                       + 0.0014×(Mưa lưu vực 48h qua) - 2.0315×(Tốc độ lên 24h qua)
 //
-// KHÁC BẢN TRƯỚC: KHÔNG còn chờ "xác nhận đỉnh" (bỏ hết điều kiện 3h/mưa
-// giảm/ECMWF thấp) — chỉ cần đang trên BĐI là tính và hiện luôn, kèm nhận
-// định xu thế tăng/giảm dựa vào mưa từng thời đoạn (1h/3h/6h/12h) — cả thực
-// đo 24h qua lẫn dự báo ECMWF 24h tới — để dự báo viên tự đánh giá thêm.
+// CHẾ ĐỘ KIỂM NGHIỆM (tham số ?asof=...): với mốc thời gian TRƯỚC 2026 (API
+// KTTV sống không còn dữ liệu), tự động đọc từ bảng lịch sử "lichsu_maihoa"
+// trong Neon (đã nạp sẵn 2006-2025) thay vì gọi API sống.
+
+import { neon } from '@neondatabase/serverless';
 
 const KTTV_BASE_URL = 'http://203.209.181.170:2018/API_TTB/JSON/solieu.php';
 const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOURS_BACK = 168;
 const BDI_DONGTAM_M = 7; // Báo động I Đồng Tâm = 7m (dữ liệu API trả về ĐÃ LÀ MÉT)
+const NEON_CUTOFF = new Date('2026-01-01T00:00:00Z'); // dữ liệu Neon phủ đến hết 2025; từ mốc này trở đi dùng API sống
 
-const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', tinhtong: '0' };
-const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', tinhtong: '0' };
+
+const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', tinhtong: '0', neonColumn: 'dongtam_m' };
+const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', tinhtong: '0', neonColumn: 'maihoa_m' };
 const RAIN_STATIONS = [
-  { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969 },  // Minh Hóa
-  { matram: '557500', ten_table: 'mua_oday_khituong', lat: 17.8833, lng: 106.017 }, // Tuyên Hóa
-  { matram: '091402', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967 },      // Thượng Hóa
-  { matram: '091401', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8 },        // Hóa Thanh
-  { matram: '555900', ten_table: 'mua_oday_thuyvan', lat: 17.9128, lng: 106.234 }, // Tân Lâm (nhánh Rào Trổ, phụ lưu cấp 1 — cùng đổ về Mai Hóa)
+  { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969, neonColumn: 'minh_hoa_mm' },  // Minh Hóa
+  { matram: '557500', ten_table: 'mua_oday_khituong', lat: 17.8833, lng: 106.017, neonColumn: 'tuyen_hoa_mm' }, // Tuyên Hóa
+  { matram: '091402', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967, neonColumn: 'thuong_hoa_mm' },      // Thượng Hóa
+  { matram: '091401', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8, neonColumn: 'hoa_thanh_mm' },        // Hóa Thanh
+  { matram: '555900', ten_table: 'mua_oday_thuyvan', lat: 17.9128, lng: 106.234, neonColumn: 'tanlam_mm' }, // Tân Lâm (nhánh Rào Trổ, phụ lưu cấp 1 — cùng đổ về Mai Hóa)
 ];
 
 const MODEL = { intercept: -1.463, dongtam: 0.5713, rain48h: 0.0014, riseRate24h: -2.0315 };
@@ -41,6 +44,46 @@ function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+// ============ Neon (dữ liệu lịch sử 2006-2025) ============
+let sqlClient = null;
+function getSql() {
+  if (!sqlClient) sqlClient = neon(process.env.DATABASE_URL);
+  return sqlClient;
+}
+
+async function fetchNeonSeries(neonColumn, start, end) {
+  try {
+    const sql = getSql();
+    // Cột động (neonColumn) không thể tham số hoá trực tiếp trong template
+    // của thư viện neon — nhưng vì tên cột LUÔN lấy từ danh sách cố định
+    // trong code (không phải từ người dùng nhập), nên an toàn để ghép chuỗi.
+    const rows = await sql(
+      `SELECT thoi_gian, ${neonColumn} AS v FROM lichsu_maihoa WHERE thoi_gian >= $1 AND thoi_gian <= $2 AND ${neonColumn} IS NOT NULL ORDER BY thoi_gian`,
+      [fmtVN(start), fmtVN(end)],
+    );
+    return rows
+      .map((r) => ({ t: new Date(`${r.thoi_gian}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: Number(r.v) }))
+      .filter((r) => Number.isFinite(r.v))
+      .sort((a, b) => a.t - b.t);
+  } catch (e) {
+    console.error(`[Neon] Lỗi đọc cột ${neonColumn}:`, e.message);
+    return [];
+  }
+}
+
+// Hàm "thông minh" — mốc thời gian TRƯỚC 2026 -> đọc Neon (lịch sử);
+// từ 2026 trở đi -> gọi API KTTV sống (như bình thường). Giữ nguyên cách
+// gọi y hệt fetchKttvSeries ở mọi nơi trong code, chỉ thêm điều kiện chọn
+// nguồn dữ liệu.
+async function fetchSeriesSmart(station, tinhtong, refNow) {
+  const end = refNow || vnNow();
+  if (refNow && refNow < NEON_CUTOFF && station.neonColumn) {
+    const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
+    return fetchNeonSeries(station.neonColumn, start, end);
+  }
+  return fetchKttvSeries(station, tinhtong, refNow);
 }
 
 async function fetchKttvSeries(station, tinhtong = '1', refNow = null) {
@@ -157,21 +200,22 @@ export default async (request) => {
         backtestMode = true;
       }
     }
+    const dataSource = backtestMode ? (refNow < NEON_CUTOFF ? 'Neon (lịch sử 2006-2025)' : 'API KTTV sống') : 'API KTTV sống';
 
     const [dongtamSeries, maihoaSeries] = await Promise.all([
-      fetchKttvSeries(DONGTAM, '0', refNow),
-      fetchKttvSeries(MAIHOA, '0', refNow),
+      fetchSeriesSmart(DONGTAM, '0', refNow),
+      fetchSeriesSmart(MAIHOA, '0', refNow),
     ]);
     if (dongtamSeries.length === 0) {
       return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm', backtestMode });
     }
     const current = dongtamSeries[dongtamSeries.length - 1];
     if (current.v < BDI_DONGTAM_M) {
-      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100, backtestMode });
+      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100, backtestMode, dataSource });
     }
 
     // Mưa thực đo (5 trạm, gộp theo giờ)
-    const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchKttvSeries(s, '1', refNow)));
+    const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchSeriesSmart(s, '1', refNow)));
     const rainByHour = new Map();
     for (const series of rainSeriesArr) {
       for (const p of series) {
@@ -222,6 +266,7 @@ export default async (request) => {
     return json({
       available: true,
       backtestMode,
+      dataSource,
       asof: asofParam || null,
       dongtamCurrentTime: current.t,
       dongtamCurrentValue: Math.round(current.v * 100) / 100,
