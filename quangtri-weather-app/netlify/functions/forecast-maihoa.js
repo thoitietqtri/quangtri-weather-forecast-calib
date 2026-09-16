@@ -43,8 +43,8 @@ function fetchWithTimeout(url, timeoutMs = 8000) {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
-async function fetchKttvSeries(station, tinhtong = '1') {
-  const end = vnNow();
+async function fetchKttvSeries(station, tinhtong = '1', refNow = null) {
+  const end = refNow || vnNow();
   const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
   const url = `${KTTV_BASE_URL}?matram=${station.matram}&ten_table=${station.ten_table}&sophut=60&tinhtong=${tinhtong}`
     + `&thoigianbd='${fmtVN(start)}'&thoigiankt='${fmtVN(end)}'`;
@@ -133,22 +133,45 @@ function assessStationTrend(riseRate6h, obsRain6h, fcRain12h, fcRain24h) {
   return { verdict: 'Tương đối ổn định', icon: '➡️' };
 }
 
-export default async () => {
+export default async (request) => {
   try {
+    // Tham số "asof" (tùy chọn) — CHỈ dùng để kiểm nghiệm lại quá khứ, giả
+    // lập "bây giờ" là 1 mốc thời gian đã qua (ví dụ đúng lúc sông Gianh có
+    // lũ), xem hệ thống lúc đó sẽ hiện dự báo gì. Ví dụ:
+    //   /.netlify/functions/forecast-maihoa?asof=2026-09-14%2005:00:00
+    // Bỏ trống tham số này -> chạy đúng như bình thường (dùng giờ hiện tại
+    // thật). Lưu ý: ở chế độ kiểm nghiệm, KHÔNG có mưa dự báo ECMWF của quá
+    // khứ (mô hình dự báo không lưu lại lịch sử) — phần đó sẽ bỏ qua, chỉ
+    // đánh giá theo đúng số liệu thực đo tại mốc đó.
+    const url = new URL(request.url);
+    const asofParam = url.searchParams.get('asof');
+    let refNow = null;
+    let backtestMode = false;
+    if (asofParam) {
+      // Coi chuỗi nhập vào (VD "2026-09-14 05:00:00") là giờ VN — parse
+      // thẳng thành UTC bằng cách thêm hậu tố Z, đúng khớp quy ước nội bộ
+      // vnNow() đang dùng (đọc field UTC ra đúng số giờ VN theo nghĩa đen).
+      const parsed = new Date(asofParam.trim().replace(' ', 'T') + 'Z');
+      if (!Number.isNaN(parsed.getTime())) {
+        refNow = parsed;
+        backtestMode = true;
+      }
+    }
+
     const [dongtamSeries, maihoaSeries] = await Promise.all([
-      fetchKttvSeries(DONGTAM, '0'),
-      fetchKttvSeries(MAIHOA, '0'),
+      fetchKttvSeries(DONGTAM, '0', refNow),
+      fetchKttvSeries(MAIHOA, '0', refNow),
     ]);
     if (dongtamSeries.length === 0) {
-      return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm' });
+      return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm', backtestMode });
     }
     const current = dongtamSeries[dongtamSeries.length - 1];
     if (current.v < BDI_DONGTAM_M) {
-      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100 });
+      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100, backtestMode });
     }
 
     // Mưa thực đo (5 trạm, gộp theo giờ)
-    const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchKttvSeries(s, '1')));
+    const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchKttvSeries(s, '1', refNow)));
     const rainByHour = new Map();
     for (const series of rainSeriesArr) {
       for (const p of series) {
@@ -159,11 +182,18 @@ export default async () => {
     }
 
     const obsRain6h = sumRainInWindow(rainByHour, current.t, 6);
-    const forecastHourly = await fetchForecastRainHourly();
-    const fcRain12h = sumWindow(forecastHourly, 12);
-    const fcRain24h = sumWindow(forecastHourly, 24);
 
-    // Coi mực nước HIỆN TẠI là "đỉnh" (có thể còn tăng thêm)
+    // Mưa dự báo ECMWF — CHỈ có ý nghĩa ở chế độ chạy thật (không có "dự báo
+    // của quá khứ" để kiểm nghiệm lại).
+    let fcRain12h = null;
+    let fcRain24h = null;
+    if (!backtestMode) {
+      const forecastHourly = await fetchForecastRainHourly();
+      fcRain12h = sumWindow(forecastHourly, 12);
+      fcRain24h = sumWindow(forecastHourly, 24);
+    }
+
+    // Coi mực nước HIỆN TẠI (hoặc tại mốc "asof") là "đỉnh" (có thể còn tăng thêm)
     const rain48h = sumRainInWindow(rainByHour, current.t, 48);
     const val24hBefore = findValueAt(dongtamSeries, current.t - 24 * 3600000);
     const riseRate24h = val24hBefore != null ? (current.v - val24hBefore) / 24 : 0;
@@ -173,17 +203,17 @@ export default async () => {
       + MODEL.rain48h * rain48h
       + MODEL.riseRate24h * riseRate24h;
 
-    // Xu thế 24h tới — tính RIÊNG cho từng trạm, dựa vào tốc độ lên/xuống 6h
-    // gần đây của CHÍNH trạm đó + mưa lưu vực (thực đo + dự báo, dùng ngầm).
     const dongtamRise6h = findValueAt(dongtamSeries, current.t - 6 * 3600000) != null
       ? (current.v - findValueAt(dongtamSeries, current.t - 6 * 3600000)) / 6 : 0;
     const dongtamTrend = assessStationTrend(dongtamRise6h, obsRain6h, fcRain12h, fcRain24h);
 
     let maihoaTrend = null;
     let maihoaCurrentValue = null;
+    let maihoaCurrentTime = null;
     if (maihoaSeries.length > 0) {
       const mhCurrent = maihoaSeries[maihoaSeries.length - 1];
       maihoaCurrentValue = Math.round(mhCurrent.v * 100) / 100;
+      maihoaCurrentTime = mhCurrent.t;
       const mh6hAgo = findValueAt(maihoaSeries, mhCurrent.t - 6 * 3600000);
       const maihoaRise6h = mh6hAgo != null ? (mhCurrent.v - mh6hAgo) / 6 : 0;
       maihoaTrend = assessStationTrend(maihoaRise6h, obsRain6h, fcRain12h, fcRain24h);
@@ -191,6 +221,8 @@ export default async () => {
 
     return json({
       available: true,
+      backtestMode,
+      asof: asofParam || null,
       dongtamCurrentTime: current.t,
       dongtamCurrentValue: Math.round(current.v * 100) / 100,
       rain48h: Math.round(rain48h * 10) / 10,
@@ -199,6 +231,10 @@ export default async () => {
       dongtamTrend,
       maihoaTrend,
       maihoaCurrentValue,
+      // Ở chế độ kiểm nghiệm, kèm luôn giá trị Mai Hóa THẬT tại đúng mốc đó
+      // để đối chiếu ngay dự báo vs thực tế — không cần tra cứu riêng.
+      maihoaActualAtSameTime: backtestMode ? maihoaCurrentValue : undefined,
+      maihoaActualTime: backtestMode ? maihoaCurrentTime : undefined,
     });
   } catch (e) {
     return json({ available: false, reason: `Lỗi: ${e.message}` });

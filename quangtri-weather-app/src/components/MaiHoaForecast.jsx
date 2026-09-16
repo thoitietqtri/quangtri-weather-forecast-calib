@@ -10,13 +10,22 @@ function formatTimeVN(t) {
 export default function MaiHoaForecast({ onClose }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [showBacktest, setShowBacktest] = useState(false);
+  const [asofInput, setAsofInput] = useState('');
 
-  useEffect(() => {
-    fetch('/.netlify/functions/forecast-maihoa')
+  const load = (asof) => {
+    setData(null);
+    setError(null);
+    const url = asof
+      ? `/.netlify/functions/forecast-maihoa?asof=${encodeURIComponent(asof)}`
+      : '/.netlify/functions/forecast-maihoa';
+    fetch(url)
       .then((r) => r.json())
       .then(setData)
       .catch((e) => setError(e.message));
-  }, []);
+  };
+
+  useEffect(() => { load(null); }, []);
 
   return (
     <div className="maihoa-forecast-overlay" onClick={onClose}>
@@ -30,6 +39,29 @@ export default function MaiHoaForecast({ onClose }) {
         </div>
 
         <div className="maihoa-forecast-body">
+          <button className="maihoa-forecast-backtest-toggle" onClick={() => setShowBacktest((v) => !v)}>
+            🔧 Chế độ kiểm nghiệm (kỹ thuật)
+          </button>
+          {showBacktest && (
+            <div className="maihoa-forecast-backtest-box">
+              <label>Giả lập "bây giờ" là (giờ VN):</label>
+              <input
+                type="text"
+                placeholder="2026-09-14 05:00:00"
+                value={asofInput}
+                onChange={(e) => setAsofInput(e.target.value)}
+              />
+              <div className="maihoa-forecast-backtest-btns">
+                <button onClick={() => load(asofInput)}>Kiểm tra</button>
+                <button onClick={() => { setAsofInput(''); load(null); }}>Về chế độ thật</button>
+              </div>
+            </div>
+          )}
+
+          {data && data.backtestMode && (
+            <div className="maihoa-forecast-backtest-note">🕑 Đang xem lại quá khứ — mốc: {data.asof} (không có mưa dự báo ECMWF của quá khứ)</div>
+          )}
+
           {error && <div className="maihoa-forecast-error">⚠️ Lỗi: {error}</div>}
 
           {!error && !data && <div className="maihoa-forecast-loading">⏳ Đang tải...</div>}
@@ -54,6 +86,12 @@ export default function MaiHoaForecast({ onClose }) {
                   Đồng Tâm hiện tại ({formatTimeVN(data.dongtamCurrentTime)}): <b>{data.dongtamCurrentValue}m</b>
                 </div>
                 <div className="maihoa-forecast-warn">⚠️ Đây là ước tính theo mực nước Đồng Tâm NGAY LÚC NÀY — nếu lũ Đồng Tâm còn tiếp tục lên, con số này cũng sẽ còn tăng theo, chưa phải giá trị đỉnh cuối cùng.</div>
+                {data.backtestMode && data.maihoaActualAtSameTime != null && (
+                  <div className="maihoa-forecast-compare">
+                    So sánh: Mai Hóa THỰC TẾ tại đúng mốc này = <b>{data.maihoaActualAtSameTime}m</b>
+                    {' '}(lệch {(data.predictedMaiHoaPeak - data.maihoaActualAtSameTime).toFixed(2)}m)
+                  </div>
+                )}
               </div>
 
               <div className="maihoa-forecast-trend">

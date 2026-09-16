@@ -38,6 +38,68 @@
   margin-top: 3px;
 }
 
+.maihoa-forecast-backtest-toggle {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #90CAF9;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.maihoa-forecast-backtest-box {
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.maihoa-forecast-backtest-box label {
+  display: block;
+  font-size: 11px;
+  color: #90CAF9;
+  margin-bottom: 4px;
+}
+
+.maihoa-forecast-backtest-box input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.maihoa-forecast-backtest-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.maihoa-forecast-backtest-btns button {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.maihoa-forecast-backtest-note {
+  font-size: 12px;
+  color: #F9A825;
+  background: rgba(249,168,37,0.1);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.maihoa-forecast-compare {
+  font-size: 13px;
+  color: #81C784;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(129,199,132,0.1);
+  border-radius: 6px;
+}
+
 .maihoa-forecast-warn {
   font-size: 11px;
   color: #F9A825;
