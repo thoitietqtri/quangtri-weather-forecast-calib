@@ -210,14 +210,14 @@
   margin-bottom: 16px;
 }
 
-.maihoa-forecast-predicted .label {
+.maihoa-forecast-main .label {
   display: block;
   font-size: 13px;
   color: #90CAF9;
   margin-bottom: 4px;
 }
 
-.maihoa-forecast-predicted .value {
+.maihoa-forecast-main .value {
   display: block;
   font-size: 42px;
   font-weight: bold;
@@ -263,4 +263,71 @@
     max-height: 100vh;
     border-radius: 0;
   }
+}
+
+.dongtam-forecast-hesobox {
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+
+.dongtam-forecast-hesobox label {
+  display: block;
+  font-size: 11px;
+  color: #90CAF9;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.dongtam-forecast-hesobox-row {
+  display: flex;
+  gap: 8px;
+}
+
+.dongtam-forecast-hesobox-row input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  font-size: 13px;
+}
+
+.dongtam-forecast-hesobox-row button {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.dongtam-forecast-hiennay {
+  text-align: center;
+  font-size: 13px;
+  padding: 10px 0;
+  margin-bottom: 10px;
+}
+
+.dongtam-forecast-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.dongtam-forecast-table th, .dongtam-forecast-table td {
+  padding: 8px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.dongtam-forecast-table-value td b {
+  color: #F9A825;
+  font-size: 16px;
+}
+
+.dongtam-forecast-dinh {
+  text-align: center;
+  padding: 10px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 14px;
 }

@@ -1,54 +1,43 @@
 // netlify/functions/forecast-maihoa.js
 //
-// Dự báo mực nước Mai Hóa dựa vào mực nước HIỆN HÀNH của Đồng Tâm (coi mực
-// nước hiện tại là "đỉnh" — có thể còn tăng thêm nếu lũ vẫn đang lên) — theo
-// đúng cách đơn giản hoá anh Hudson chốt ngày 15/09/2026.
+// Dự báo mực nước Mai Hóa theo ĐÚNG FORMAT BẢN TIN CHÍNH THỨC — 4 mốc cách
+// nhau 6h tính từ giờ phát tin, tự nhận diện đạt đỉnh trong 24h tới hay
+// còn tiếp tục lên. Dùng mực nước hiện tại của CHÍNH Mai Hóa + Đồng Tâm
+// (trạm trên) + Tân Lâm (nhánh phụ lưu) làm điểm neo, cộng mưa lưu vực
+// (thực đo + dự báo ECMWF).
 //
-// Phương trình (huấn luyện lại 17/09/2026, thêm mực nước Tân Lâm — nhánh
-// dốc/phản ứng nhanh, độc lập với Đồng Tâm — 124 trận từ 2010, R²=0.846):
-//   Đỉnh Mai Hóa (m) = -1.1209 + 0.5500×(Đồng Tâm hiện tại)
-//                       + 0.0029×(Mưa lưu vực 48h qua) - 2.8337×(Tốc độ lên 24h qua)
-//                       - 0.0317×(Mực nước Tân Lâm hiện tại)
-//
-// CHẾ ĐỘ KIỂM NGHIỆM (tham số ?asof=...): với mốc thời gian TRƯỚC 2026 (API
-// KTTV sống không còn dữ liệu), tự động đọc từ bảng lịch sử "lichsu_maihoa"
-// trong Neon (đã nạp sẵn 2006-2025) thay vì gọi API sống.
+// Phương trình (huấn luyện từ 212 mẫu giờ mùa lũ 2010-2025, Mai Hóa >=BĐI,
+// lấy 1 mẫu/6h):
+//   +6h:  = -1.3375 + 0.6204×MaiHóa + 0.2636×ĐồngTâm - 0.0143×TânLâm - 0.0011×mưa_đã_qua + 0.0179×mưa_dự_báo_6h
+//   +12h: = -1.4981 + 0.4246×MaiHóa + 0.2946×ĐồngTâm - 0.0227×TânLâm - 0.0019×mưa_đã_qua + 0.0224×mưa_dự_báo_12h
+//   +18h: = -1.1161 + 0.4004×MaiHóa + 0.2150×ĐồngTâm - 0.0256×TânLâm - 0.0040×mưa_đã_qua + 0.0236×mưa_dự_báo_18h
+//   +24h: = -0.7898 + 0.4349×MaiHóa + 0.1336×ĐồngTâm - 0.0255×TânLâm - 0.0059×mưa_đã_qua + 0.0222×mưa_dự_báo_24h
 
 import { neon } from '@neondatabase/serverless';
 
 const KTTV_BASE_URL = 'http://203.209.181.170:2018/API_TTB/JSON/solieu.php';
 const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
-const HOURS_BACK = 168;
-const BDI_DONGTAM_M = 7; // Báo động I Đồng Tâm = 7m (dữ liệu API trả về ĐÃ LÀ MÉT)
-const NEON_CUTOFF = new Date('2026-01-01T00:00:00Z'); // dữ liệu Neon phủ đến hết 2025; từ mốc này trở đi dùng API sống
+const HOURS_BACK = 48;
+const LEADS = [6, 12, 18, 24];
+const NEON_CUTOFF = new Date('2026-01-01T00:00:00Z');
 
+const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', neonColumn: 'dongtam_m' };
+const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', neonColumn: 'maihoa_m' };
+const TANLAM_MUCNUOC = { matram: '555900', ten_table: 'mucnuoc_oday' };
 
-const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', tinhtong: '0', neonColumn: 'dongtam_m' };
-const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', tinhtong: '0', neonColumn: 'maihoa_m' };
-const TANLAM_MUCNUOC = { matram: '555900', ten_table: 'mucnuoc_oday', tinhtong: '0' }; // mực nước Tân Lâm — nhánh dốc/phản ứng nhanh, độc lập với Đồng Tâm
 const RAIN_STATIONS = [
-  { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969, neonColumn: 'minh_hoa_mm' },  // Minh Hóa
-  { matram: '557500', ten_table: 'mua_oday_khituong', lat: 17.8833, lng: 106.017, neonColumn: 'tuyen_hoa_mm' }, // Tuyên Hóa
-  { matram: '091402', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967, neonColumn: 'thuong_hoa_mm' },      // Thượng Hóa
-  { matram: '091401', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8, neonColumn: 'hoa_thanh_mm' },        // Hóa Thanh
-  { matram: '555900', ten_table: 'mua_oday_thuyvan', lat: 17.9128, lng: 106.234, neonColumn: 'tanlam_mm' }, // Tân Lâm (nhánh Rào Trổ, phụ lưu cấp 1 — cùng đổ về Mai Hóa)
+  { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969, neonColumn: 'minh_hoa_mm' },
+  { matram: '557500', ten_table: 'mua_oday_khituong', lat: 17.8833, lng: 106.017, neonColumn: 'tuyen_hoa_mm' },
+  { matram: '091402', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967, neonColumn: 'thuong_hoa_mm' },
+  { matram: '091401', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8, neonColumn: 'hoa_thanh_mm' },
 ];
 
-const MODEL = { intercept: -1.1209, dongtam: 0.5500, rain48h: 0.0029, riseRate24h: -2.8337, tanlam: -0.0317 };
-
-// Độ trễ (giờ) từ đỉnh Đồng Tâm -> đỉnh Mai Hóa — tra theo cấp độ lũ (thống
-// kê từ 144 trận lịch sử). Lũ càng lớn thì trễ càng ngắn/ổn định hơn; lũ
-// nhỏ (7-10m) trễ rất thất thường (0-72h) — cần nói rõ độ tin cậy thấp.
-const LAG_TABLE = [
-  { minDongTam: 16, label: 'Lũ to', medianH: 5, minH: 2, maxH: 35 },
-  { minDongTam: 13, label: 'Lũ vừa', medianH: 3, minH: 2, maxH: 15 },
-  { minDongTam: 10, label: 'Lũ nhỏ-vừa', medianH: 3, minH: 0, maxH: 20 },
-  { minDongTam: 7, label: 'Lũ nhỏ', medianH: 16, minH: 0, maxH: 72 },
-];
-function tinhDoTre(dongtamV) {
-  return LAG_TABLE.find((r) => dongtamV >= r.minDongTam) || LAG_TABLE[LAG_TABLE.length - 1];
-}
-const WINDOWS_H = [1, 3, 6, 12];
+const MODEL_THEO_MOC = {
+  6: { intercept: -1.3375, maihoa: 0.6204, dongtam: 0.2636, tanlam: -0.0143, daQua: -0.0011, duBao: 0.0179 },
+  12: { intercept: -1.4981, maihoa: 0.4246, dongtam: 0.2946, tanlam: -0.0227, daQua: -0.0019, duBao: 0.0224 },
+  18: { intercept: -1.1161, maihoa: 0.4004, dongtam: 0.2150, tanlam: -0.0256, daQua: -0.0040, duBao: 0.0236 },
+  24: { intercept: -0.7898, maihoa: 0.4349, dongtam: 0.1336, tanlam: -0.0255, daQua: -0.0059, duBao: 0.0222 },
+};
 
 function vnNow() {
   return new Date(Date.now() + 7 * 3600 * 1000);
@@ -62,83 +51,14 @@ function fetchWithTimeout(url, timeoutMs = 8000) {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
-// ============ Neon (dữ liệu lịch sử 2006-2025) ============
 let sqlClient = null;
 function getSql() {
   if (!sqlClient) sqlClient = neon(process.env.DATABASE_URL);
   return sqlClient;
 }
-
-// Đọc đúng cột TIMESTAMP trả về từ Neon — thư viện @neondatabase/serverless
-// trả về dạng Date object (không phải chuỗi), nên KHÔNG được ép thành chuỗi
-// theo kiểu cũ (làm hỏng giá trị, gây lỗi hiện sai ngày "01/01"). Date
-// object đó đã đại diện đúng số giờ VN theo nghĩa đen (đọc qua trường UTC)
-// — chỉ cần trừ đi 7h để khớp quy ước nội bộ (t + 7h = số giờ VN theo
-// nghĩa đen, giống vnNow()).
 function parseNeonTimestamp(raw) {
   if (raw instanceof Date) return raw.getTime() - 7 * 3600 * 1000;
   return new Date(`${raw}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000;
-}
-
-async function fetchNeonSeries(neonColumn, start, end) {
-  try {
-    const sql = getSql();
-    // Cột động (neonColumn) không thể tham số hoá trực tiếp trong template
-    // của thư viện neon — nhưng vì tên cột LUÔN lấy từ danh sách cố định
-    // trong code (không phải từ người dùng nhập), nên an toàn để ghép chuỗi.
-    const rows = await sql(
-      `SELECT thoi_gian, ${neonColumn} AS v FROM lichsu_maihoa WHERE thoi_gian >= $1 AND thoi_gian <= $2 AND ${neonColumn} IS NOT NULL ORDER BY thoi_gian`,
-      [fmtVN(start), fmtVN(end)],
-    );
-    return rows
-      .map((r) => ({ t: parseNeonTimestamp(r.thoi_gian), v: Number(r.v) }))
-      .filter((r) => Number.isFinite(r.v))
-      .sort((a, b) => a.t - b.t);
-  } catch (e) {
-    console.error(`[Neon] Lỗi đọc cột ${neonColumn}:`, e.message);
-    return [];
-  }
-}
-
-// Hàm "thông minh" — mốc thời gian TRƯỚC 2026 -> đọc Neon (lịch sử);
-// từ 2026 trở đi -> gọi API KTTV sống (như bình thường). Giữ nguyên cách
-// gọi y hệt fetchKttvSeries ở mọi nơi trong code, chỉ thêm điều kiện chọn
-// nguồn dữ liệu.
-async function fetchSeriesSmart(station, tinhtong, refNow) {
-  const end = refNow || vnNow();
-  if (refNow && refNow < NEON_CUTOFF && station.neonColumn) {
-    const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
-    return fetchNeonSeries(station.neonColumn, start, end);
-  }
-  return fetchKttvSeries(station, tinhtong, refNow);
-}
-
-// Bảng chung so_lieu_lichsu (dạng dài: tram/loai/thoi_gian/gia_tri) — nơi
-// chứa mực nước Tân Lâm và các trạm bổ sung sau này cho lưu vực khác.
-async function fetchSoLieuLichSu(tram, loai, start, end) {
-  try {
-    const sql = getSql();
-    const rows = await sql(
-      `SELECT thoi_gian, gia_tri AS v FROM so_lieu_lichsu WHERE tram = $1 AND loai = $2 AND thoi_gian >= $3 AND thoi_gian <= $4 ORDER BY thoi_gian`,
-      [tram, loai, fmtVN(start), fmtVN(end)],
-    );
-    return rows
-      .map((r) => ({ t: parseNeonTimestamp(r.thoi_gian), v: Number(r.v) }))
-      .filter((r) => Number.isFinite(r.v))
-      .sort((a, b) => a.t - b.t);
-  } catch (e) {
-    console.error(`[Neon] Lỗi đọc so_lieu_lichsu (${tram}/${loai}):`, e.message);
-    return [];
-  }
-}
-
-async function fetchTanLamMucNuocSmart(refNow) {
-  const end = refNow || vnNow();
-  if (refNow && refNow < NEON_CUTOFF) {
-    const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
-    return fetchSoLieuLichSu('Tan Lam', 'mucnuoc', start, end);
-  }
-  return fetchKttvSeries(TANLAM_MUCNUOC, '0', refNow);
 }
 
 async function fetchKttvSeries(station, tinhtong = '1', refNow = null) {
@@ -163,6 +83,58 @@ async function fetchKttvSeries(station, tinhtong = '1', refNow = null) {
   }
 }
 
+async function fetchNeonSeries(neonColumn, start, end) {
+  try {
+    const sql = getSql();
+    const rows = await sql(
+      `SELECT thoi_gian, ${neonColumn} AS v FROM lichsu_maihoa WHERE thoi_gian >= $1 AND thoi_gian <= $2 AND ${neonColumn} IS NOT NULL ORDER BY thoi_gian`,
+      [fmtVN(start), fmtVN(end)],
+    );
+    return rows
+      .map((r) => ({ t: parseNeonTimestamp(r.thoi_gian), v: Number(r.v) }))
+      .filter((r) => Number.isFinite(r.v))
+      .sort((a, b) => a.t - b.t);
+  } catch (e) {
+    console.error(`[Neon] Lỗi đọc cột ${neonColumn}:`, e.message);
+    return [];
+  }
+}
+
+async function fetchSoLieuLichSu(tram, loai, start, end) {
+  try {
+    const sql = getSql();
+    const rows = await sql(
+      `SELECT thoi_gian, gia_tri AS v FROM so_lieu_lichsu WHERE tram = $1 AND loai = $2 AND thoi_gian >= $3 AND thoi_gian <= $4 ORDER BY thoi_gian`,
+      [tram, loai, fmtVN(start), fmtVN(end)],
+    );
+    return rows
+      .map((r) => ({ t: parseNeonTimestamp(r.thoi_gian), v: Number(r.v) }))
+      .filter((r) => Number.isFinite(r.v))
+      .sort((a, b) => a.t - b.t);
+  } catch (e) {
+    console.error(`[Neon] Lỗi đọc so_lieu_lichsu (${tram}/${loai}):`, e.message);
+    return [];
+  }
+}
+
+async function fetchSeriesSmart(station, tinhtong, refNow) {
+  const end = refNow || vnNow();
+  if (refNow && refNow < NEON_CUTOFF && station.neonColumn) {
+    const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
+    return fetchNeonSeries(station.neonColumn, start, end);
+  }
+  return fetchKttvSeries(station, tinhtong, refNow);
+}
+
+async function fetchTanLamMucNuocSmart(refNow) {
+  const end = refNow || vnNow();
+  if (refNow && refNow < NEON_CUTOFF) {
+    const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
+    return fetchSoLieuLichSu('Tan Lam', 'mucnuoc', start, end);
+  }
+  return fetchKttvSeries(TANLAM_MUCNUOC, '0', refNow);
+}
+
 function findValueAt(series, targetT, toleranceMs = 90 * 60 * 1000) {
   let best = null; let bestDiff = Infinity;
   for (const p of series) {
@@ -182,8 +154,6 @@ function sumRainInWindow(rainByHour, endT, hours) {
   return sum;
 }
 
-// Mưa dự báo ECMWF (Open-Meteo, trung bình 5 trạm) — trả về mảng giờ tương
-// lai để tự cộng dồn theo từng thời đoạn.
 async function fetchForecastRainHourly() {
   const results = await Promise.all(RAIN_STATIONS.map(async (s) => {
     try {
@@ -204,73 +174,67 @@ async function fetchForecastRainHourly() {
   for (let h = 0; h < hoursCount; h++) {
     avgHourly.push(valid.reduce((a, v) => a + (v[h] || 0), 0) / valid.length);
   }
-  return avgHourly; // avgHourly[0] = giờ hiện tại trở đi (theo giờ VN, do đã truyền timezone)
+  return avgHourly;
 }
 
 function sumWindow(arr, hours) {
   if (!arr) return null;
-  return Math.round(arr.slice(0, hours).reduce((a, b) => a + b, 0) * 10) / 10;
+  return arr.slice(0, hours).reduce((a, b) => a + b, 0);
 }
 
-// Nhận định xu thế mực nước 24h TỚI cho 1 trạm — kết hợp tốc độ lên/xuống 6h
-// gần đây của CHÍNH trạm đó với mưa lưu vực (thực đo gần đây + dự báo ECMWF
-// sắp tới, dùng ngầm bên trong, không hiển thị số thô ra giao diện).
-function assessStationTrend(riseRate6h, obsRain6h, fcRain12h, fcRain24h) {
-  const rising = riseRate6h > 0.02; // đang lên rõ rệt (>2cm/h)
-  const falling = riseRate6h < -0.02; // đang xuống rõ rệt
-  const moreRainComing = (fcRain24h != null && fcRain24h >= 30) || (fcRain12h != null && fcRain12h >= 20);
-  const rainEnding = (fcRain24h != null && fcRain24h < 15) && (fcRain12h != null && fcRain12h < 10);
+// Mưa "dự báo" khi kiểm nghiệm quá khứ — dùng đúng mưa thật xảy ra SAU mốc
+// asof (giả lập dự báo hoàn hảo, đúng kỹ thuật đã dùng để huấn luyện).
+async function fetchRainRangeSmart(station, start, end) {
+  if (end < NEON_CUTOFF && station.neonColumn) {
+    return fetchNeonSeries(station.neonColumn, start, end);
+  }
+  const full = await fetchKttvSeries(station, '1', end);
+  return full.filter((p) => p.t >= start.getTime() && p.t <= end.getTime());
+}
 
-  if (rising && moreRainComing) return { verdict: 'Khả năng TIẾP TỤC TĂNG mạnh', icon: '📈' };
-  if (rising && rainEnding) return { verdict: 'Đang lên nhưng mưa sắp dứt — khả năng sắp đạt đỉnh, tốc độ lên chậm dần', icon: '↗️' };
-  if (rising) return { verdict: 'Đang lên, xu thế mưa chưa rõ ràng — cần theo dõi thêm', icon: '↗️' };
-  if (falling && moreRainComing) return { verdict: 'Đang xuống nhưng dự báo còn mưa lớn — có thể LÊN TRỞ LẠI', icon: '⚠️' };
-  if (falling) return { verdict: 'Khả năng TIẾP TỤC GIẢM', icon: '📉' };
-  // gần như đi ngang
-  if (moreRainComing) return { verdict: 'Đang ổn định nhưng dự báo còn mưa lớn — có thể bắt đầu lên', icon: '⚠️' };
-  return { verdict: 'Tương đối ổn định', icon: '➡️' };
+function nhanDienDinh(hienTaiV, duBaoTheoMoc) {
+  const diem = [{ h: 0, v: hienTaiV }, ...LEADS.map((h) => ({ h, v: duBaoTheoMoc[h] }))];
+  for (let i = 1; i < diem.length - 1; i++) {
+    if (diem[i].v >= diem[i - 1].v && diem[i].v >= diem[i + 1].v && diem[i].v > diem[i - 1].v) {
+      return { coDinh: true, gioTruoc: diem[i - 1].h, gioDinh: diem[i].h, giaTriDinh: diem[i].v };
+    }
+  }
+  const max = diem.reduce((a, b) => (b.v > a.v ? b : a));
+  if (max.h === 24 && diem[diem.length - 2].v <= max.v) {
+    return { coDinh: false, dangTiepTucLen: true };
+  }
+  return { coDinh: false, dangTiepTucLen: diem[diem.length - 1].v >= diem[diem.length - 2].v };
 }
 
 export default async (request) => {
   try {
-    // Tham số "asof" (tùy chọn) — CHỈ dùng để kiểm nghiệm lại quá khứ, giả
-    // lập "bây giờ" là 1 mốc thời gian đã qua (ví dụ đúng lúc sông Gianh có
-    // lũ), xem hệ thống lúc đó sẽ hiện dự báo gì. Ví dụ:
-    //   /.netlify/functions/forecast-maihoa?asof=2026-09-14%2005:00:00
-    // Bỏ trống tham số này -> chạy đúng như bình thường (dùng giờ hiện tại
-    // thật). Lưu ý: ở chế độ kiểm nghiệm, KHÔNG có mưa dự báo ECMWF của quá
-    // khứ (mô hình dự báo không lưu lại lịch sử) — phần đó sẽ bỏ qua, chỉ
-    // đánh giá theo đúng số liệu thực đo tại mốc đó.
     const url = new URL(request.url);
     const asofParam = url.searchParams.get('asof');
     let refNow = null;
     let backtestMode = false;
     if (asofParam) {
-      // Coi chuỗi nhập vào (VD "2026-09-14 05:00:00") là giờ VN — parse
-      // thẳng thành UTC bằng cách thêm hậu tố Z, đúng khớp quy ước nội bộ
-      // vnNow() đang dùng (đọc field UTC ra đúng số giờ VN theo nghĩa đen).
       const parsed = new Date(asofParam.trim().replace(' ', 'T') + 'Z');
-      if (!Number.isNaN(parsed.getTime())) {
-        refNow = parsed;
-        backtestMode = true;
-      }
+      if (!Number.isNaN(parsed.getTime())) { refNow = parsed; backtestMode = true; }
     }
+    const heSoParam = parseFloat(url.searchParams.get('hesoHieuChinh'));
+    const heSoHieuChinh = Number.isFinite(heSoParam) && heSoParam > 0 ? heSoParam : 1.0;
     const dataSource = backtestMode ? (refNow < NEON_CUTOFF ? 'Neon (lịch sử 2006-2025)' : 'API KTTV sống') : 'API KTTV sống';
 
-    const [dongtamSeries, maihoaSeries, tanlamMucNuocSeries] = await Promise.all([
+    const [dongtamSeries, maihoaSeries, tanlamSeries] = await Promise.all([
       fetchSeriesSmart(DONGTAM, '0', refNow),
       fetchSeriesSmart(MAIHOA, '0', refNow),
       fetchTanLamMucNuocSmart(refNow),
     ]);
-    if (dongtamSeries.length === 0) {
-      return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm', backtestMode });
+    if (maihoaSeries.length === 0) {
+      return json({ available: false, reason: 'Không lấy được dữ liệu Mai Hóa', backtestMode });
     }
-    const current = dongtamSeries[dongtamSeries.length - 1];
-    if (current.v < BDI_DONGTAM_M) {
-      return json({ available: false, reason: `Đồng Tâm chưa vượt báo động I (${BDI_DONGTAM_M}m) — chưa có lũ`, dongtamCurrentValue: Math.round(current.v * 100) / 100, backtestMode, dataSource });
+    const current = maihoaSeries[maihoaSeries.length - 1];
+    const dongtamNow = findValueAt(dongtamSeries, current.t, 2 * 3600000);
+    const tanlamNow = findValueAt(tanlamSeries, current.t, 2 * 3600000);
+    if (dongtamNow == null || tanlamNow == null) {
+      return json({ available: false, reason: 'Thiếu số liệu Đồng Tâm hoặc Tân Lâm tại đúng mốc này', backtestMode });
     }
 
-    // Mưa thực đo (5 trạm, gộp theo giờ)
     const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchSeriesSmart(s, '1', refNow)));
     const rainByHour = new Map();
     for (const series of rainSeriesArr) {
@@ -280,78 +244,55 @@ export default async (request) => {
         rainByHour.get(bucket).push(p.v);
       }
     }
+    const rainDaQua24h = sumRainInWindow(rainByHour, current.t, 24);
 
-    const obsRain6h = sumRainInWindow(rainByHour, current.t, 6);
-
-    // Mưa dự báo ECMWF — CHỈ có ý nghĩa ở chế độ chạy thật (không có "dự báo
-    // của quá khứ" để kiểm nghiệm lại).
-    let fcRain12h = null;
-    let fcRain24h = null;
+    const duBaoTheoMoc = {};
+    const mucMuaDuBao = {};
     if (!backtestMode) {
       const forecastHourly = await fetchForecastRainHourly();
-      fcRain12h = sumWindow(forecastHourly, 12);
-      fcRain24h = sumWindow(forecastHourly, 24);
+      for (const LEAD of LEADS) {
+        const rainGoc = sumWindow(forecastHourly, LEAD);
+        const rainSauHieuChinh = rainGoc != null ? rainGoc * heSoHieuChinh : null;
+        mucMuaDuBao[LEAD] = { goc: rainGoc != null ? Math.round(rainGoc * 10) / 10 : null, sauHieuChinh: rainSauHieuChinh != null ? Math.round(rainSauHieuChinh * 10) / 10 : null };
+        const M = MODEL_THEO_MOC[LEAD];
+        duBaoTheoMoc[LEAD] = M.intercept + M.maihoa * current.v + M.dongtam * dongtamNow + M.tanlam * tanlamNow + M.daQua * rainDaQua24h + M.duBao * (rainSauHieuChinh || 0);
+      }
+    } else {
+      for (const LEAD of LEADS) {
+        const startF = new Date(current.t);
+        const endF = new Date(current.t + LEAD * 3600000);
+        const rainFArr = await Promise.all(RAIN_STATIONS.map((s) => fetchRainRangeSmart(s, startF, endF)));
+        const rainFByHour = new Map();
+        for (const series of rainFArr) {
+          for (const p of series) {
+            const bucket = Math.floor(p.t / 3600000) * 3600000;
+            if (!rainFByHour.has(bucket)) rainFByHour.set(bucket, []);
+            rainFByHour.get(bucket).push(p.v);
+          }
+        }
+        const rainThat = sumRainInWindow(rainFByHour, endF.getTime(), LEAD);
+        mucMuaDuBao[LEAD] = { goc: Math.round(rainThat * 10) / 10, sauHieuChinh: Math.round(rainThat * 10) / 10 };
+        const M = MODEL_THEO_MOC[LEAD];
+        duBaoTheoMoc[LEAD] = M.intercept + M.maihoa * current.v + M.dongtam * dongtamNow + M.tanlam * tanlamNow + M.daQua * rainDaQua24h + M.duBao * rainThat;
+      }
     }
 
-    // Coi mực nước HIỆN TẠI (hoặc tại mốc "asof") là "đỉnh" (có thể còn tăng thêm)
-    const rain48h = sumRainInWindow(rainByHour, current.t, 48);
-    const val24hBefore = findValueAt(dongtamSeries, current.t - 24 * 3600000);
-    const riseRate24h = val24hBefore != null ? (current.v - val24hBefore) / 24 : 0;
-    const tanlamNow = findValueAt(tanlamMucNuocSeries, current.t, 2 * 3600000);
-    // Nếu không lấy được Tân Lâm (mất kết nối/thiếu số liệu đúng giờ đó) —
-    // bỏ hẳn số hạng này thay vì đoán bừa 1 giá trị, tránh lệch kết quả.
-    const tanlamTerm = tanlamNow != null ? MODEL.tanlam * tanlamNow : 0;
-
-    const predicted = MODEL.intercept
-      + MODEL.dongtam * current.v
-      + MODEL.rain48h * rain48h
-      + MODEL.riseRate24h * riseRate24h
-      + tanlamTerm;
-
-    const dongtamRise6h = findValueAt(dongtamSeries, current.t - 6 * 3600000) != null
-      ? (current.v - findValueAt(dongtamSeries, current.t - 6 * 3600000)) / 6 : 0;
-    const dongtamTrend = assessStationTrend(dongtamRise6h, obsRain6h, fcRain12h, fcRain24h);
-
-    let maihoaTrend = null;
-    let maihoaCurrentValue = null;
-    let maihoaCurrentTime = null;
-    if (maihoaSeries.length > 0) {
-      const mhCurrent = maihoaSeries[maihoaSeries.length - 1];
-      maihoaCurrentValue = Math.round(mhCurrent.v * 100) / 100;
-      maihoaCurrentTime = mhCurrent.t;
-      const mh6hAgo = findValueAt(maihoaSeries, mhCurrent.t - 6 * 3600000);
-      const maihoaRise6h = mh6hAgo != null ? (mhCurrent.v - mh6hAgo) / 6 : 0;
-      maihoaTrend = assessStationTrend(maihoaRise6h, obsRain6h, fcRain12h, fcRain24h);
-    }
+    const dinh = nhanDienDinh(current.v, duBaoTheoMoc);
 
     return json({
       available: true,
       backtestMode,
       dataSource,
       asof: asofParam || null,
-      dongtamCurrentTime: current.t,
-      dongtamCurrentValue: Math.round(current.v * 100) / 100,
-      rain48h: Math.round(rain48h * 10) / 10,
-      riseRate24h: Math.round(riseRate24h * 1000) / 1000,
-      predictedMaiHoaPeak: Math.round(predicted * 100) / 100,
-      tanlamMucNuoc: tanlamNow != null ? Math.round(tanlamNow * 100) / 100 : null,
-      predictedPeakTime: (() => {
-        const lag = tinhDoTre(current.v);
-        return {
-          gioUocTinh: current.t + lag.medianH * 3600000,
-          khoangSom: current.t + lag.minH * 3600000,
-          khoangMuon: current.t + lag.maxH * 3600000,
-          capLu: lag.label,
-          doTinCay: lag.maxH - lag.minH <= 20 ? 'khá ổn định' : 'RẤT KHÔNG CHẮC CHẮN — khoảng dao động lớn',
-        };
-      })(),
-      dongtamTrend,
-      maihoaTrend,
-      maihoaCurrentValue,
-      // Ở chế độ kiểm nghiệm, kèm luôn giá trị Mai Hóa THẬT tại đúng mốc đó
-      // để đối chiếu ngay dự báo vs thực tế — không cần tra cứu riêng.
-      maihoaActualAtSameTime: backtestMode ? maihoaCurrentValue : undefined,
-      maihoaActualTime: backtestMode ? maihoaCurrentTime : undefined,
+      thoiDiemHienTai: current.t,
+      maihoaHienTai: Math.round(current.v * 100) / 100,
+      dongtamHienTai: Math.round(dongtamNow * 100) / 100,
+      tanlamHienTai: Math.round(tanlamNow * 100) / 100,
+      rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
+      heSoHieuChinh,
+      mucMuaDuBao,
+      duBaoTheoMoc: Object.fromEntries(LEADS.map((h) => [h, Math.round(duBaoTheoMoc[h] * 100) / 100])),
+      nhanDinhDinh: dinh,
     });
   } catch (e) {
     return json({ available: false, reason: `Lỗi: ${e.message}` });

@@ -1,24 +1,22 @@
 // netlify/functions/forecast-dongtam.js
 //
-// Dự báo mực nước Đồng Tâm 24h TỚI — trạm đầu nguồn, không có trạm nào ở
-// trên để dùng mực nước, nên CHỈ dùng mưa (thực đo 24h qua + dự báo ECMWF
-// 24h tới). Đây là dự báo THỰC SỰ hướng tới tương lai (khác Mai Hóa, vốn
-// chỉ ước tính theo mực nước Đồng Tâm NGAY LÚC NÀY).
+// Dự báo mực nước Đồng Tâm theo ĐÚNG FORMAT BẢN TIN CHÍNH THỨC — trạm đầu
+// nguồn, chỉ dùng mưa (thực đo + dự báo ECMWF). Đưa ra 4 mốc cách nhau 6h
+// tính từ giờ phát tin (giờ hiện tại), tự nhận diện nếu đạt đỉnh trong 24h
+// tới hoặc còn tiếp tục lên.
 //
-// Phương trình (huấn luyện từ 144 trận lũ, mô phỏng "dự báo hoàn hảo" 24h
-// trước đỉnh để kiểm tra khả năng dùng mưa dự báo, R²=0.744 trên toàn bộ
-// dữ liệu; kiểm định chéo thực tế: đạt chuẩn ±1m ~58%):
-//   Đỉnh Đồng Tâm (m) = 4.3526 + 0.0036×(Mưa lưu vực 24h ĐÃ QUA)
-//                                + 0.0391×(Mưa lưu vực 24h DỰ BÁO ECMWF)
-//
-// LƯU Ý QUAN TRỌNG: mưa dự báo ECMWF theo kinh nghiệm thực tế thường THẤP
-// HƠN thực tế 2-2.5 lần lúc có hình thái cực đoan (bão/ATNĐ/đới gió đông
-// kết hợp KKL) — có hệ số hiệu chỉnh thủ công (mặc định 1.0) để dự báo
-// viên tự điều chỉnh theo đánh giá chuyên môn, KHÔNG tự động phát hiện.
+// Phương trình (huấn luyện từ 332 mẫu giờ mùa lũ 2006-2025, Đồng Tâm >=BĐI,
+// lấy 1 mẫu/6h để giảm trùng lặp — mỗi mốc 1 phương trình riêng, dùng đúng
+// mực nước hiện tại làm điểm neo + mưa đã qua + mưa dự báo tương ứng):
+//   +6h:  level = 1.0372 + 0.7746×hiện_tại - 0.0008×mưa_đã_qua_24h + 0.0378×mưa_dự_báo_6h
+//   +12h: level = 2.5392 + 0.5068×hiện_tại - 0.0029×mưa_đã_qua_24h + 0.0408×mưa_dự_báo_12h
+//   +18h: level = 3.4477 + 0.3602×hiện_tại - 0.0059×mưa_đã_qua_24h + 0.0360×mưa_dự_báo_18h
+//   +24h: level = 3.7644 + 0.2977×hiện_tại - 0.0075×mưa_đã_qua_24h + 0.0291×mưa_dự_báo_24h
 
 const KTTV_BASE_URL = 'http://203.209.181.170:2018/API_TTB/JSON/solieu.php';
 const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOURS_BACK = 48;
+const LEADS = [6, 12, 18, 24];
 
 const RAIN_STATIONS = [
   { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969 },  // Minh Hóa
@@ -27,7 +25,12 @@ const RAIN_STATIONS = [
   { matram: '091401', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8 },        // Hóa Thanh
 ];
 
-const MODEL = { intercept: 4.3526, raQua: 0.0036, duBao: 0.0391 };
+const MODEL_THEO_MOC = {
+  6: { intercept: 1.0372, hienTai: 0.7746, daQua: -0.0008, duBao: 0.0378 },
+  12: { intercept: 2.5392, hienTai: 0.5068, daQua: -0.0029, duBao: 0.0408 },
+  18: { intercept: 3.4477, hienTai: 0.3602, daQua: -0.0059, duBao: 0.0360 },
+  24: { intercept: 3.7644, hienTai: 0.2977, daQua: -0.0075, duBao: 0.0291 },
+};
 
 function vnNow() {
   return new Date(Date.now() + 7 * 3600 * 1000);
@@ -101,13 +104,36 @@ function sumWindow(arr, hours) {
   return arr.slice(0, hours).reduce((a, b) => a + b, 0);
 }
 
+// Nhận diện đỉnh trong 4 mốc dự báo — so sánh lần lượt hiện_tại,+6,+12,+18,+24.
+// Nếu có 1 điểm cao hơn điểm trước VÀ cao hơn/bằng điểm sau -> đỉnh nằm
+// trong khoảng [mốc trước, mốc đó]. Nếu +24h vẫn là điểm cao nhất (còn đang
+// lên) -> "tiếp tục lên", không có đỉnh xác định trong 24h.
+function nhanDienDinh(hienTaiV, duBaoTheoMoc) {
+  const diem = [{ h: 0, v: hienTaiV }, ...LEADS.map((h) => ({ h, v: duBaoTheoMoc[h] }))];
+  for (let i = 1; i < diem.length - 1; i++) {
+    if (diem[i].v >= diem[i - 1].v && diem[i].v >= diem[i + 1].v && diem[i].v > diem[i - 1].v) {
+      return { coDinh: true, gioTruoc: diem[i - 1].h, gioDinh: diem[i].h, giaTriDinh: diem[i].v };
+    }
+  }
+  // Kiểm tra riêng mốc cuối (24h) có phải đỉnh không (giảm ngay trước đó nhưng h24 là cao nhất thì không tính là đỉnh thật, chỉ khi nó là điểm CAO NHẤT và có xu hướng đi lên tới đó)
+  const max = diem.reduce((a, b) => (b.v > a.v ? b : a));
+  if (max.h === 24 && diem[diem.length - 2].v <= max.v) {
+    return { coDinh: false, dangTiepTucLen: true };
+  }
+  return { coDinh: false, dangTiepTucLen: diem[diem.length - 1].v >= diem[diem.length - 2].v };
+}
+
 export default async (request) => {
   try {
     const url = new URL(request.url);
-    // Hệ số hiệu chỉnh mưa dự báo ECMWF — dự báo viên tự điều chỉnh theo
-    // đánh giá chuyên môn (mặc định 1.0, gợi ý 2-2.5 lúc hình thái cực đoan).
     const heSoParam = parseFloat(url.searchParams.get('hesoHieuChinh'));
     const heSoHieuChinh = Number.isFinite(heSoParam) && heSoParam > 0 ? heSoParam : 1.0;
+
+    const dongtamSeries = await fetchKttvSeries({ matram: '555300', ten_table: 'mucnuoc_oday' });
+    if (dongtamSeries.length === 0) {
+      return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm' });
+    }
+    const current = dongtamSeries[dongtamSeries.length - 1];
 
     const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchKttvSeries(s)));
     const rainByHour = new Map();
@@ -118,30 +144,34 @@ export default async (request) => {
         rainByHour.get(bucket).push(p.v);
       }
     }
-    if (rainByHour.size === 0) {
-      return json({ available: false, reason: 'Không lấy được dữ liệu mưa thực đo' });
-    }
-
-    const now = vnNow().getTime();
-    const rainDaQua24h = sumRainInWindow(rainByHour, now, 24);
+    const rainDaQua24h = sumRainInWindow(rainByHour, current.t, 24);
 
     const forecastHourly = await fetchForecastRainHourly();
     if (!forecastHourly) {
-      return json({ available: false, reason: 'Không lấy được mưa dự báo ECMWF', rainDaQua24h: Math.round(rainDaQua24h * 10) / 10 });
+      return json({ available: false, reason: 'Không lấy được mưa dự báo ECMWF' });
     }
-    const rainDuBao24hGoc = sumWindow(forecastHourly, 24);
-    const rainDuBao24h = rainDuBao24hGoc * heSoHieuChinh;
 
-    const predicted = MODEL.intercept + MODEL.raQua * rainDaQua24h + MODEL.duBao * rainDuBao24h;
+    const duBaoTheoMoc = {};
+    const mucMuaDuBao = {};
+    for (const LEAD of LEADS) {
+      const rainGoc = sumWindow(forecastHourly, LEAD);
+      const rainSauHieuChinh = rainGoc * heSoHieuChinh;
+      mucMuaDuBao[LEAD] = { goc: Math.round(rainGoc * 10) / 10, sauHieuChinh: Math.round(rainSauHieuChinh * 10) / 10 };
+      const M = MODEL_THEO_MOC[LEAD];
+      duBaoTheoMoc[LEAD] = M.intercept + M.hienTai * current.v + M.daQua * rainDaQua24h + M.duBao * rainSauHieuChinh;
+    }
+
+    const dinh = nhanDienDinh(current.v, duBaoTheoMoc);
 
     return json({
       available: true,
-      thoiDiemHienTai: now,
+      thoiDiemHienTai: current.t,
+      dongtamHienTai: Math.round(current.v * 100) / 100,
       rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
-      rainDuBao24hGoc: Math.round(rainDuBao24hGoc * 10) / 10,
       heSoHieuChinh,
-      rainDuBao24hSauHieuChinh: Math.round(rainDuBao24h * 10) / 10,
-      predictedDongTam24hToi: Math.round(predicted * 100) / 100,
+      mucMuaDuBao,
+      duBaoTheoMoc: Object.fromEntries(LEADS.map((h) => [h, Math.round(duBaoTheoMoc[h] * 100) / 100])),
+      nhanDinhDinh: dinh,
     });
   } catch (e) {
     return json({ available: false, reason: `Lỗi: ${e.message}` });

@@ -297,3 +297,37 @@
   font-size: 12px;
   padding: 6px 12px;
 }
+
+.dongtam-forecast-hiennay {
+  text-align: center;
+  font-size: 14px;
+  padding: 10px 0;
+  margin-bottom: 10px;
+}
+
+.dongtam-forecast-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.dongtam-forecast-table th, .dongtam-forecast-table td {
+  padding: 8px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.dongtam-forecast-table-value td b {
+  color: #F9A825;
+  font-size: 16px;
+}
+
+.dongtam-forecast-dinh {
+  text-align: center;
+  padding: 10px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}

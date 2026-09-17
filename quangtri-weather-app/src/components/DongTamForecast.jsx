@@ -4,7 +4,7 @@ import './DongTamForecast.css';
 function formatTimeVN(t) {
   const d = new Date(t + 7 * 3600 * 1000);
   const p = (n) => String(n).padStart(2, '0');
-  return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  return `${p(d.getUTCHours())}h ${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}`;
 }
 
 export default function DongTamForecast({ onClose }) {
@@ -28,7 +28,7 @@ export default function DongTamForecast({ onClose }) {
       <div className="dongtam-forecast-panel" onClick={(e) => e.stopPropagation()}>
         <div className="dongtam-forecast-header">
           <div>
-            <h3>🔮 Dự báo mực nước Đồng Tâm (24h tới)</h3>
+            <h3>🔮 Dự báo mực nước Đồng Tâm</h3>
             <div className="dongtam-forecast-wip">(Chức năng này chưa xong, đang trong giai đoạn xây dựng)</div>
           </div>
           <button className="dongtam-forecast-close" onClick={onClose} aria-label="Đóng">✕</button>
@@ -36,7 +36,7 @@ export default function DongTamForecast({ onClose }) {
 
         <div className="dongtam-forecast-body">
           <div className="dongtam-forecast-hesobox">
-            <label>Hệ số hiệu chỉnh mưa dự báo ECMWF (mặc định 1.0 — chỉnh lên 2-2.5 nếu đang có bão/ATNĐ/đới gió đông kết hợp KKL, theo đánh giá chuyên môn):</label>
+            <label>Hệ số hiệu chỉnh mưa dự báo ECMWF (mặc định 1.0 — chỉnh lên 2-2.5 nếu đang có bão/ATNĐ/đới gió đông kết hợp KKL):</label>
             <div className="dongtam-forecast-hesobox-row">
               <input type="number" step="0.1" min="0.1" value={heSo} onChange={(e) => setHeSo(e.target.value)} />
               <button onClick={() => load(heSo)}>Áp dụng</button>
@@ -45,27 +45,53 @@ export default function DongTamForecast({ onClose }) {
 
           {error && <div className="dongtam-forecast-error">⚠️ Lỗi: {error}</div>}
           {!error && !data && <div className="dongtam-forecast-loading">⏳ Đang tải...</div>}
-
-          {data && !data.available && (
-            <div className="dongtam-forecast-empty">ℹ️ {data.reason}</div>
-          )}
+          {data && !data.available && <div className="dongtam-forecast-empty">ℹ️ {data.reason}</div>}
 
           {data && data.available && (
             <>
-              <div className="dongtam-forecast-main">
-                <span className="label">Đồng Tâm dự báo lúc {formatTimeVN(data.thoiDiemHienTai + 24 * 3600000)} (24h tới)</span>
-                <span className="value">{data.predictedDongTam24hToi}m</span>
+              <div className="dongtam-forecast-hiennay">
+                Đồng Tâm hiện tại ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.dongtamHienTai}m</b>
+              </div>
+
+              <table className="dongtam-forecast-table">
+                <thead>
+                  <tr><th></th><th>+6h</th><th>+12h</th><th>+18h</th><th>+24h</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Giờ</td>
+                    {[6, 12, 18, 24].map((h) => <td key={h}>{formatTimeVN(data.thoiDiemHienTai + h * 3600000)}</td>)}
+                  </tr>
+                  <tr className="dongtam-forecast-table-value">
+                    <td>Mực nước</td>
+                    {[6, 12, 18, 24].map((h) => <td key={h}><b>{data.duBaoTheoMoc[h]}m</b></td>)}
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="dongtam-forecast-dinh">
+                {data.nhanDinhDinh.coDinh ? (
+                  <>🔴 Dự kiến đạt <b>ĐỈNH {data.nhanDinhDinh.giaTriDinh.toFixed(2)}m</b> trong khoảng {formatTimeVN(data.thoiDiemHienTai + data.nhanDinhDinh.gioTruoc * 3600000)} đến {formatTimeVN(data.thoiDiemHienTai + data.nhanDinhDinh.gioDinh * 3600000)}</>
+                ) : data.nhanDinhDinh.dangTiepTucLen ? (
+                  <>📈 Sau +24h vẫn còn xu hướng <b>TIẾP TỤC LÊN</b>, chưa xác định được đỉnh trong 24h tới</>
+                ) : (
+                  <>📉 Xu hướng giảm/ổn định trong 24h tới, không có đỉnh mới</>
+                )}
               </div>
 
               <div className="dongtam-forecast-inputs">
                 <div className="dongtam-forecast-row"><span>Mưa lưu vực 24h đã qua:</span><b>{data.rainDaQua24h}mm</b></div>
-                <div className="dongtam-forecast-row"><span>Mưa dự báo ECMWF gốc (24h tới):</span><b>{data.rainDuBao24hGoc}mm</b></div>
-                <div className="dongtam-forecast-row"><span>Sau hiệu chỉnh (×{data.heSoHieuChinh}):</span><b>{data.rainDuBao24hSauHieuChinh}mm</b></div>
+                {[6, 12, 18, 24].map((h) => (
+                  <div className="dongtam-forecast-row" key={h}>
+                    <span>Mưa dự báo +{h}h (gốc → hiệu chỉnh):</span>
+                    <b>{data.mucMuaDuBao[h].goc}mm → {data.mucMuaDuBao[h].sauHieuChinh}mm</b>
+                  </div>
+                ))}
               </div>
 
               <div className="dongtam-forecast-note">
-                📊 Phương trình xây từ 144 trận lũ lịch sử, mô phỏng "mưa dự báo hoàn hảo" để kiểm tra khả năng dùng mưa dự báo — kiểm định chéo thực tế: đạt chuẩn sai số ±1m khoảng 58% (thấp hơn Mai Hóa, vì Đồng Tâm không có trạm nào phía trên để dùng mực nước, chỉ dựa vào mưa).
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên — đặc biệt lưu ý hệ số hiệu chỉnh mưa dự báo cần tự điều chỉnh theo tình huống thực tế.
+                📊 Phương trình riêng cho từng mốc, xây từ 332 mẫu giờ mùa lũ (2006-2025) — đạt chuẩn sai số ±1m: 65% (+6h), 63% (+12h), 71% (+18h), 76% (+24h).
+                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>
           )}
