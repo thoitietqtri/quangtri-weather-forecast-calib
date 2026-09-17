@@ -20,6 +20,9 @@ const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOURS_BACK = 48;
 const LEADS = [6, 12, 18, 24];
 const NEON_CUTOFF = new Date('2026-01-01T00:00:00Z');
+const NGUONG_CHUYEN_DOI_DONGTAM = 5.6; // 80% BĐI Đồng Tâm (7m) — dưới ngưỡng này dùng mô hình triều (Tân Mỹ), từ ngưỡng này trở lên dùng mô hình lũ (bỏ Tân Mỹ)
+const TANMY_MUCNUOC = { matram: '555800', ten_table: 'mucnuoc_oday', neonColumn: null }; // trạm cửa biển, đại diện triều — cần Hudson xác nhận đúng matram
+const MODEL_NGAY_THUONG = { intercept: -0.6241, tanmy: 0.4856, rain24h: 0.0036, dongtam: 0.2189 };
 
 const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', neonColumn: 'dongtam_m' };
 const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', neonColumn: 'maihoa_m' };
@@ -230,11 +233,8 @@ export default async (request) => {
     }
     const current = maihoaSeries[maihoaSeries.length - 1];
     const dongtamNow = findValueAt(dongtamSeries, current.t, 2 * 3600000);
-    const tanlamNow = findValueAt(tanlamSeries, current.t, 2 * 3600000);
-    if (dongtamNow == null || tanlamNow == null) {
-      return json({ available: false, reason: 'Thiếu số liệu Đồng Tâm hoặc Tân Lâm tại đúng mốc này', backtestMode });
-    }
 
+    // Mưa lưu vực đã qua 24h — dùng chung cho cả 2 nhánh (ngày thường/lũ)
     const rainSeriesArr = await Promise.all(RAIN_STATIONS.map((s) => fetchSeriesSmart(s, '1', refNow)));
     const rainByHour = new Map();
     for (const series of rainSeriesArr) {
@@ -245,6 +245,51 @@ export default async (request) => {
       }
     }
     const rainDaQua24h = sumRainInWindow(rainByHour, current.t, 24);
+
+    // ============ NHÁNH NGÀY THƯỜNG (Đồng Tâm dưới ngưỡng 80% BĐI) ============
+    // Chỉ dùng triều Tân Mỹ khi mực nước còn thấp — lúc có lũ, sóng lũ phá
+    // vỡ hẳn quy luật triều nên KHÔNG dùng Tân Mỹ (theo đúng yêu cầu).
+    if (dongtamNow != null && dongtamNow < NGUONG_CHUYEN_DOI_DONGTAM) {
+      const tanmySeries = refNow && refNow < NEON_CUTOFF
+        ? await fetchSoLieuLichSu('Tan My', 'mucnuoc', new Date(refNow.getTime() - 60 * 3600000), refNow)
+        : await fetchKttvSeries(TANMY_MUCNUOC, '0', refNow);
+
+      // Kiểm tra máy Tân Mỹ có đang hỏng không (đứng yên bất thường) — đo độ
+      // lệch chuẩn 48h gần nhất, dưới 0.2m coi như nghi ngờ hỏng, không dùng.
+      const tanmyGanDay = tanmySeries.filter((p) => p.t >= current.t - 48 * 3600000 && p.t <= current.t);
+      const tanmyValues = tanmyGanDay.map((p) => p.v);
+      const tanmyMean = tanmyValues.reduce((a, b) => a + b, 0) / (tanmyValues.length || 1);
+      const tanmyStd = tanmyValues.length > 1
+        ? Math.sqrt(tanmyValues.reduce((a, b) => a + (b - tanmyMean) ** 2, 0) / tanmyValues.length)
+        : 0;
+      const tanmyDangHoat = tanmyValues.length >= 10 && tanmyStd >= 0.2;
+
+      const tanmyLag8h = findValueAt(tanmySeries, current.t - 8 * 3600000, 2 * 3600000);
+
+      if (tanmyDangHoat && tanmyLag8h != null) {
+        const predicted = MODEL_NGAY_THUONG.intercept + MODEL_NGAY_THUONG.tanmy * tanmyLag8h + MODEL_NGAY_THUONG.rain24h * rainDaQua24h + MODEL_NGAY_THUONG.dongtam * dongtamNow;
+        return json({
+          available: true,
+          cheDo: 'ngay_thuong',
+          backtestMode,
+          dataSource,
+          thoiDiemHienTai: current.t,
+          maihoaHienTai: Math.round(current.v * 100) / 100,
+          dongtamHienTai: Math.round(dongtamNow * 100) / 100,
+          tanmyLag8h: Math.round(tanmyLag8h * 100) / 100,
+          rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
+          maihoaDuBao: Math.round(predicted * 100) / 100,
+        });
+      }
+      // Nếu Tân Mỹ hỏng/thiếu số liệu — RƠI XUỐNG dùng mô hình lũ bên dưới
+      // như phương án dự phòng (dù đang ở mức thấp, vẫn còn hơn không có gì).
+    }
+    // ============ HẾT NHÁNH NGÀY THƯỜNG — TỪ ĐÂY LÀ MÔ HÌNH LŨ (CŨ) ============
+
+    const tanlamNow = findValueAt(tanlamSeries, current.t, 2 * 3600000);
+    if (dongtamNow == null || tanlamNow == null) {
+      return json({ available: false, reason: 'Thiếu số liệu Đồng Tâm hoặc Tân Lâm tại đúng mốc này', backtestMode });
+    }
 
     const duBaoTheoMoc = {};
     const mucMuaDuBao = {};

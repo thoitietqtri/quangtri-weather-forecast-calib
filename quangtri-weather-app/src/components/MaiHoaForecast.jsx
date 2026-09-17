@@ -72,7 +72,26 @@ export default function MaiHoaForecast({ onClose }) {
           {!error && !data && <div className="maihoa-forecast-loading">⏳ Đang tải...</div>}
           {data && !data.available && <div className="maihoa-forecast-empty">ℹ️ {data.reason}</div>}
 
-          {data && data.available && (
+          {data && data.available && data.cheDo === 'ngay_thuong' && (
+            <>
+              <div className="dongtam-forecast-hiennay">
+                Mai Hóa hiện tại ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
+                {' | '}Đồng Tâm: <b>{data.dongtamHienTai}m</b> (dưới ngưỡng lũ — dùng mô hình triều)
+              </div>
+              <div className="dongtam-forecast-dinh">
+                🌊 Mai Hóa ước tính (ảnh hưởng triều): <b>{data.maihoaDuBao}m</b>
+              </div>
+              <div className="maihoa-forecast-inputs">
+                <div className="maihoa-forecast-row"><span>Tân Mỹ (trễ 8h):</span><b>{data.tanmyLag8h}m</b></div>
+                <div className="maihoa-forecast-row"><span>Mưa lưu vực 24h qua:</span><b>{data.rainDaQua24h}mm</b></div>
+              </div>
+              <div className="maihoa-forecast-note">
+                📊 Mô hình riêng cho ngày thường (không lũ) — dựa vào triều trạm Tân Mỹ (trễ 8h) + mực nước Đồng Tâm + mưa nhẹ, R²=0.56. Chỉ dùng khi Đồng Tâm dưới 5.6m — khi vượt mức này, hệ thống tự chuyển sang mô hình lũ (không dùng Tân Mỹ nữa, vì lũ phá vỡ quy luật triều).
+              </div>
+            </>
+          )}
+
+          {data && data.available && data.cheDo !== 'ngay_thuong' && (
             <>
               <div className="dongtam-forecast-hiennay">
                 Mai Hóa hiện tại ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
