@@ -12,12 +12,13 @@ import MucNuocChart from './MucNuocChart';
 import RainHourlyTable from './RainHourlyTable';
 import RainHourlyChart from './RainHourlyChart';
 import MaiHoaForecast from './MaiHoaForecast';
+import DongTamForecast from './DongTamForecast';
 
 // Cấu trúc menu "Dự báo Mực nước (khi có lũ)" — theo từng lưu vực sông.
 // ready:true là trạm đã có chức năng dự báo thật (hiện chỉ Mai Hóa); các
 // trạm còn lại hiện "chưa xây dựng" khi bấm vào, chờ mở rộng dần sau này.
 const LUU_VUC_TRAM = [
-  { song: 'Sông Gianh', trams: [{ name: 'Đồng Tâm', ready: false }, { name: 'Mai Hóa', ready: true }] },
+  { song: 'Sông Gianh', trams: [{ name: 'Đồng Tâm', ready: true }, { name: 'Mai Hóa', ready: true }] },
   { song: 'Sông Nhật Lệ', trams: [{ name: 'Kiến Giang', ready: false }, { name: 'Lệ Thủy', ready: false }, { name: 'Đồng Hới', ready: false }] },
   { song: 'Sông Bến Hải', trams: [{ name: 'Gia Vòng', ready: false }, { name: 'Hiền Lương', ready: false }] },
   { song: 'Sông Thạch Hãn', trams: [{ name: 'Đakrong', ready: false }, { name: 'Đông Hà', ready: false }, { name: 'Thạch Hãn', ready: false }] },
@@ -199,6 +200,7 @@ function MapComponent() {
   const [showRiver, setShowRiver] = useState(true);
   const [showTempColor, setShowTempColor] = useState(true);
   const [showMaiHoaForecast, setShowMaiHoaForecast] = useState(false);
+  const [showDongTamForecast, setShowDongTamForecast] = useState(false);
   const [showMucNuocLuMenu, setShowMucNuocLuMenu] = useState(false);
   const [openLuuVuc, setOpenLuuVuc] = useState(null);
   const [featureList, setFeatureList] = useState([]);
@@ -524,7 +526,8 @@ function MapComponent() {
                             key={tr.name}
                             onClick={() => {
                               if (tr.ready) {
-                                setShowMaiHoaForecast(true);
+                                if (tr.name === 'Đồng Tâm') setShowDongTamForecast(true);
+                                else setShowMaiHoaForecast(true);
                                 setShowMenu(false);
                                 setShowMucNuocLuMenu(false);
                                 setOpenLuuVuc(null);
@@ -550,6 +553,7 @@ function MapComponent() {
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
       {showMaiHoaForecast && <MaiHoaForecast onClose={() => setShowMaiHoaForecast(false)} />}
+      {showDongTamForecast && <DongTamForecast onClose={() => setShowDongTamForecast(false)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
