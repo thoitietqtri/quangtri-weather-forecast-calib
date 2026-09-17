@@ -396,3 +396,57 @@ input[type="date"] {
     padding: 8px 10px;
   }
 }
+
+/* Menu con "Dự báo Mực nước (khi có lũ)" — 3 cấp, bấm để mở rộng (dùng
+   được cả cảm ứng lẫn chuột, không phụ thuộc hover). */
+.menu-submenu-cap2 {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  margin-left: 6px;
+}
+
+.menu-submenu-header {
+  text-align: left;
+  background: transparent;
+  color: #90CAF9;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.menu-submenu-header:hover,
+.menu-submenu-header:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-submenu-cap3 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 14px;
+}
+
+.menu-submenu-cap3 button {
+  text-align: left;
+  background: transparent;
+  color: #fff;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.menu-submenu-cap3 button:hover,
+.menu-submenu-cap3 button:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+  .menu-submenu-header, .menu-submenu-cap3 button {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+}

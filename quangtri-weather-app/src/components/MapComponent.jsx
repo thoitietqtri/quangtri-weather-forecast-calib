@@ -12,6 +12,16 @@ import MucNuocChart from './MucNuocChart';
 import RainHourlyTable from './RainHourlyTable';
 import RainHourlyChart from './RainHourlyChart';
 import MaiHoaForecast from './MaiHoaForecast';
+
+// Cấu trúc menu "Dự báo Mực nước (khi có lũ)" — theo từng lưu vực sông.
+// ready:true là trạm đã có chức năng dự báo thật (hiện chỉ Mai Hóa); các
+// trạm còn lại hiện "chưa xây dựng" khi bấm vào, chờ mở rộng dần sau này.
+const LUU_VUC_TRAM = [
+  { song: 'Sông Gianh', trams: [{ name: 'Đồng Tâm', ready: false }, { name: 'Mai Hóa', ready: true }] },
+  { song: 'Sông Nhật Lệ', trams: [{ name: 'Kiến Giang', ready: false }, { name: 'Lệ Thủy', ready: false }, { name: 'Đồng Hới', ready: false }] },
+  { song: 'Sông Bến Hải', trams: [{ name: 'Gia Vòng', ready: false }, { name: 'Hiền Lương', ready: false }] },
+  { song: 'Sông Thạch Hãn', trams: [{ name: 'Đakrong', ready: false }, { name: 'Đông Hà', ready: false }, { name: 'Thạch Hãn', ready: false }] },
+];
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
 
@@ -189,6 +199,8 @@ function MapComponent() {
   const [showRiver, setShowRiver] = useState(true);
   const [showTempColor, setShowTempColor] = useState(true);
   const [showMaiHoaForecast, setShowMaiHoaForecast] = useState(false);
+  const [showMucNuocLuMenu, setShowMucNuocLuMenu] = useState(false);
+  const [openLuuVuc, setOpenLuuVuc] = useState(null);
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
@@ -492,7 +504,45 @@ function MapComponent() {
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
-            <button onClick={() => { setShowMaiHoaForecast(true); setShowMenu(false); }}>🔮 Dự báo đỉnh lũ Mai Hóa</button>
+            <button onClick={() => setShowMucNuocLuMenu((v) => !v)}>
+              🌊 Dự báo Mực nước (khi có lũ) {showMucNuocLuMenu ? '▲' : '▼'}
+            </button>
+            {showMucNuocLuMenu && (
+              <div className="menu-submenu-cap2">
+                {LUU_VUC_TRAM.map((lv) => (
+                  <div key={lv.song}>
+                    <button
+                      className="menu-submenu-header"
+                      onClick={() => setOpenLuuVuc(openLuuVuc === lv.song ? null : lv.song)}
+                    >
+                      {lv.song} {openLuuVuc === lv.song ? '▲' : '▼'}
+                    </button>
+                    {openLuuVuc === lv.song && (
+                      <div className="menu-submenu-cap3">
+                        {lv.trams.map((tr) => (
+                          <button
+                            key={tr.name}
+                            onClick={() => {
+                              if (tr.ready) {
+                                setShowMaiHoaForecast(true);
+                                setShowMenu(false);
+                                setShowMucNuocLuMenu(false);
+                                setOpenLuuVuc(null);
+                              } else {
+                                alert(`Chức năng dự báo mực nước ${tr.name} chưa được xây dựng.`);
+                              }
+                            }}
+                            style={!tr.ready ? { opacity: 0.55 } : undefined}
+                          >
+                            {tr.name}{!tr.ready ? ' (chưa có)' : ''}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             
           </div>
         </div>
