@@ -92,7 +92,7 @@ export default function DongTamForecast({ onClose }) {
 
               <div className="dongtam-forecast-note">
                 📊 Phương trình riêng cho từng mốc, xây từ 332 mẫu giờ mùa lũ (2006-2025) — đạt chuẩn sai số ±1m: 74.7% (+6h), 68.4% (+12h), 71.1% (+18h), 75.9% (+24h).
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                Đây là tham khảo hỗ trợ, không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}

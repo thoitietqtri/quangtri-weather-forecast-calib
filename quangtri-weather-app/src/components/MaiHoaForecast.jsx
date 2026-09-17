@@ -137,7 +137,7 @@ export default function MaiHoaForecast({ onClose }) {
 
               <div className="maihoa-forecast-note">
                 📊 Phương trình riêng cho từng mốc, xây từ 212 mẫu giờ mùa lũ (2010-2025) — đạt chuẩn sai số ±1m: 91.5% (+6h), 76% (+12h), 74.5% (+18h), 81.6% (+24h).
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                Đây là tham khảo hỗ trợ, không thay thế bản tin chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}
