@@ -38,6 +38,20 @@
   margin-top: 3px;
 }
 
+.maihoa-forecast-peaktime {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.maihoa-forecast-peaktime-detail {
+  font-size: 11px;
+  color: #90CAF9;
+  margin-top: 4px;
+}
+
 .maihoa-forecast-backtest-toggle {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.25);

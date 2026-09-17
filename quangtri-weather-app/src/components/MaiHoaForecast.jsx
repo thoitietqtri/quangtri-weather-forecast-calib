@@ -86,6 +86,14 @@ export default function MaiHoaForecast({ onClose }) {
                   Đồng Tâm hiện tại ({formatTimeVN(data.dongtamCurrentTime)}): <b>{data.dongtamCurrentValue}m</b>
                 </div>
                 <div className="maihoa-forecast-warn">⚠️ Đây là ước tính theo mực nước Đồng Tâm NGAY LÚC NÀY — nếu lũ Đồng Tâm còn tiếp tục lên, con số này cũng sẽ còn tăng theo, chưa phải giá trị đỉnh cuối cùng.</div>
+                {data.predictedPeakTime && (
+                  <div className="maihoa-forecast-peaktime">
+                    🕐 Dự báo đỉnh lũ Mai Hóa trong phiên này xuất hiện lúc <b>{formatTimeVN(data.predictedPeakTime.gioUocTinh)}</b>
+                    <div className="maihoa-forecast-peaktime-detail">
+                      ({data.predictedPeakTime.capLu} — khoảng {formatTimeVN(data.predictedPeakTime.khoangSom)} đến {formatTimeVN(data.predictedPeakTime.khoangMuon)}, {data.predictedPeakTime.doTinCay})
+                    </div>
+                  </div>
+                )}
                 {data.backtestMode && data.maihoaActualAtSameTime != null && (
                   <div className="maihoa-forecast-compare">
                     So sánh: Mai Hóa THỰC TẾ tại đúng mốc này = <b>{data.maihoaActualAtSameTime}m</b>

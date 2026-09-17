@@ -35,6 +35,19 @@ const RAIN_STATIONS = [
 ];
 
 const MODEL = { intercept: -1.1209, dongtam: 0.5500, rain48h: 0.0029, riseRate24h: -2.8337, tanlam: -0.0317 };
+
+// Độ trễ (giờ) từ đỉnh Đồng Tâm -> đỉnh Mai Hóa — tra theo cấp độ lũ (thống
+// kê từ 144 trận lịch sử). Lũ càng lớn thì trễ càng ngắn/ổn định hơn; lũ
+// nhỏ (7-10m) trễ rất thất thường (0-72h) — cần nói rõ độ tin cậy thấp.
+const LAG_TABLE = [
+  { minDongTam: 16, label: 'Lũ to', medianH: 5, minH: 2, maxH: 35 },
+  { minDongTam: 13, label: 'Lũ vừa', medianH: 3, minH: 2, maxH: 15 },
+  { minDongTam: 10, label: 'Lũ nhỏ-vừa', medianH: 3, minH: 0, maxH: 20 },
+  { minDongTam: 7, label: 'Lũ nhỏ', medianH: 16, minH: 0, maxH: 72 },
+];
+function tinhDoTre(dongtamV) {
+  return LAG_TABLE.find((r) => dongtamV >= r.minDongTam) || LAG_TABLE[LAG_TABLE.length - 1];
+}
 const WINDOWS_H = [1, 3, 6, 12];
 
 function vnNow() {
@@ -311,6 +324,16 @@ export default async (request) => {
       riseRate24h: Math.round(riseRate24h * 1000) / 1000,
       predictedMaiHoaPeak: Math.round(predicted * 100) / 100,
       tanlamMucNuoc: tanlamNow != null ? Math.round(tanlamNow * 100) / 100 : null,
+      predictedPeakTime: (() => {
+        const lag = tinhDoTre(current.v);
+        return {
+          gioUocTinh: current.t + lag.medianH * 3600000,
+          khoangSom: current.t + lag.minH * 3600000,
+          khoangMuon: current.t + lag.maxH * 3600000,
+          capLu: lag.label,
+          doTinCay: lag.maxH - lag.minH <= 20 ? 'khá ổn định' : 'RẤT KHÔNG CHẮC CHẮN — khoảng dao động lớn',
+        };
+      })(),
       dongtamTrend,
       maihoaTrend,
       maihoaCurrentValue,
