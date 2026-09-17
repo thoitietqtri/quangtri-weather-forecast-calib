@@ -44,10 +44,10 @@ function fetchWithTimeout(url, timeoutMs = 8000) {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
-async function fetchKttvSeries(station) {
+async function fetchKttvSeries(station, tinhtong = '1') {
   const end = vnNow();
   const start = new Date(end.getTime() - (HOURS_BACK + 1) * 3600 * 1000);
-  const url = `${KTTV_BASE_URL}?matram=${station.matram}&ten_table=${station.ten_table}&sophut=60&tinhtong=1`
+  const url = `${KTTV_BASE_URL}?matram=${station.matram}&ten_table=${station.ten_table}&sophut=60&tinhtong=${tinhtong}`
     + `&thoigianbd='${fmtVN(start)}'&thoigiankt='${fmtVN(end)}'`;
   try {
     const res = await fetchWithTimeout(url);
@@ -129,7 +129,7 @@ export default async (request) => {
     const heSoParam = parseFloat(url.searchParams.get('hesoHieuChinh'));
     const heSoHieuChinh = Number.isFinite(heSoParam) && heSoParam > 0 ? heSoParam : 1.0;
 
-    const dongtamSeries = await fetchKttvSeries({ matram: '555300', ten_table: 'mucnuoc_oday' });
+    const dongtamSeries = await fetchKttvSeries({ matram: '555300', ten_table: 'mucnuoc_oday' }, '0');
     if (dongtamSeries.length === 0) {
       return json({ available: false, reason: 'Không lấy được dữ liệu Đồng Tâm' });
     }
