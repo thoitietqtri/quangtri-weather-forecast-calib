@@ -69,6 +69,17 @@ function getSql() {
   return sqlClient;
 }
 
+// Đọc đúng cột TIMESTAMP trả về từ Neon — thư viện @neondatabase/serverless
+// trả về dạng Date object (không phải chuỗi), nên KHÔNG được ép thành chuỗi
+// theo kiểu cũ (làm hỏng giá trị, gây lỗi hiện sai ngày "01/01"). Date
+// object đó đã đại diện đúng số giờ VN theo nghĩa đen (đọc qua trường UTC)
+// — chỉ cần trừ đi 7h để khớp quy ước nội bộ (t + 7h = số giờ VN theo
+// nghĩa đen, giống vnNow()).
+function parseNeonTimestamp(raw) {
+  if (raw instanceof Date) return raw.getTime() - 7 * 3600 * 1000;
+  return new Date(`${raw}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000;
+}
+
 async function fetchNeonSeries(neonColumn, start, end) {
   try {
     const sql = getSql();
@@ -80,7 +91,7 @@ async function fetchNeonSeries(neonColumn, start, end) {
       [fmtVN(start), fmtVN(end)],
     );
     return rows
-      .map((r) => ({ t: new Date(`${r.thoi_gian}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: Number(r.v) }))
+      .map((r) => ({ t: parseNeonTimestamp(r.thoi_gian), v: Number(r.v) }))
       .filter((r) => Number.isFinite(r.v))
       .sort((a, b) => a.t - b.t);
   } catch (e) {
@@ -112,7 +123,7 @@ async function fetchSoLieuLichSu(tram, loai, start, end) {
       [tram, loai, fmtVN(start), fmtVN(end)],
     );
     return rows
-      .map((r) => ({ t: new Date(`${r.thoi_gian}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: Number(r.v) }))
+      .map((r) => ({ t: parseNeonTimestamp(r.thoi_gian), v: Number(r.v) }))
       .filter((r) => Number.isFinite(r.v))
       .sort((a, b) => a.t - b.t);
   } catch (e) {
