@@ -81,6 +81,7 @@ export default function DongTamForecast({ onClose }) {
 
               <div className="dongtam-forecast-inputs">
                 <div className="dongtam-forecast-row"><span>Mưa lưu vực 24h đã qua:</span><b>{data.rainDaQua24h}mm</b></div>
+                <div className="dongtam-forecast-row"><span>Tốc độ lên/xuống (6h qua):</span><b>{data.tocDo6h}m/h</b></div>
                 {[6, 12, 18, 24].map((h) => (
                   <div className="dongtam-forecast-row" key={h}>
                     <span>Mưa dự báo +{h}h (gốc → hiệu chỉnh):</span>
@@ -90,7 +91,7 @@ export default function DongTamForecast({ onClose }) {
               </div>
 
               <div className="dongtam-forecast-note">
-                📊 Phương trình riêng cho từng mốc, xây từ 332 mẫu giờ mùa lũ (2006-2025) — đạt chuẩn sai số ±1m: 65% (+6h), 63% (+12h), 71% (+18h), 76% (+24h).
+                📊 Phương trình riêng cho từng mốc, xây từ 332 mẫu giờ mùa lũ (2006-2025) — đạt chuẩn sai số ±1m: 74.7% (+6h), 68.4% (+12h), 71.1% (+18h), 75.9% (+24h).
                 Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>

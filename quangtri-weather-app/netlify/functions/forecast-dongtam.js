@@ -26,10 +26,10 @@ const RAIN_STATIONS = [
 ];
 
 const MODEL_THEO_MOC = {
-  6: { intercept: 1.0372, hienTai: 0.7746, daQua: -0.0008, duBao: 0.0378 },
-  12: { intercept: 2.5392, hienTai: 0.5068, daQua: -0.0029, duBao: 0.0408 },
-  18: { intercept: 3.4477, hienTai: 0.3602, daQua: -0.0059, duBao: 0.0360 },
-  24: { intercept: 3.7644, hienTai: 0.2977, daQua: -0.0075, duBao: 0.0291 },
+  6: { intercept: 1.7305, hienTai: 0.6957, tocDo: 2.1968, daQua: 0.0006, duBao: 0.0287 },
+  12: { intercept: 3.0632, hienTai: 0.4488, tocDo: 1.6942, daQua: -0.0021, duBao: 0.0372 },
+  18: { intercept: 3.6696, hienTai: 0.3359, tocDo: 0.7436, daQua: -0.0057, duBao: 0.0349 },
+  24: { intercept: 3.7951, hienTai: 0.2943, tocDo: 0.1052, daQua: -0.0075, duBao: 0.0290 },
 };
 
 function vnNow() {
@@ -104,6 +104,15 @@ function sumWindow(arr, hours) {
   return arr.slice(0, hours).reduce((a, b) => a + b, 0);
 }
 
+function findValueAt(series, targetT, toleranceMs = 90 * 60 * 1000) {
+  let best = null; let bestDiff = Infinity;
+  for (const p of series) {
+    const diff = Math.abs(p.t - targetT);
+    if (diff < bestDiff) { bestDiff = diff; best = p; }
+  }
+  return best && bestDiff <= toleranceMs ? best.v : null;
+}
+
 // Nhận diện đỉnh trong 4 mốc dự báo — so sánh lần lượt hiện_tại,+6,+12,+18,+24.
 // Nếu có 1 điểm cao hơn điểm trước VÀ cao hơn/bằng điểm sau -> đỉnh nằm
 // trong khoảng [mốc trước, mốc đó]. Nếu +24h vẫn là điểm cao nhất (còn đang
@@ -145,6 +154,8 @@ export default async (request) => {
       }
     }
     const rainDaQua24h = sumRainInWindow(rainByHour, current.t, 24);
+    const gia6hTruoc = findValueAt(dongtamSeries, current.t - 6 * 3600000);
+    const tocDo6h = gia6hTruoc != null ? (current.v - gia6hTruoc) / 6 : 0;
 
     const forecastHourly = await fetchForecastRainHourly();
     if (!forecastHourly) {
@@ -158,7 +169,7 @@ export default async (request) => {
       const rainSauHieuChinh = rainGoc * heSoHieuChinh;
       mucMuaDuBao[LEAD] = { goc: Math.round(rainGoc * 10) / 10, sauHieuChinh: Math.round(rainSauHieuChinh * 10) / 10 };
       const M = MODEL_THEO_MOC[LEAD];
-      duBaoTheoMoc[LEAD] = M.intercept + M.hienTai * current.v + M.daQua * rainDaQua24h + M.duBao * rainSauHieuChinh;
+      duBaoTheoMoc[LEAD] = M.intercept + M.hienTai * current.v + M.tocDo * tocDo6h + M.daQua * rainDaQua24h + M.duBao * rainSauHieuChinh;
     }
 
     const dinh = nhanDienDinh(current.v, duBaoTheoMoc);
@@ -168,6 +179,7 @@ export default async (request) => {
       thoiDiemHienTai: current.t,
       dongtamHienTai: Math.round(current.v * 100) / 100,
       rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
+      tocDo6h: Math.round(tocDo6h * 1000) / 1000,
       heSoHieuChinh,
       mucMuaDuBao,
       duBaoTheoMoc: Object.fromEntries(LEADS.map((h) => [h, Math.round(duBaoTheoMoc[h] * 100) / 100])),
