@@ -109,6 +109,7 @@ export default function MaiHoaForecast({ onClose }) {
                 <h4>Số liệu khác:</h4>
                 <div className="maihoa-forecast-row"><span>Mưa lưu vực 48h qua:</span><b>{data.rain48h}mm</b></div>
                 <div className="maihoa-forecast-row"><span>Tốc độ lên Đồng Tâm (24h qua):</span><b>{data.riseRate24h}m/h</b></div>
+                <div className="maihoa-forecast-row"><span>Mực nước Tân Lâm hiện tại:</span><b>{data.tanlamMucNuoc != null ? `${data.tanlamMucNuoc}m` : '— (không lấy được)'}</b></div>
               </div>
 
               <div className="maihoa-forecast-note">
