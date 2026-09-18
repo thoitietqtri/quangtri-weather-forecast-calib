@@ -137,7 +137,7 @@ export default function MaiHoaForecast({ onClose }) {
                 <div className="maihoa-forecast-row"><span>Mưa lưu vực 24h đã qua:</span><b>{data.rainDaQua24h}mm</b></div>
                 {[6, 12, 18, 24].map((h) => (
                   <div className="maihoa-forecast-row" key={h}>
-                    <span>Mưa dự báo +{h}h (gốc → hiệu chỉnh):</span>
+                    <span>Mưa dự báo +{h}h (ECMWF→HC):</span>
                     <b>{data.mucMuaDuBao[h].goc}mm → {data.mucMuaDuBao[h].sauHieuChinh}mm</b>
                   </div>
                 ))}
