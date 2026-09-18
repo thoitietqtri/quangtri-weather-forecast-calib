@@ -55,6 +55,7 @@ export default function MucNuocTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#EF6C00' }} />Trên BĐ II / cảnh báo</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />Trên BĐ III / nguy hiểm</span>
           <span><span className="dot" style={{ background: '#9E9E9E' }} />Chưa phân cấp (hồ chứa)</span>
+          <span><span style={{ color: 'red' }}>*</span> = trạm KTTV</span>
         </div>
         <div className="mucnuoc-table-scroll">
           <table className="mucnuoc-table">
@@ -68,7 +69,7 @@ export default function MucNuocTable({ stations, onClose }) {
               {stations.map((s) => (
                 <tr key={s.id}>
                   <td className="mucnuoc-table-time-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
-                    {s.name}
+                    {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>
                   {times.map((t) => {
                     const v = rows[`${s.id}|${t}`];

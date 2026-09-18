@@ -31,7 +31,7 @@ export default function RainTable({ stations, onClose }) {
     <div className="rain-table-overlay" onClick={onClose}>
       <div className="rain-table-panel" onClick={(e) => e.stopPropagation()}>
         <div className="rain-table-header">
-          <h3>📊 Mưa thực đo theo thời đoạn (mm)</h3>
+          <h3>📊 Lượng mưa thực đo tại các trạm theo thời đoạn (mm)</h3>
           <button className="rain-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
         <div className="rain-table-legend">
@@ -53,7 +53,7 @@ export default function RainTable({ stations, onClose }) {
                 const isVrain = s.id?.startsWith('vrain_');
                 return (
                   <tr key={s.id}>
-                    <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}</td>
+                    <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];
                       const { bg, fg } = cellColor(v);

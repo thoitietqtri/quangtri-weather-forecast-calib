@@ -57,7 +57,7 @@ export default function RainHourlyTable({ stations, onClose }) {
               {stations.map((s) => (
                 <tr key={s.id}>
                   <td className="rain-hourly-table-station-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
-                    {s.name}
+                    {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>
                   {times.map((t) => {
                     const v = rows[`${s.id}|${t}`];
