@@ -30,7 +30,7 @@ export default function DongTamForecast({ onClose }) {
         <div className="dongtam-forecast-header">
           <div>
             <h3>🔮 Dự báo mực nước Đồng Tâm</h3>
-            <div className="dongtam-forecast-wip">(Chức năng này chưa xong, đang trong giai đoạn xây dựng)</div>
+            <div className="dongtam-forecast-wip">Tham khảo - Không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị</div>
           </div>
           <button className="dongtam-forecast-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
