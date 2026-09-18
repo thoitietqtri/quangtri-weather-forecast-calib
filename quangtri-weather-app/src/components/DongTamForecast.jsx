@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DuBaoChart from './DuBaoChart';
 import './DongTamForecast.css';
 
 function formatTimeVN(t) {
@@ -69,6 +70,13 @@ export default function DongTamForecast({ onClose }) {
                 </tbody>
               </table>
 
+              <DuBaoChart
+                hienTaiT={data.thoiDiemHienTai}
+                hienTaiV={data.dongtamHienTai}
+                duBaoTheoMoc={data.duBaoTheoMoc}
+                nguong={{ bd1: 7, bd2: 13, bd3: 16 }}
+              />
+
               <div className="dongtam-forecast-dinh">
                 {data.nhanDinhDinh.coDinh ? (
                   <>🔴 Dự kiến đạt <b>ĐỈNH {data.nhanDinhDinh.giaTriDinh.toFixed(2)}m</b> trong khoảng {formatTimeVN(data.thoiDiemHienTai + data.nhanDinhDinh.gioTruoc * 3600000)} đến {formatTimeVN(data.thoiDiemHienTai + data.nhanDinhDinh.gioDinh * 3600000)}</>
@@ -84,7 +92,7 @@ export default function DongTamForecast({ onClose }) {
                 <div className="dongtam-forecast-row"><span>Tốc độ lên/xuống (6h qua):</span><b>{data.tocDo6h}m/h</b></div>
                 {[6, 12, 18, 24].map((h) => (
                   <div className="dongtam-forecast-row" key={h}>
-                    <span>Mưa dự báo +{h}h (ECMWF→HC):</span>
+                    <span>Mưa dự báo +{h}h (gốc → hiệu chỉnh):</span>
                     <b>{data.mucMuaDuBao[h].goc}mm → {data.mucMuaDuBao[h].sauHieuChinh}mm</b>
                   </div>
                 ))}
@@ -92,7 +100,7 @@ export default function DongTamForecast({ onClose }) {
 
               <div className="dongtam-forecast-note">
                 📊 Phương trình riêng cho từng mốc, xây từ 332 mẫu giờ mùa lũ (2006-2025) — đạt chuẩn sai số ±1m: 74.7% (+6h), 68.4% (+12h), 71.1% (+18h), 75.9% (+24h).
-                Đây là tham khảo hỗ trợ, không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị.
+                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>
           )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DuBaoChart from './DuBaoChart';
 import './MaiHoaForecast.css';
 
 function formatTimeVN(t) {
@@ -115,6 +116,13 @@ export default function MaiHoaForecast({ onClose }) {
                 </tbody>
               </table>
 
+              <DuBaoChart
+                hienTaiT={data.thoiDiemHienTai}
+                hienTaiV={data.maihoaHienTai}
+                duBaoTheoMoc={data.duBaoTheoMoc}
+                nguong={{ bd1: 3, bd2: 5, bd3: 6.5 }}
+              />
+
               <div className="dongtam-forecast-dinh">
                 {data.nhanDinhDinh.coDinh ? (
                   <>🔴 Dự kiến đạt <b>ĐỈNH {data.nhanDinhDinh.giaTriDinh.toFixed(2)}m</b> trong khoảng {formatTimeVN(data.thoiDiemHienTai + data.nhanDinhDinh.gioTruoc * 3600000)} đến {formatTimeVN(data.thoiDiemHienTai + data.nhanDinhDinh.gioDinh * 3600000)}</>
@@ -129,7 +137,7 @@ export default function MaiHoaForecast({ onClose }) {
                 <div className="maihoa-forecast-row"><span>Mưa lưu vực 24h đã qua:</span><b>{data.rainDaQua24h}mm</b></div>
                 {[6, 12, 18, 24].map((h) => (
                   <div className="maihoa-forecast-row" key={h}>
-                    <span>Mưa dự báo +{h}h (ECMWF→HC):</span>
+                    <span>Mưa dự báo +{h}h (gốc → hiệu chỉnh):</span>
                     <b>{data.mucMuaDuBao[h].goc}mm → {data.mucMuaDuBao[h].sauHieuChinh}mm</b>
                   </div>
                 ))}
@@ -137,7 +145,7 @@ export default function MaiHoaForecast({ onClose }) {
 
               <div className="maihoa-forecast-note">
                 📊 Phương trình riêng cho từng mốc, xây từ 212 mẫu giờ mùa lũ (2010-2025) — đạt chuẩn sai số ±1m: 91.5% (+6h), 76% (+12h), 74.5% (+18h), 81.6% (+24h).
-                Đây là tham khảo hỗ trợ, không thay thế bản tin chính thức của Đài KTTV tỉnh Quảng Trị.
+                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>
           )}
