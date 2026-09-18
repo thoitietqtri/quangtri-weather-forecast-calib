@@ -84,7 +84,7 @@ export default function DongTamForecast({ onClose }) {
                 <div className="dongtam-forecast-row"><span>Tốc độ lên/xuống (6h qua):</span><b>{data.tocDo6h}m/h</b></div>
                 {[6, 12, 18, 24].map((h) => (
                   <div className="dongtam-forecast-row" key={h}>
-                    <span>Mưa dự báo +{h}h (gốc → hiệu chỉnh):</span>
+                    <span>Mưa dự báo +{h}h (ECMWF→HC):</span>
                     <b>{data.mucMuaDuBao[h].goc}mm → {data.mucMuaDuBao[h].sauHieuChinh}mm</b>
                   </div>
                 ))}
