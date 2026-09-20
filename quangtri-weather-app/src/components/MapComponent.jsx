@@ -218,6 +218,36 @@ function MapComponent() {
   const [showRainHourlyTable, setShowRainHourlyTable] = useState(false);
   const [showRainHourlyChart, setShowRainHourlyChart] = useState(false);
   const mapRef = useRef(null);
+  const QT_CENTER = [16.75, 107.1];
+  const QT_ZOOM = 8;
+  const [viTriNguoiDung, setViTriNguoiDung] = useState(null);
+  const [dangDinhVi, setDangDinhVi] = useState(false);
+
+  const veLaiQuangTri = () => {
+    if (mapRef.current) mapRef.current.setView(QT_CENTER, QT_ZOOM);
+  };
+
+  const dinhViNguoiDung = () => {
+    if (!navigator.geolocation) {
+      alert('Thiết bị/trình duyệt không hỗ trợ định vị.');
+      return;
+    }
+    setDangDinhVi(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setViTriNguoiDung({ lat: latitude, lng: longitude });
+        if (mapRef.current) mapRef.current.setView([latitude, longitude], 14);
+        setDangDinhVi(false);
+      },
+      (err) => {
+        setDangDinhVi(false);
+        alert('Không lấy được vị trí — vui lòng kiểm tra đã cho phép truy cập vị trí (Location) cho trang web này chưa.');
+        console.error('Lỗi định vị:', err);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   // Đăng ký Service Worker (chỉ cache giao diện tĩnh, không đụng dữ liệu —
   // xem chi tiết trong file sw.js).
@@ -582,10 +612,39 @@ function MapComponent() {
 
       {/* Bản đồ lấp đầy phần còn lại */}
       <div className="map-wrapper">
+        <button
+          className="locate-btn"
+          onClick={dinhViNguoiDung}
+          disabled={dangDinhVi}
+          aria-label="Định vị vị trí của tôi"
+          title="Định vị vị trí của tôi"
+        >
+          {dangDinhVi ? '⏳' : '📍'}
+        </button>
+        <button
+          className="home-btn"
+          onClick={veLaiQuangTri}
+          aria-label="Về Quảng Trị"
+          title="Về Quảng Trị"
+        >
+          🏠
+        </button>
         {geoData ? (
           <MapContainer center={[16.75, 107.1]} zoom={8} className="responsive-map" ref={mapRef}>
             <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)' maxZoom={17} />
-            {showRiver && riverGeoData && (
+            {viTriNguoiDung && (
+              <Marker
+                position={[viTriNguoiDung.lat, viTriNguoiDung.lng]}
+                icon={L.divIcon({
+                  className: 'vi-tri-nguoi-dung-icon',
+                  html: '<div style="width:16px;height:16px;background:#1565C0;border:3px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,0.5);"></div>',
+                  iconSize: [16, 16],
+                  iconAnchor: [8, 8],
+                })}
+              >
+                <Popup>Vị trí của bạn</Popup>
+              </Marker>
+            )}            {showRiver && riverGeoData && (
               <GeoJSON
                 data={riverGeoData}
                 style={{ color: '#1565C0', weight: 1, fillColor: '#1565C0', fillOpacity: 0.55 }}

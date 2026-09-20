@@ -450,3 +450,74 @@ input[type="date"] {
     padding: 6px 8px;
   }
 }
+
+.locate-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1001;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.locate-btn:hover,
+.locate-btn:active {
+  background: #f0f0f0;
+}
+
+.locate-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.home-btn {
+  position: absolute;
+  top: 58px;
+  right: 12px;
+  z-index: 1001;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.home-btn:hover,
+.home-btn:active {
+  background: #f0f0f0;
+}
+
+@media (max-width: 768px) {
+  .home-btn {
+    top: 48px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .locate-btn {
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+}
