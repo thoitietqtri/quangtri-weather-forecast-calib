@@ -351,7 +351,7 @@ async function fetchVfassAll() {
   const end = vnNow();
   const dateFrom = fmtVN(end).slice(0, 10);
   const dateTo = dateFrom;
-  const url = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_10m`;
+  const url = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h`;
 
   const res = await fetchWithTimeout(url, {
     headers: {
