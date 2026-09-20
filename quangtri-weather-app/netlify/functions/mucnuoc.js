@@ -60,6 +60,16 @@ const VRAIN_MUCNUOC_COORDS = {
   'Đầu mối HCN Ái Tử': { lat: 16.76475, lng: 107.129889, displayName: 'Hồ Ái Tử' },
 };
 
+// ============ 2 trạm mực nước MỚI từ hệ thống vfass (quangtri.vfass.vn) —
+// dùng CHUNG cơ chế đăng nhập với VRain (xác nhận qua thực tế) nhưng khác
+// tên miền/tổ chức/API version — đợt bổ sung 09/2026, anh Hudson xác nhận
+// tên hiển thị rút gọn. Trạm mới, CHƯA có cấp báo động chính thức — để
+// trống (chưa phân cấp) cho đến khi có ngưỡng cụ thể.
+const VFASS_STATIONS = [
+  { id: '841697046160', displayName: 'Trường Sơn 2', lat: 17.209778, lng: 106.459639 },
+  { id: '841697046673', displayName: 'Kim Ngân', lat: 17.093444, lng: 106.756306 },
+];
+
 // ============ Cấp báo động / ngưỡng nguy hiểm — key dùng ĐÚNG mã trạm
 // (matram cho KTTV) hoặc đúng tên đối chiếu VRain (giữ nguyên như trong
 // VRAIN_MUCNUOC_COORDS, KHÔNG dùng displayName). Trạm không có entry ở đây
@@ -119,6 +129,13 @@ const VRAIN_MN_DETAILS_URL = `${VRAIN_MN_BASE_URL}/api/vwater/private/v1/stats/d
 const VRAIN_MN_USERNAME = 'mnquangtri';
 const VRAIN_MN_PASSWORD = '123456';
 const VRAIN_MN_GROUP_ID = '182';
+
+const VFASS_BASE_URL = 'https://quangtri.vfass.vn';
+const VFASS_LOGIN_URL = `${VFASS_BASE_URL}/api/vrain/public/v1/login`;
+const VFASS_DETAILS_URL = `${VFASS_BASE_URL}/api/vwater/private/v2/stats/details`;
+const VFASS_USERNAME = 'quangtri';
+const VFASS_PASSWORD = '123456';
+const VFASS_ORG_UUID = 'f3813533-b653-4d16-945b-8359f26d6b62';
 
 function vnNow() {
   return new Date(Date.now() + 7 * 3600 * 1000);
@@ -300,6 +317,74 @@ async function fetchVrainMnAll() {
 // gọn thành mức thay đổi) — để hiển thị dạng bảng hàng=giờ, cột=trạm giống
 // đúng kiểu bảng Python cũ (mucnuoc_wide.xlsx). Mức thay đổi cho icon bản đồ
 // sẽ tự tính ở phía frontend từ chính chuỗi này.
+// ============ vfass (đăng nhập chung cơ chế VRain, khác domain/tổ chức) ============
+async function vfassLogin() {
+  const res = await fetchWithTimeout(VFASS_LOGIN_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      referer: `${VFASS_BASE_URL}/main/detail/vfass`,
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    },
+    body: JSON.stringify({ username: VFASS_USERNAME, password: VFASS_PASSWORD }),
+  }, 8000);
+  if (!res.ok) throw new Error(`vfass đăng nhập lỗi HTTP ${res.status}`);
+  let setCookieRaw = '';
+  if (typeof res.headers.getSetCookie === 'function') {
+    setCookieRaw = res.headers.getSetCookie().join('; ');
+  } else {
+    setCookieRaw = res.headers.get('set-cookie') || '';
+  }
+  const m = /sid=([^;]+)/.exec(setCookieRaw);
+  if (!m) throw new Error('vfass đăng nhập không trả về sid');
+  return m[1];
+}
+
+async function fetchVfassAll() {
+  const sid = await vfassLogin();
+  const end = vnNow();
+  const dateFrom = fmtVN(end).slice(0, 10);
+  const dateTo = dateFrom;
+  const url = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_10m`;
+
+  const res = await fetchWithTimeout(url, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      referer: `${VFASS_BASE_URL}/main/detail/vfass`,
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'x-org-uuid': VFASS_ORG_UUID,
+      'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      cookie: `sid=${sid}`,
+    },
+  }, 8000);
+  if (!res.ok) throw new Error(`vfass lấy dữ liệu lỗi HTTP ${res.status}`);
+  const data = await res.json();
+
+  const idCanLay = new Set(VFASS_STATIONS.map((s) => s.id));
+  const seriesById = {};
+  for (const ent of data.stats || []) {
+    const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+    let t = parseVrainTimestamp(tRaw);
+    if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000; // dự phòng — coi như giá trị hiện tại nếu không tìm được mốc thời gian trong dữ liệu
+    for (const st of ent.stations || []) {
+      if (!st || !idCanLay.has(String(st.id))) continue;
+      const v = parseFloat(st.depth);
+      if (!Number.isFinite(v) || v <= -900) continue; // -999 = mã lỗi/thiếu dữ liệu
+      const key = String(st.id);
+      if (!seriesById[key]) seriesById[key] = [];
+      seriesById[key].push({ t, v });
+    }
+  }
+
+  const results = [];
+  for (const s of VFASS_STATIONS) {
+    const series = (seriesById[s.id] || []).sort((a, b) => a.t - b.t);
+    if (series.length === 0) continue;
+    results.push(buildStationResult(s.displayName, s.lat, s.lng, `vrain_vfass_${s.id}`, series, null));
+  }
+  return results;
+}
+
 function buildStationResult(name, lat, lng, id, series, alertInfo = null) {
   if (series.length === 0) return null;
   return {
@@ -317,8 +402,14 @@ export default async () => {
     } catch (e) {
       console.error('[mucnuoc] Lỗi VRain mực nước:', e.message);
     }
+    let vfassResults = [];
+    try {
+      vfassResults = await fetchVfassAll();
+    } catch (e) {
+      console.error('[mucnuoc] Lỗi vfass:', e.message);
+    }
 
-    const stations = [...kttvResults.filter(Boolean), ...vrainResults.filter(Boolean)]
+    const stations = [...kttvResults.filter(Boolean), ...vrainResults.filter(Boolean), ...vfassResults.filter(Boolean)]
       .sort((a, b) => alertPriority(a.alertInfo) - alertPriority(b.alertInfo));
     return new Response(JSON.stringify(stations), {
       status: 200,
