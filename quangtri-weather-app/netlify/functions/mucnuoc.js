@@ -114,6 +114,12 @@ const ALERT_THRESHOLDS = {
   'Triệu Độ': { type: 'custom', binhThuongMax: 1.0, nguyHiemMin: 1.6 },
   'Triệu Đại': { type: 'custom', binhThuongMax: 1.1, nguyHiemMin: 1.7 },
   'Cây Da': { type: 'custom', binhThuongMax: 1.2, nguyHiemMin: 1.8 },
+
+  // --- vfass (key = id trạm) — theo tính toán anh Hudson (17/09/2026):
+  // Trường Sơn 2 = lấy đúng ngưỡng trạm Trường Sơn; Kim Ngân = ngưỡng Kiến
+  // Giang + 4.87m.
+  '841697046160': { type: 'custom', binhThuongMax: 21.0, nguyHiemMin: 23.0 }, // Trường Sơn 2 (= Trường Sơn)
+  '841697046673': { type: 'official', bd1: 12.87, bd2: 15.87, bd3: 17.87 },   // Kim Ngân (= Kiến Giang + 4.87m)
 };
 
 // Thứ tự ưu tiên hiển thị: có cấp báo động chính thức -> có ngưỡng tự quy
@@ -380,7 +386,7 @@ async function fetchVfassAll() {
   for (const s of VFASS_STATIONS) {
     const series = (seriesById[s.id] || []).sort((a, b) => a.t - b.t);
     if (series.length === 0) continue;
-    results.push(buildStationResult(s.displayName, s.lat, s.lng, `vrain_vfass_${s.id}`, series, null));
+    results.push(buildStationResult(s.displayName, s.lat, s.lng, `vrain_vfass_${s.id}`, series, ALERT_THRESHOLDS[s.id] || null));
   }
   return results;
 }
