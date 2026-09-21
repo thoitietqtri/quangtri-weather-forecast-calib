@@ -32,7 +32,7 @@ function alertColor(value, alertInfo) {
 // Bảng dạng hàng=TRẠM, cột=GIỜ — giống đúng bố cục "Mưa thực đo theo thời
 // đoạn" / "Mưa theo giờ" đã có, trạm cố định bên trái khi cuộn ngang.
 export default function MucNuocTable({ stations, onClose }) {
-  const sorted = useMemo(() => [...stations].sort((a, b) => layLuuVuc(a.id).thuTu - layLuuVuc(b.id).thuTu), [stations]);
+  const sorted = useMemo(() => [...stations].sort((a, b) => layLuuVuc(a.name).thuTu - layLuuVuc(b.name).thuTu), [stations]);
   const { times, rows } = useMemo(() => {
     const timeSet = new Set();
     for (const s of stations) for (const p of s.series) timeSet.add(p.t);
@@ -71,7 +71,7 @@ export default function MucNuocTable({ stations, onClose }) {
             <tbody>
               {sorted.map((s) => (
                 <tr key={s.id}>
-                  <td className="mucnuoc-table-time-col">{layLuuVuc(s.id).luuVuc}</td>
+                  <td className="mucnuoc-table-time-col">{layLuuVuc(s.name).luuVuc}</td>
                   <td className="mucnuoc-table-time-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
                     {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>

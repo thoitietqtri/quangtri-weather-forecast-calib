@@ -26,7 +26,7 @@ const WINDOWS = [
 ];
 
 export default function RainTable({ stations, onClose }) {
-  const sorted = [...stations].sort((a, b) => layLuuVuc(a.id).thuTu - layLuuVuc(b.id).thuTu);
+  const sorted = [...stations].sort((a, b) => layLuuVuc(a.name).thuTu - layLuuVuc(b.name).thuTu);
 
   return (
     <div className="rain-table-overlay" onClick={onClose}>
@@ -57,7 +57,7 @@ export default function RainTable({ stations, onClose }) {
                 const isVrain = s.id?.startsWith('vrain_');
                 return (
                   <tr key={s.id}>
-                    <td className="rain-table-station-col">{layLuuVuc(s.id).luuVuc}</td>
+                    <td className="rain-table-station-col">{layLuuVuc(s.name).luuVuc}</td>
                     <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];
