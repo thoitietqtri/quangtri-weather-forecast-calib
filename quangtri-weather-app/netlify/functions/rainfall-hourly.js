@@ -52,7 +52,7 @@ const KTTV_STATIONS = [
   { matram: '091456', name: 'Ba Lòng', ten_table: 'hanquoc_mua', lat: 16.635, lng: 107.011 },
   { matram: '091406', name: 'Phúc Trạch', ten_table: 'hanquoc_mua', lat: 17.6474, lng: 106.265 },
   { matram: '091405', name: 'Hương Hóa', ten_table: 'hanquoc_mua', lat: 18.0306, lng: 105.857 },
-  { matram: '091404', name: 'Sen Thủy', ten_table: 'hanquoc_mua', lat: 17.1201, lng: 106.899 },
+  { matram: '091404', name: 'Đo Mưa TĐ Sen Thủy', ten_table: 'hanquoc_mua', lat: 17.1201, lng: 106.899 },
   { matram: '091403', name: 'Quảng Hợp', ten_table: 'hanquoc_mua', lat: 17.9169, lng: 106.342 },
   { matram: '091402', name: 'Thượng Hóa', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967 },
   { matram: '091401', name: 'Hóa Thanh', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8 },
@@ -98,6 +98,36 @@ function slugifyId(raw) {
   return String(raw).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'tram';
 }
+
+// Chuẩn hoá tên trạm để so khớp MỀM DẺO (bỏ dấu, viết thường, bỏ các tiền
+// tố/hậu tố thường gặp không mang tính phân biệt: "hồ", "đầu mối", "thủy
+// văn", "trạm", "đập, thủy điện") — vì tên trạm API trả về thực tế có thể
+// khác đôi chút so với tên trong VRAIN_FALLBACK_COORDS (thêm/bớt tiền tố),
+// trước đây khớp CHÍNH XÁC TUYỆT ĐỐI nên nhiều trạm bị âm thầm loại bỏ.
+function chuanHoaTenTram(raw) {
+  let s = String(raw).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  s = s.replace(/\b(dau\s*moi|thuy\s*van|thuy\s*dien|tram|ho|dap)\b/g, ' ');
+  s = s.replace(/[^a-z0-9]+/g, ' ').trim();
+  return s;
+}
+
+let _vrainFallbackIndex = null;
+function timToaDoFallback(name) {
+  if (!_vrainFallbackIndex) {
+    _vrainFallbackIndex = Object.entries(VRAIN_FALLBACK_COORDS).map(([key, coords]) => ({
+      key, coords, chuanHoa: chuanHoaTenTram(key),
+    }));
+  }
+  const target = chuanHoaTenTram(name);
+  if (!target) return null;
+  // 1. Khớp đúng tuyệt đối sau chuẩn hoá
+  let found = _vrainFallbackIndex.find((e) => e.chuanHoa === target);
+  if (found) return found.coords;
+  // 2. Khớp bao hàm (1 bên chứa trọn bên kia — vd "an ma" nằm trong "ho an ma")
+  found = _vrainFallbackIndex.find((e) => e.chuanHoa && (target.includes(e.chuanHoa) || e.chuanHoa.includes(target)));
+  return found ? found.coords : null;
+}
+
 async function fetchWithRetry(url, options, retries = 2, delayMs = 1500) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -306,7 +336,7 @@ async function getVrainSeriesAll() {
       const lat = Number(pick(st, ['lat', 'latitude', 'viDo', 'vi_do']));
       const lng = Number(pick(st, ['lng', 'lon', 'long', 'longitude', 'kinhDo', 'kinh_do']));
       if (!byStation.has(id)) {
-        const fallback = VRAIN_FALLBACK_COORDS[(name || '').trim()] || null;
+        const fallback = timToaDoFallback(name || '');
         byStation.set(id, {
           name: name || id,
           lat: Number.isFinite(lat) ? lat : (fallback ? fallback.lat : null),
