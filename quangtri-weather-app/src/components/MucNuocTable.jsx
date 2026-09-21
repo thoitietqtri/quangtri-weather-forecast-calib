@@ -69,9 +69,13 @@ export default function MucNuocTable({ stations, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s) => (
-                <tr key={s.id}>
-                  <td className="mucnuoc-table-time-col">{layLuuVuc(s.name).luuVuc}</td>
+              {sorted.map((s, i) => {
+                const luuVucHienTai = layLuuVuc(s.name).luuVuc;
+                const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
+                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #9C27B0' } : undefined;
+                return (
+                <tr key={s.id} style={rowStyle}>
+                  <td className="mucnuoc-table-time-col">{luuVucHienTai}</td>
                   <td className="mucnuoc-table-time-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
                     {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>
@@ -85,7 +89,8 @@ export default function MucNuocTable({ stations, onClose }) {
                     );
                   })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

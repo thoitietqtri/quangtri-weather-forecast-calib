@@ -53,11 +53,14 @@ export default function RainTable({ stations, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s) => {
+              {sorted.map((s, i) => {
                 const isVrain = s.id?.startsWith('vrain_');
+                const luuVucHienTai = layLuuVuc(s.name).luuVuc;
+                const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
+                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #9C27B0' } : undefined;
                 return (
-                  <tr key={s.id}>
-                    <td className="rain-table-station-col">{layLuuVuc(s.name).luuVuc}</td>
+                  <tr key={s.id} style={rowStyle}>
+                    <td className="rain-table-station-col">{luuVucHienTai}</td>
                     <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];

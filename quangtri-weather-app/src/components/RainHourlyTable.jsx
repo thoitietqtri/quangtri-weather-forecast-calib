@@ -59,9 +59,13 @@ export default function RainHourlyTable({ stations, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s) => (
-                <tr key={s.id}>
-                  <td className="rain-hourly-table-station-col">{layLuuVuc(s.name).luuVuc}</td>
+              {sorted.map((s, i) => {
+                const luuVucHienTai = layLuuVuc(s.name).luuVuc;
+                const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
+                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #9C27B0' } : undefined;
+                return (
+                <tr key={s.id} style={rowStyle}>
+                  <td className="rain-hourly-table-station-col">{luuVucHienTai}</td>
                   <td className="rain-hourly-table-station-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
                     {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>
@@ -75,7 +79,8 @@ export default function RainHourlyTable({ stations, onClose }) {
                     );
                   })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
