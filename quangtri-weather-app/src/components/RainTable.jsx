@@ -1,4 +1,5 @@
 import './RainTable.css';
+import { layLuuVuc } from './luuVucSong';
 
 // Ngưỡng màu theo lượng mưa (áp dụng riêng cho từng ô trong bảng — độc lập
 // với thang màu marker trên bản đồ):
@@ -25,7 +26,7 @@ const WINDOWS = [
 ];
 
 export default function RainTable({ stations, onClose }) {
-  const sorted = [...stations].sort((a, b) => (b.rain_24h ?? 0) - (a.rain_24h ?? 0));
+  const sorted = [...stations].sort((a, b) => layLuuVuc(a.id).thuTu - layLuuVuc(b.id).thuTu);
 
   return (
     <div className="rain-table-overlay" onClick={onClose}>
@@ -39,11 +40,14 @@ export default function RainTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#2E7D32' }} />&gt;25–50mm</span>
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
+          <span style={{ fontStyle: 'italic' }}>Tên nghiêng = trạm VRain</span>
+          <span><span style={{ color: 'red' }}>*</span> = trạm KTTV</span>
         </div>
         <div className="rain-table-scroll">
           <table className="rain-table">
             <thead>
               <tr>
+                <th className="rain-table-station-col">Lưu vực sông</th>
                 <th className="rain-table-station-col">Trạm</th>
                 {WINDOWS.map((w) => <th key={w.key}>{w.label}</th>)}
               </tr>
@@ -53,6 +57,7 @@ export default function RainTable({ stations, onClose }) {
                 const isVrain = s.id?.startsWith('vrain_');
                 return (
                   <tr key={s.id}>
+                    <td className="rain-table-station-col">{layLuuVuc(s.id).luuVuc}</td>
                     <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];

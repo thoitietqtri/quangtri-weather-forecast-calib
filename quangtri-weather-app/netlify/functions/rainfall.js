@@ -72,7 +72,7 @@ const KTTV_STATIONS = [
   { matram: '091456', name: 'Ba Lòng', ten_table: 'hanquoc_mua', lat: 16.635, lng: 107.011 },
   { matram: '091406', name: 'Phúc Trạch', ten_table: 'hanquoc_mua', lat: 17.6474, lng: 106.265 },
   { matram: '091405', name: 'Hương Hóa', ten_table: 'hanquoc_mua', lat: 18.0306, lng: 105.857 },
-  { matram: '091404', name: 'Đo Mưa TĐ Sen Thủy', ten_table: 'hanquoc_mua', lat: 17.1201, lng: 106.899 },
+  { matram: '091404', name: 'Sen Thủy', ten_table: 'hanquoc_mua', lat: 17.1201, lng: 106.899 },
   { matram: '091403', name: 'Quảng Hợp', ten_table: 'hanquoc_mua', lat: 17.9169, lng: 106.342 },
   { matram: '091402', name: 'Thượng Hóa', ten_table: 'hanquoc_mua', lat: 17.7133, lng: 105.967 },
   { matram: '091401', name: 'Hóa Thanh', ten_table: 'hanquoc_mua', lat: 17.8914, lng: 105.8 },

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import './RainHourlyTable.css';
+import { layLuuVuc } from './luuVucSong';
 
 function formatTime(t) {
   const d = new Date(t + 7 * 3600 * 1000); // dịch sang giờ VN trước khi đọc field UTC
@@ -21,6 +22,7 @@ function rainColor(mm) {
 // Bảng dạng hàng=TRẠM, cột=GIỜ — giống đúng bố cục bảng "Mưa thực đo theo
 // thời đoạn" đã có (trạm cố định bên trái, cuộn ngang xem các mốc giờ).
 export default function RainHourlyTable({ stations, onClose }) {
+  const sorted = useMemo(() => [...stations].sort((a, b) => layLuuVuc(a.id).thuTu - layLuuVuc(b.id).thuTu), [stations]);
   const { times, rows } = useMemo(() => {
     const timeSet = new Set();
     for (const s of stations) for (const p of s.series) timeSet.add(p.t);
@@ -44,18 +46,22 @@ export default function RainHourlyTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#2E7D32' }} />&gt;25–50mm</span>
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
+          <span style={{ fontStyle: 'italic' }}>Tên nghiêng = trạm VRain</span>
+          <span><span style={{ color: 'red' }}>*</span> = trạm KTTV</span>
         </div>
         <div className="rain-hourly-table-scroll">
           <table className="rain-hourly-table">
             <thead>
               <tr>
+                <th className="rain-hourly-table-station-col">Lưu vực sông</th>
                 <th className="rain-hourly-table-station-col">Trạm</th>
                 {times.map((t) => <th key={t}>{formatTime(t)}</th>)}
               </tr>
             </thead>
             <tbody>
-              {stations.map((s) => (
+              {sorted.map((s) => (
                 <tr key={s.id}>
+                  <td className="rain-hourly-table-station-col">{layLuuVuc(s.id).luuVuc}</td>
                   <td className="rain-hourly-table-station-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
                     {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>
