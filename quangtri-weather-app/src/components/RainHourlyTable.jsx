@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import './RainHourlyTable.css';
-import { layLuuVuc } from './luuVucSong';
+import { layLuuVucMua } from './luuVucSong';
 
 function formatTime(t) {
   const d = new Date(t + 7 * 3600 * 1000); // dịch sang giờ VN trước khi đọc field UTC
@@ -22,7 +22,7 @@ function rainColor(mm) {
 // Bảng dạng hàng=TRẠM, cột=GIỜ — giống đúng bố cục bảng "Mưa thực đo theo
 // thời đoạn" đã có (trạm cố định bên trái, cuộn ngang xem các mốc giờ).
 export default function RainHourlyTable({ stations, onClose }) {
-  const sorted = useMemo(() => [...stations].sort((a, b) => layLuuVuc(a.name).thuTu - layLuuVuc(b.name).thuTu), [stations]);
+  const sorted = useMemo(() => [...stations].sort((a, b) => layLuuVucMua(a.name).thuTu - layLuuVucMua(b.name).thuTu), [stations]);
   const { times, rows } = useMemo(() => {
     const timeSet = new Set();
     for (const s of stations) for (const p of s.series) timeSet.add(p.t);
@@ -65,8 +65,8 @@ export default function RainHourlyTable({ stations, onClose }) {
             </thead>
             <tbody>
               {sorted.map((s, i) => {
-                const luuVucHienTai = layLuuVuc(s.name).luuVuc;
-                const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
+                const luuVucHienTai = layLuuVucMua(s.name).luuVuc;
+                const doiLuuVuc = i > 0 && layLuuVucMua(sorted[i - 1].name).luuVuc !== luuVucHienTai;
                 const borderStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : {};
                 const isVrain = s.id.startsWith('vrain_');
                 return (

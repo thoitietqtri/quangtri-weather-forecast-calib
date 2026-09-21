@@ -1,5 +1,5 @@
 import './RainTable.css';
-import { layLuuVuc } from './luuVucSong';
+import { layLuuVucMua } from './luuVucSong';
 
 // Ngưỡng màu theo lượng mưa (áp dụng riêng cho từng ô trong bảng — độc lập
 // với thang màu marker trên bản đồ):
@@ -26,7 +26,7 @@ const WINDOWS = [
 ];
 
 export default function RainTable({ stations, onClose }) {
-  const sorted = [...stations].sort((a, b) => layLuuVuc(a.name).thuTu - layLuuVuc(b.name).thuTu);
+  const sorted = [...stations].sort((a, b) => layLuuVucMua(a.name).thuTu - layLuuVucMua(b.name).thuTu);
 
   return (
     <div className="rain-table-overlay" onClick={onClose}>
@@ -60,8 +60,8 @@ export default function RainTable({ stations, onClose }) {
             <tbody>
               {sorted.map((s, i) => {
                 const isVrain = s.id?.startsWith('vrain_');
-                const luuVucHienTai = layLuuVuc(s.name).luuVuc;
-                const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
+                const luuVucHienTai = layLuuVucMua(s.name).luuVuc;
+                const doiLuuVuc = i > 0 && layLuuVucMua(sorted[i - 1].name).luuVuc !== luuVucHienTai;
                 const borderStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : {};
                 return (
                   <tr key={s.id}>
