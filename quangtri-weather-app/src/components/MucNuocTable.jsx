@@ -78,17 +78,18 @@ export default function MucNuocTable({ stations, onClose }) {
               {sorted.map((s, i) => {
                 const luuVucHienTai = layLuuVuc(s.name).luuVuc;
                 const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
-                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : undefined;
+                const borderStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : {};
+                const isVrain = s.id.startsWith('vrain_');
                 return (
-                <tr key={s.id} style={rowStyle}>
-                  <td className="mucnuoc-table-time-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
-                    {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
+                <tr key={s.id}>
+                  <td className="mucnuoc-table-time-col" style={{ ...borderStyle, ...(isVrain ? { fontStyle: 'italic' } : {}) }}>
+                    {s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}
                   </td>
                   {times.map((t) => {
                     const v = rows[`${s.id}|${t}`];
                     const { bg, fg } = alertColor(v, s.alertInfo);
                     return (
-                      <td key={t} style={{ background: bg, color: fg }}>
+                      <td key={t} style={{ ...borderStyle, background: bg, color: fg }}>
                         {v == null ? '—' : v}
                       </td>
                     );

@@ -62,15 +62,15 @@ export default function RainTable({ stations, onClose }) {
                 const isVrain = s.id?.startsWith('vrain_');
                 const luuVucHienTai = layLuuVuc(s.name).luuVuc;
                 const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
-                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : undefined;
+                const borderStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : {};
                 return (
-                  <tr key={s.id} style={rowStyle}>
-                    <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
+                  <tr key={s.id}>
+                    <td className="rain-table-station-col" style={{ ...borderStyle, ...(isVrain ? { fontStyle: 'italic' } : {}) }}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];
                       const { bg, fg } = cellColor(v);
                       return (
-                        <td key={w.key} style={{ background: bg, color: fg }}>
+                        <td key={w.key} style={{ ...borderStyle, background: bg, color: fg }}>
                           {v == null ? '—' : v}
                         </td>
                       );
