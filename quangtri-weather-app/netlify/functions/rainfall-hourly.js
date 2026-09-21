@@ -209,7 +209,7 @@ const VRAIN_FALLBACK_COORDS = {
   'Tà Long': { lat: 16.575033, lng: 106.957696 },
   'Hải An': { lat: 16.777313, lng: 107.330052 },
   'Trường Xuân PCTT': { lat: 17.27642, lng: 106.626623 },
-  'TT Phòng tránh và Giảm nhẹ thiên tai': { lat: 16.790278, lng: 107.100278 },
+  'TT PCGNTT': { lat: 16.790278, lng: 107.100278 },
   'Trường Sơn': { lat: 17.218776, lng: 106.45199 },
   'Đầu mối hồ Bảo Đài': { lat: 17.058056, lng: 106.927778 },
   'Bến Quan': { lat: 17.022222, lng: 106.903056 },
