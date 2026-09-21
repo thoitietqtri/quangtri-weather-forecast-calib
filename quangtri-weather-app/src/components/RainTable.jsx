@@ -1,5 +1,5 @@
 import './RainTable.css';
-import { layLuuVucMua } from './luuVucSong';
+import { layLuuVucMua, layTenHienThi } from './luuVucSong';
 
 // Ngưỡng màu theo lượng mưa (áp dụng riêng cho từng ô trong bảng — độc lập
 // với thang màu marker trên bản đồ):
@@ -32,7 +32,7 @@ export default function RainTable({ stations, onClose }) {
     <div className="rain-table-overlay" onClick={onClose}>
       <div className="rain-table-panel" onClick={(e) => e.stopPropagation()}>
         <div className="rain-table-header">
-          <h3>📊 Mưa thực đo theo thời đoạn (mm)</h3>
+          <h3>📊 Lượng mưa thực đo tại các trạm theo thời đoạn (mm)</h3>
           <button className="rain-table-close" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
         <div className="rain-table-legend">
@@ -41,7 +41,7 @@ export default function RainTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
           <span>
-            {['Ròn', 'Gianh', 'Lý Hòa', 'Dinh', 'K.Giang', 'Bến Hải', 'T.Hãn', 'Sê Pôn'].map((lv, i, arr) => (
+            {['Ròn', 'Gianh', 'Lý Hòa', 'Dinh', 'Kiến Giang', 'Bến Hải', 'Thạch Hãn', 'Sê Pôn'].map((lv, i, arr) => (
               <span key={lv}>
                 {lv}
                 {i < arr.length - 1 && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}> | </span>}
@@ -65,7 +65,7 @@ export default function RainTable({ stations, onClose }) {
                 const borderStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : {};
                 return (
                   <tr key={s.id}>
-                    <td className="rain-table-station-col" style={{ ...borderStyle, ...(isVrain ? { fontStyle: 'italic' } : {}) }}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
+                    <td className="rain-table-station-col" style={{ ...borderStyle, ...(isVrain ? { fontStyle: 'italic' } : {}) }}>{layTenHienThi(s.name)}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];
                       const { bg, fg } = cellColor(v);

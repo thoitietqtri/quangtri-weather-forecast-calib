@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import './RainHourlyTable.css';
-import { layLuuVucMua } from './luuVucSong';
+import { layLuuVucMua, layTenHienThi } from './luuVucSong';
 
 function formatTime(t) {
   const d = new Date(t + 7 * 3600 * 1000); // dịch sang giờ VN trước khi đọc field UTC
@@ -72,7 +72,7 @@ export default function RainHourlyTable({ stations, onClose }) {
                 return (
                 <tr key={s.id}>
                   <td className="rain-hourly-table-station-col" style={{ ...borderStyle, ...(isVrain ? { fontStyle: 'italic' } : {}) }}>
-                    {s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}
+                    {layTenHienThi(s.name)}{!isVrain && <span style={{ color: 'red' }}> *</span>}
                   </td>
                   {times.map((t) => {
                     const v = rows[`${s.id}|${t}`];

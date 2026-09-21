@@ -173,3 +173,14 @@ export function layLuuVucMua(ten) {
 export function layLuuVucMucNuoc(ten) {
   return LUU_VUC_MUC_NUOC[chuanHoaTen(ten)] || { thuTu: 9999, luuVuc: '' };
 }
+
+// Đổi tên hiển thị cho gọn trên màn hình nhỏ — CHỈ áp dụng lúc HIỂN THỊ,
+// không đụng đến tên gốc dùng để tra cứu lưu vực (layLuuVucMua ở trên vẫn
+// nhận đúng tên gốc, không đi qua hàm này).
+const TEN_HIEN_THI_NGAN = {
+  'TT Phòng tránh và Giảm nhẹ thiên tai': 'TT PCLB',
+  'Thủy văn Rào Nan, Cao Quảng': 'TV Rào Nan',
+};
+export function layTenHienThi(ten) {
+  return TEN_HIEN_THI_NGAN[ten] || ten;
+}
