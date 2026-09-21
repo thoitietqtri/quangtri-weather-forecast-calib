@@ -57,13 +57,19 @@ export default function MucNuocTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#EF6C00' }} />Trên BĐ II / cảnh báo</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />Trên BĐ III / nguy hiểm</span>
           <span><span className="dot" style={{ background: '#9E9E9E' }} />Chưa phân cấp (hồ chứa)</span>
-          <span><span style={{ color: 'red' }}>*</span> = trạm KTTV</span>
+          <span>
+            {['Ròn', 'Gianh', 'Lý Hòa', 'Dinh', 'Kiến Giang', 'Bến Hải', 'Thạch Hãn', 'Sê Pôn'].map((lv, i, arr) => (
+              <span key={lv}>
+                {lv}
+                {i < arr.length - 1 && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}> | </span>}
+              </span>
+            ))}
+          </span>
         </div>
         <div className="mucnuoc-table-scroll">
           <table className="mucnuoc-table">
             <thead>
               <tr>
-                <th className="mucnuoc-table-time-col">Lưu vực sông</th>
                 <th className="mucnuoc-table-time-col">Trạm</th>
                 {times.map((t) => <th key={t}>{formatTime(t)}</th>)}
               </tr>
@@ -72,10 +78,9 @@ export default function MucNuocTable({ stations, onClose }) {
               {sorted.map((s, i) => {
                 const luuVucHienTai = layLuuVuc(s.name).luuVuc;
                 const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
-                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #9C27B0' } : undefined;
+                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : undefined;
                 return (
                 <tr key={s.id} style={rowStyle}>
-                  <td className="mucnuoc-table-time-col">{luuVucHienTai}</td>
                   <td className="mucnuoc-table-time-col" style={s.id.startsWith('vrain_') ? { fontStyle: 'italic' } : undefined}>
                     {s.name}{!s.id.startsWith('vrain_') && <span style={{ color: 'red' }}> *</span>}
                   </td>

@@ -40,14 +40,19 @@ export default function RainTable({ stations, onClose }) {
           <span><span className="dot" style={{ background: '#2E7D32' }} />&gt;25–50mm</span>
           <span><span className="dot" style={{ background: '#F9A825' }} />&gt;50–100mm</span>
           <span><span className="dot" style={{ background: '#D32F2F' }} />&gt;100mm</span>
-          <span style={{ fontStyle: 'italic' }}>Tên nghiêng = trạm VRain</span>
-          <span><span style={{ color: 'red' }}>*</span> = trạm KTTV</span>
+          <span>
+            {['Ròn', 'Gianh', 'Lý Hòa', 'Dinh', 'Kiến Giang', 'Bến Hải', 'Thạch Hãn', 'Sê Pôn'].map((lv, i, arr) => (
+              <span key={lv}>
+                {lv}
+                {i < arr.length - 1 && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}> | </span>}
+              </span>
+            ))}
+          </span>
         </div>
         <div className="rain-table-scroll">
           <table className="rain-table">
             <thead>
               <tr>
-                <th className="rain-table-station-col">Lưu vực sông</th>
                 <th className="rain-table-station-col">Trạm</th>
                 {WINDOWS.map((w) => <th key={w.key}>{w.label}</th>)}
               </tr>
@@ -57,10 +62,9 @@ export default function RainTable({ stations, onClose }) {
                 const isVrain = s.id?.startsWith('vrain_');
                 const luuVucHienTai = layLuuVuc(s.name).luuVuc;
                 const doiLuuVuc = i > 0 && layLuuVuc(sorted[i - 1].name).luuVuc !== luuVucHienTai;
-                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #9C27B0' } : undefined;
+                const rowStyle = doiLuuVuc ? { borderTop: '3px solid #4CAF50' } : undefined;
                 return (
                   <tr key={s.id} style={rowStyle}>
-                    <td className="rain-table-station-col">{luuVucHienTai}</td>
                     <td className="rain-table-station-col" style={isVrain ? { fontStyle: 'italic' } : undefined}>{s.name}{!isVrain && <span style={{ color: 'red' }}> *</span>}</td>
                     {WINDOWS.map((w) => {
                       const v = s[w.key];

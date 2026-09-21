@@ -70,6 +70,19 @@ const VFASS_STATIONS = [
   { id: '841697046673', displayName: 'Kim Ngân', lat: 17.093444, lng: 106.756306 },
 ];
 
+// Dakrong 2 — trạm mới lắp (19/09/2026), TOẠ ĐỘ đã có nhưng CHƯA lên hệ
+// thống vfass nên chưa có mã trạm (id) thật để khớp cứng như 2 trạm trên.
+// Dò tìm theo TÊN (chứa "dakrong"/"đakrông", không phân biệt dấu/hoa
+// thường) trong toàn bộ phản hồi API — tự động nhận diện ngay khi trạm
+// này thật sự xuất hiện, không cần sửa code thêm lần nữa. Nếu sau khi lên
+// hệ thống mà vẫn không tự hiện, xin mã id thật từ Hudson và thêm thẳng
+// vào VFASS_STATIONS ở trên (theo đúng mẫu 2 trạm kia) sẽ chắc chắn hơn.
+const VFASS_DAKRONG2 = { displayName: 'Dakrong 2', lat: 16.682548, lng: 106.884738 };
+function laDakrong2(ten) {
+  const s = String(ten || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return s.includes('dakrong') || s.includes('da krong') || s.includes('dak rong');
+}
+
 // ============ Cấp báo động / ngưỡng nguy hiểm — key dùng ĐÚNG mã trạm
 // (matram cho KTTV) hoặc đúng tên đối chiếu VRain (giữ nguyên như trong
 // VRAIN_MUCNUOC_COORDS, KHÔNG dùng displayName). Trạm không có entry ở đây
@@ -368,12 +381,16 @@ async function fetchVfassAll() {
 
   const idCanLay = new Set(VFASS_STATIONS.map((s) => s.id));
   const seriesById = {};
+  let dakrong2Id = null; // mã trạm thật của Dakrong 2, phát hiện được thì gán vào đây
   for (const ent of data.stats || []) {
     const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
     let t = parseVrainTimestamp(tRaw);
     if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000; // dự phòng — coi như giá trị hiện tại nếu không tìm được mốc thời gian trong dữ liệu
     for (const st of ent.stations || []) {
-      if (!st || !idCanLay.has(String(st.id))) continue;
+      if (!st) continue;
+      const laDR2 = laDakrong2(st.name);
+      if (laDR2) dakrong2Id = String(st.id);
+      if (!idCanLay.has(String(st.id)) && !laDR2) continue;
       const v = parseFloat(st.depth);
       if (!Number.isFinite(v) || v <= -900) continue; // -999 = mã lỗi/thiếu dữ liệu
       const key = String(st.id);
@@ -387,6 +404,12 @@ async function fetchVfassAll() {
     const series = (seriesById[s.id] || []).sort((a, b) => a.t - b.t);
     if (series.length === 0) continue;
     results.push(buildStationResult(s.displayName, s.lat, s.lng, `vrain_vfass_${s.id}`, series, ALERT_THRESHOLDS[s.id] || null));
+  }
+  if (dakrong2Id) {
+    const series = (seriesById[dakrong2Id] || []).sort((a, b) => a.t - b.t);
+    if (series.length > 0) {
+      results.push(buildStationResult(VFASS_DAKRONG2.displayName, VFASS_DAKRONG2.lat, VFASS_DAKRONG2.lng, `vrain_vfass_${dakrong2Id}`, series, ALERT_THRESHOLDS[dakrong2Id] || null));
+    }
   }
   return results;
 }
