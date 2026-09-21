@@ -1,11 +1,10 @@
 // luuVucSong.js
 //
 // Bảng tra "lưu vực sông" + thứ tự Bắc->Nam — TÁCH RIÊNG cho mưa và mực
-// nước, vì cùng 1 trạm có thể xuất hiện ở cả 2 danh sách với SỐ THỨ TỰ
-// KHÁC NHAU (đánh số độc lập mỗi bên). Dùng chung 1 bảng trước đây là
-// nguyên nhân gây sai lưu vực/thứ tự. Theo đúng file Vitri_tramdotudong.xlsx
-// (sheet "mua" 117 trạm, sheet "mucnuoc" 36 trạm) anh Hudson đã rà soát kỹ,
-// đã kiểm tra khớp 100% với khoảng thứ tự anh cung cấp.
+// nước. Hàm chuẩn hoá tên XỬ LÝ RIÊNG chữ "Đ" (NFKD không tự chuyển thành
+// "D") và BỎ TIỀN TỐ trạm KTTV mưa ("Đo Mưa TĐ", "Thủy Văn TĐ", "Khí Tượng
+// TĐ") — nguyên nhân bảng "Mưa theo giờ 72h" bị khớp sai trước đây. Có thêm
+// biệt danh "huong hoa qb" cho trạm Hương Hóa (hậu tố phân biệt tỉnh).
 
 export const LUU_VUC_MUA = {
   'quang hop': { thuTu: 1, luuVuc: 'Ròn' },
@@ -16,30 +15,30 @@ export const LUU_VUC_MUA = {
   'huong hoa': { thuTu: 6, luuVuc: 'Gianh' },
   'thanh hoa': { thuTu: 7, luuVuc: 'Gianh' },
   'lam hoa': { thuTu: 8, luuVuc: 'Gianh' },
-  'đong tam': { thuTu: 9, luuVuc: 'Gianh' },
+  'dong tam': { thuTu: 9, luuVuc: 'Gianh' },
   'tan lam': { thuTu: 10, luuVuc: 'Gianh' },
   'hoa thanh': { thuTu: 11, luuVuc: 'Gianh' },
   'tuyen hoa': { thuTu: 12, luuVuc: 'Gianh' },
   'trong hoa': { thuTu: 13, luuVuc: 'Gianh' },
-  'đong lam, đuc hoa': { thuTu: 14, luuVuc: 'Gianh' },
+  'dong lam, duc hoa': { thuTu: 14, luuVuc: 'Gianh' },
   'quang tien': { thuTu: 15, luuVuc: 'Gianh' },
   'ho be': { thuTu: 16, luuVuc: 'Gianh' },
   'mai hoa': { thuTu: 17, luuVuc: 'Gianh' },
-  'đau moi ho trung thuan': { thuTu: 18, luuVuc: 'Gianh' },
+  'dau moi ho trung thuan': { thuTu: 18, luuVuc: 'Gianh' },
   'minh hoa': { thuTu: 19, luuVuc: 'Gianh' },
   'quang trach': { thuTu: 20, luuVuc: 'Gianh' },
   'tan hoa': { thuTu: 21, luuVuc: 'Gianh' },
-  'tdc 8, thi tran quy đat': { thuTu: 22, luuVuc: 'Gianh' },
+  'tdc 8, thi tran quy dat': { thuTu: 22, luuVuc: 'Gianh' },
   'cao quang': { thuTu: 23, luuVuc: 'Gianh' },
   'thuy van rao nan, cao quang': { thuTu: 24, luuVuc: 'Gianh' },
   'tu lan lodge': { thuTu: 25, luuVuc: 'Gianh' },
   'hoa son': { thuTu: 26, luuVuc: 'Gianh' },
-  'ba đon': { thuTu: 28, luuVuc: 'Gianh' },
+  'ba don': { thuTu: 28, luuVuc: 'Gianh' },
   'trung hoa': { thuTu: 29, luuVuc: 'Gianh' },
   'quang minh': { thuTu: 30, luuVuc: 'Gianh' },
   'thuong hoa': { thuTu: 31, luuVuc: 'Gianh' },
   'tan my': { thuTu: 32, luuVuc: 'Gianh' },
-  'ho đong ran': { thuTu: 33, luuVuc: 'Gianh' },
+  'ho dong ran': { thuTu: 33, luuVuc: 'Gianh' },
   'bac trach': { thuTu: 34, luuVuc: 'Gianh' },
   'thuy van lien trach': { thuTu: 35, luuVuc: 'Gianh' },
   'lien trach': { thuTu: 36, luuVuc: 'Gianh' },
@@ -50,7 +49,7 @@ export const LUU_VUC_MUA = {
   'van trach': { thuTu: 41, luuVuc: 'Lý hòa' },
   'ho thac chuoi': { thuTu: 42, luuVuc: 'Dinh' },
   'viet trung': { thuTu: 43, luuVuc: 'Dinh' },
-  'đong hoi': { thuTu: 44, luuVuc: 'Kiến Giang' },
+  'dong hoi': { thuTu: 44, luuVuc: 'Kiến Giang' },
   'quan hau': { thuTu: 46, luuVuc: 'Kiến Giang' },
   'ho trooc trau': { thuTu: 47, luuVuc: 'Kiến Giang' },
   'van ninh': { thuTu: 48, luuVuc: 'Kiến Giang' },
@@ -60,7 +59,7 @@ export const LUU_VUC_MUA = {
   'cam ly': { thuTu: 54, luuVuc: 'Kiến Giang' },
   'ho cam ly': { thuTu: 55, luuVuc: 'Kiến Giang' },
   'thai thuy': { thuTu: 56, luuVuc: 'Kiến Giang' },
-  'đo mua tđ sen thuy': { thuTu: 57, luuVuc: 'Kiến Giang' },
+  'sen thuy': { thuTu: 57, luuVuc: 'Kiến Giang' },
   'kien giang': { thuTu: 58, luuVuc: 'Kiến Giang' },
   'ho an ma': { thuTu: 59, luuVuc: 'Kiến Giang' },
   'lam thuy': { thuTu: 60, luuVuc: 'Kiến Giang' },
@@ -68,9 +67,9 @@ export const LUU_VUC_MUA = {
   'vinh tu': { thuTu: 62, luuVuc: 'Bến Hải' },
   'vinh kim': { thuTu: 63, luuVuc: 'Bến Hải' },
   'vinh khe': { thuTu: 64, luuVuc: 'Bến Hải' },
-  'đau moi ho bao đai': { thuTu: 65, luuVuc: 'Bến Hải' },
+  'dau moi ho bao dai': { thuTu: 65, luuVuc: 'Bến Hải' },
   'cua tung': { thuTu: 66, luuVuc: 'Bến Hải' },
-  'đau moi ho la nga': { thuTu: 67, luuVuc: 'Bến Hải' },
+  'dau moi ho la nga': { thuTu: 67, luuVuc: 'Bến Hải' },
   'ben quan': { thuTu: 68, luuVuc: 'Bến Hải' },
   'hien luong': { thuTu: 69, luuVuc: 'Bến Hải' },
   'trung son': { thuTu: 70, luuVuc: 'Bến Hải' },
@@ -80,14 +79,14 @@ export const LUU_VUC_MUA = {
   'cua viet': { thuTu: 74, luuVuc: 'Thạch Hãn' },
   'huong lap': { thuTu: 75, luuVuc: 'Thạch Hãn' },
   'hai thai': { thuTu: 76, luuVuc: 'Thạch Hãn' },
-  'đau moi ho truc kinh': { thuTu: 77, luuVuc: 'Thạch Hãn' },
-  'đong ha': { thuTu: 78, luuVuc: 'Thạch Hãn' },
+  'dau moi ho truc kinh': { thuTu: 77, luuVuc: 'Thạch Hãn' },
+  'dong ha': { thuTu: 78, luuVuc: 'Thạch Hãn' },
   'huong viet': { thuTu: 79, luuVuc: 'Thạch Hãn' },
-  'đau moi ho đa mai': { thuTu: 81, luuVuc: 'Thạch Hãn' },
+  'dau moi ho da mai': { thuTu: 81, luuVuc: 'Thạch Hãn' },
   'cam tuyen': { thuTu: 82, luuVuc: 'Thạch Hãn' },
   'trieu hoa': { thuTu: 83, luuVuc: 'Thạch Hãn' },
   'tt phong tranh va giam nhe thien tai': { thuTu: 84, luuVuc: 'Thạch Hãn' },
-  'đau mau': { thuTu: 85, luuVuc: 'Thạch Hãn' },
+  'dau mau': { thuTu: 85, luuVuc: 'Thạch Hãn' },
   'hai an': { thuTu: 86, luuVuc: 'Thạch Hãn' },
   'huong son': { thuTu: 87, luuVuc: 'Thạch Hãn' },
   'huong hiep': { thuTu: 88, luuVuc: 'Thạch Hãn' },
@@ -98,7 +97,7 @@ export const LUU_VUC_MUA = {
   'huong linh': { thuTu: 94, luuVuc: 'Thạch Hãn' },
   'nam thach han': { thuTu: 95, luuVuc: 'Thạch Hãn' },
   'hai lam': { thuTu: 96, luuVuc: 'Thạch Hãn' },
-  'tđ quang tri': { thuTu: 98, luuVuc: 'Thạch Hãn' },
+  'td quang tri': { thuTu: 98, luuVuc: 'Thạch Hãn' },
   'hai phong': { thuTu: 99, luuVuc: 'Thạch Hãn' },
   'dakrong': { thuTu: 100, luuVuc: 'Thạch Hãn' },
   'ba long': { thuTu: 101, luuVuc: 'Thạch Hãn' },
@@ -106,7 +105,7 @@ export const LUU_VUC_MUA = {
   'tan long': { thuTu: 103, luuVuc: 'Thạch Hãn' },
   'ba nang': { thuTu: 104, luuVuc: 'Thạch Hãn' },
   'ta long': { thuTu: 105, luuVuc: 'Thạch Hãn' },
-  'đap, thuy đien la to': { thuTu: 106, luuVuc: 'Thạch Hãn' },
+  'dap, thuy dien la to': { thuTu: 106, luuVuc: 'Thạch Hãn' },
   'ta rut': { thuTu: 107, luuVuc: 'Thạch Hãn' },
   'a vao': { thuTu: 109, luuVuc: 'Thạch Hãn' },
   'a bung': { thuTu: 110, luuVuc: 'Thạch Hãn' },
@@ -117,11 +116,12 @@ export const LUU_VUC_MUA = {
   'thanh': { thuTu: 115, luuVuc: 'Sê Pôn' },
   'a doi': { thuTu: 116, luuVuc: 'Sê Pôn' },
   'lia': { thuTu: 117, luuVuc: 'Sê Pôn' },
+  'huong hoa qb': { thuTu: 6, luuVuc: 'Gianh' },
 };
 
 export const LUU_VUC_MUC_NUOC = {
   'roon': { thuTu: 1, luuVuc: 'Ròn' },
-  'đong tam': { thuTu: 2, luuVuc: 'Gianh' },
+  'dong tam': { thuTu: 2, luuVuc: 'Gianh' },
   'tan lam': { thuTu: 3, luuVuc: 'Gianh' },
   'mai hoa': { thuTu: 4, luuVuc: 'Gianh' },
   'rao nan': { thuTu: 5, luuVuc: 'Gianh' },
@@ -130,7 +130,7 @@ export const LUU_VUC_MUC_NUOC = {
   'lien trach': { thuTu: 8, luuVuc: 'Gianh' },
   'phong nha': { thuTu: 9, luuVuc: 'Gianh' },
   'ly hoa': { thuTu: 10, luuVuc: 'Lý hòa' },
-  'đong hoi': { thuTu: 11, luuVuc: 'Kiến Giang' },
+  'dong hoi': { thuTu: 11, luuVuc: 'Kiến Giang' },
   'ham ninh': { thuTu: 12, luuVuc: 'Kiến Giang' },
   'le thuy': { thuTu: 13, luuVuc: 'Kiến Giang' },
   'truong son': { thuTu: 14, luuVuc: 'Kiến Giang' },
@@ -142,11 +142,11 @@ export const LUU_VUC_MUC_NUOC = {
   'gia vong': { thuTu: 20, luuVuc: 'Bến Hải' },
   'cua viet': { thuTu: 21, luuVuc: 'Thạch Hãn' },
   'ho truc kinh': { thuTu: 22, luuVuc: 'Thạch Hãn' },
-  'trieu đo': { thuTu: 23, luuVuc: 'Thạch Hãn' },
-  'trieu đai': { thuTu: 24, luuVuc: 'Thạch Hãn' },
-  'đong ha': { thuTu: 25, luuVuc: 'Thạch Hãn' },
+  'trieu do': { thuTu: 23, luuVuc: 'Thạch Hãn' },
+  'trieu dai': { thuTu: 24, luuVuc: 'Thạch Hãn' },
+  'dong ha': { thuTu: 25, luuVuc: 'Thạch Hãn' },
   'cam tuyen': { thuTu: 26, luuVuc: 'Thạch Hãn' },
-  'đau mau': { thuTu: 27, luuVuc: 'Thạch Hãn' },
+  'dau mau': { thuTu: 27, luuVuc: 'Thạch Hãn' },
   'vinh phuoc': { thuTu: 28, luuVuc: 'Thạch Hãn' },
   'ho ai tu': { thuTu: 29, luuVuc: 'Thạch Hãn' },
   'thach han': { thuTu: 30, luuVuc: 'Thạch Hãn' },
@@ -158,17 +158,18 @@ export const LUU_VUC_MUC_NUOC = {
   'my chanh': { thuTu: 36, luuVuc: 'Thạch Hãn' },
 };
 
-function chuanHoaTen(ten) {
-  return String(ten).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().trim().replace(/\s+/g, ' ');
+function chuanHoaTen(raw) {
+  let s = String(raw).replace(/Đ/g, 'D').replace(/đ/g, 'd');
+  s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  s = s.toLowerCase().trim();
+  s = s.replace(/^(do mua|thuy van|khi tuong)\s+td\s+/, '').trim();
+  return s.replace(/\s+/g, ' ');
 }
 
-// Dùng cho 2 cửa sổ MƯA (RainTable, RainHourlyTable).
 export function layLuuVucMua(ten) {
   return LUU_VUC_MUA[chuanHoaTen(ten)] || { thuTu: 9999, luuVuc: '' };
 }
 
-// Dùng cho cửa sổ MỰC NƯỚC (MucNuocTable).
 export function layLuuVucMucNuoc(ten) {
   return LUU_VUC_MUC_NUOC[chuanHoaTen(ten)] || { thuTu: 9999, luuVuc: '' };
 }
