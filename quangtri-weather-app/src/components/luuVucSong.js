@@ -154,6 +154,7 @@ export const LUU_VUC_MUC_NUOC = {
   'cay da': { thuTu: 32, luuVuc: 'Thạch Hãn' },
   'dakrong': { thuTu: 33, luuVuc: 'Thạch Hãn' },
   'dakrong 2': { thuTu: 34, luuVuc: 'Thạch Hãn' },
+  'dackrong - plan': { thuTu: 34, luuVuc: 'Thạch Hãn' },
   'hai tan': { thuTu: 35, luuVuc: 'Thạch Hãn' },
   'my chanh': { thuTu: 36, luuVuc: 'Thạch Hãn' },
 };
