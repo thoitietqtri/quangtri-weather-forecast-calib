@@ -105,6 +105,9 @@ const ALERT_THRESHOLDS = {
   '555200': { type: 'official', bd1: 21, bd2: 22.5, bd3: 23.5, luLichSu: 25.62 },   // Đầu Mầu
   '554700': { type: 'official', bd1: 2, bd2: 3, bd3: 4, luLichSu: 5.36 },           // Đông Hà
   '554500': { type: 'official', bd1: 29.5, bd2: 31.5, bd3: 33.5, luLichSu: 41.42 }, // Dakrong
+  // Dackrong - Plan (Cầu Khe Luồi, Hướng Hiệp) — CHƯA có ngưỡng chính thức,
+  // nội suy từ trạm Dakrong KTTV trừ đi 7m (anh Hudson tính toán, 21/09/2026).
+  DAKRONG2_KHELUOI: { type: 'official', bd1: 22.5, bd2: 24.5, bd3: 26.5, luLichSu: 34.42 },
   '554600': { type: 'official', bd1: 3, bd2: 4.5, bd3: 6, luLichSu: 7.4 },          // Thạch Hãn
   '554800': { type: 'official', bd1: 1, bd2: 1.5, bd3: 2, luLichSu: 2.72 },         // Cửa Việt
   '555100': { type: 'official', bd1: 2.5, bd2: 4, bd3: 5.3, luLichSu: 6.81 },       // Mỹ Chánh
@@ -433,7 +436,7 @@ async function fetchVfassAll() {
   if (dakrong2Id) {
     const series = (seriesById[dakrong2Id] || []).sort((a, b) => a.t - b.t);
     if (series.length > 0) {
-      results.push(buildStationResult(VFASS_DAKRONG2.displayName, VFASS_DAKRONG2.lat, VFASS_DAKRONG2.lng, `vrain_vfass_${dakrong2Id}`, series, ALERT_THRESHOLDS[dakrong2Id] || null));
+      results.push(buildStationResult(VFASS_DAKRONG2.displayName, VFASS_DAKRONG2.lat, VFASS_DAKRONG2.lng, `vrain_vfass_${dakrong2Id}`, series, ALERT_THRESHOLDS.DAKRONG2_KHELUOI));
     }
   }
   return results;
