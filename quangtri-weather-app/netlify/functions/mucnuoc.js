@@ -427,14 +427,58 @@ async function fetchVfassAll() {
     }
   }
 
+  // Lấy thêm 1 lượt riêng theo 10 phút — CHỈ dùng để lấy giá trị "hiện tại"
+  // tươi hơn cho popup bản đồ, không thay cả chuỗi lịch sử (bảng số liệu
+  // vẫn giữ nguyên theo giờ như trước).
+  const gia10pGanNhat = {};
+  try {
+    const url10p = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_10m`;
+    const res10p = await fetchWithTimeout(url10p, {
+      headers: {
+        accept: 'application/json, text/plain, */*',
+        referer: `${VFASS_BASE_URL}/main/detail/vfass`,
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'x-org-uuid': VFASS_ORG_UUID,
+        'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        cookie: `sid=${sid}`,
+      },
+    }, 8000);
+    if (res10p.ok) {
+      const data10p = await res10p.json();
+      for (const ent of data10p.stats || []) {
+        const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+        let t = parseVrainTimestamp(tRaw);
+        if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000;
+        for (const st of ent.stations || []) {
+          if (!st) continue;
+          const key = idCanLay.has(String(st.id)) || laDakrong2(st.name) ? String(st.id) : null;
+          if (!key) continue;
+          const v = parseFloat(st.depth);
+          if (!Number.isFinite(v) || v <= -900) continue;
+          if (!gia10pGanNhat[key] || t > gia10pGanNhat[key].t) gia10pGanNhat[key] = { t, v };
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[mucnuoc][vfass] Lỗi lấy giá trị 10 phút (không nghiêm trọng, vẫn dùng dữ liệu giờ):', e.message);
+  }
+
   const results = [];
   for (const s of VFASS_STATIONS) {
     const series = (seriesById[s.id] || []).sort((a, b) => a.t - b.t);
     if (series.length === 0) continue;
+    const moi10p = gia10pGanNhat[s.id];
+    if (moi10p && (series.length === 0 || moi10p.t >= series[series.length - 1].t)) {
+      series.push(moi10p); // thêm/ghi đè điểm cuối bằng giá trị 10 phút tươi hơn
+    }
     results.push(buildStationResult(s.displayName, s.lat, s.lng, `vrain_vfass_${s.id}`, series, ALERT_THRESHOLDS[s.id] || null));
   }
   if (dakrong2Id) {
     const series = (seriesById[dakrong2Id] || []).sort((a, b) => a.t - b.t);
+    const moi10pDR2 = gia10pGanNhat[dakrong2Id];
+    if (moi10pDR2 && (series.length === 0 || moi10pDR2.t >= series[series.length - 1].t)) {
+      series.push(moi10pDR2);
+    }
     if (series.length > 0) {
       results.push(buildStationResult(VFASS_DAKRONG2.displayName, VFASS_DAKRONG2.lat, VFASS_DAKRONG2.lng, `vrain_vfass_${dakrong2Id}`, series, ALERT_THRESHOLDS.DAKRONG2_KHELUOI));
     }
