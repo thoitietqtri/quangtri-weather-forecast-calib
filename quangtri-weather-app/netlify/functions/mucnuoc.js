@@ -122,7 +122,7 @@ const ALERT_THRESHOLDS = {
   'Quảng Thanh': { type: 'official', bd1: 1.2, bd2: 2.1, bd3: 2.7, luLichSu: 3.83 },
   'Trạm Thủy văn Lý Hòa': { type: 'official', bd1: 1.2, bd2: 2, bd3: 2.6 },
   'Hàm Ninh': { type: 'official', bd1: 1.2, bd2: 2, bd3: 2.6, luLichSu: 4.48 },
-  'Cầu Bến Quan': { type: 'official', bd1: 4, bd2: 5.5, bd3: 6.5, luLichSu: 11.02 },
+  'Cầu Bến Quan': { type: 'official', bd1: 6, bd2: 7.5, bd3: 8.5, luLichSu: 13.02 }, // +2m so với gốc theo yêu cầu anh Hudson (24/09/2026, đã sửa lại từ lần trừ nhầm)
   'Hải Tân': { type: 'official', bd1: 1.8, bd2: 2.8, bd3: 3.4, luLichSu: 3.93 },
 
   // --- VRain (key = tên đối chiếu gốc) — ngưỡng tự quy định ---
@@ -215,6 +215,31 @@ async function fetchKttvStation(station) {
       .map((r) => ({ t: new Date(`${r.Thoigian_SL}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: parseFloat(r.Solieu) }))
       .filter((r) => Number.isFinite(r.v))
       .sort((a, b) => a.t - b.t);
+
+    // Lấy thêm giá trị 10 phút gần nhất — CHỈ để "hiện tại" tươi hơn trên
+    // popup bản đồ, không thay cả chuỗi lịch sử (bảng số liệu vẫn theo giờ).
+    try {
+      const start10p = new Date(end.getTime() - 3 * 3600 * 1000);
+      const url10p = `${KTTV_BASE_URL}?matram=${station.matram}&ten_table=mucnuoc_oday&sophut=10&tinhtong=0`
+        + `&thoigianbd='${fmtVN(start10p)}'&thoigiankt='${fmtVN(end)}'`;
+      const res10p = await fetchWithTimeout(url10p, {}, 6000);
+      if (res10p.ok) {
+        const js10p = await res10p.json();
+        if (Array.isArray(js10p) && js10p.length > 0) {
+          const gan_nhat = js10p
+            .map((r) => ({ t: new Date(`${r.Thoigian_SL}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: parseFloat(r.Solieu) }))
+            .filter((r) => Number.isFinite(r.v))
+            .sort((a, b) => a.t - b.t)
+            .pop();
+          if (gan_nhat && (series.length === 0 || gan_nhat.t >= series[series.length - 1].t)) {
+            series.push(gan_nhat);
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`[mucnuoc][kttv] Lỗi lấy giá trị 10 phút cho ${station.name} (không nghiêm trọng):`, e.message);
+    }
+
     return buildStationResult(station.name, station.lat, station.lng, `kttv_${station.matram}`, series, ALERT_THRESHOLDS[station.matram] || null);
   } catch (e) {
     return null;
@@ -349,10 +374,60 @@ async function fetchVrainMnAll() {
   console.log('[mucnuoc][debug] Tên trạm tìm được trong dữ liệu (tối đa 20):', Object.keys(seriesByName).slice(0, 20));
   console.log('[mucnuoc][debug] Tên trạm mong đợi (trong VRAIN_MUCNUOC_COORDS):', Object.keys(VRAIN_MUCNUOC_COORDS));
 
+  // Lấy thêm 1 lượt riêng theo 10 phút — CHỈ để "hiện tại" tươi hơn trên
+  // popup bản đồ, không thay cả chuỗi lịch sử (bảng số liệu vẫn theo giờ).
+  const seriesByName10p = {};
+  try {
+    const url10p = `${VRAIN_MN_DETAILS_URL}?groupID=${VRAIN_MN_GROUP_ID}&from=${dateTo}&to=${dateTo}&i=_10m&sid=${sid}`;
+    const res10p = await fetchWithTimeout(url10p, {
+      headers: {
+        Cookie: `sid=${sid}`,
+        'accept': 'application/json, text/plain, */*',
+        'referer': `${VRAIN_MN_BASE_URL}/home/${VRAIN_MN_GROUP_ID}/details`,
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      },
+    }, 8000);
+    if (res10p.ok) {
+      const data10p = await res10p.json();
+      const entries10p = Array.isArray(data10p) ? data10p : (data10p?.data || data10p?.stats || []);
+      for (const ent of entries10p) {
+        if (!ent || typeof ent !== 'object') continue;
+        const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+        const t = parseVrainTimestamp(tRaw);
+        if (!Number.isFinite(t)) continue;
+        const stations10p = ent.stations || ent.stationsList || [];
+        for (const st of stations10p) {
+          if (!st || typeof st !== 'object') continue;
+          const name = (st.stationName || st.name || st.station || '').trim();
+          if (!name) continue;
+          const v = vrainValueFromStation(st);
+          if (v == null || !Number.isFinite(v) || v <= -900) continue;
+          if (!seriesByName10p[name] || t > seriesByName10p[name].t) seriesByName10p[name] = { t, v };
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[mucnuoc][vrain-mn] Lỗi lấy giá trị 10 phút (không nghiêm trọng, vẫn dùng dữ liệu giờ):', e.message);
+  }
+
   const results = [];
   for (const [matchName, coords] of Object.entries(VRAIN_MUCNUOC_COORDS)) {
     const series = (timSeriesMemDeo(seriesByName, matchName) || []).sort((a, b) => a.t - b.t);
     if (series.length === 0) continue;
+    // Tìm giá trị 10 phút gần nhất khớp mềm dẻo với đúng trạm này
+    const targetChuan = chuanHoaTenTramMN(matchName);
+    let diem10p = null;
+    for (const [tenThat, diem] of Object.entries(seriesByName10p)) {
+      const chuanHoa = chuanHoaTenTramMN(tenThat);
+      if (chuanHoa && targetChuan && (chuanHoa === targetChuan || chuanHoa.includes(targetChuan) || targetChuan.includes(chuanHoa))) {
+        diem10p = diem;
+        break;
+      }
+    }
+    if (diem10p && diem10p.t >= series[series.length - 1].t) {
+      series.push(diem10p);
+    }
     // Đối chiếu dùng matchName (tên gốc VRain) — hiển thị dùng displayName
     // (tên ngắn gọn) nếu có, không có thì fallback về tên gốc.
     results.push(buildStationResult(coords.displayName || matchName, coords.lat, coords.lng, `vrain_mn_${matchName}`, series, ALERT_THRESHOLDS[matchName] || null));
