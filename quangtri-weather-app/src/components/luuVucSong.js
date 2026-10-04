@@ -31,6 +31,7 @@ export const LUU_VUC_MUA = {
   'tdc 8, thi tran quy dat': { thuTu: 22, luuVuc: 'Gianh' },
   'cao quang': { thuTu: 23, luuVuc: 'Gianh' },
   'thuy van rao nan, cao quang': { thuTu: 24, luuVuc: 'Gianh' },
+  'tram thuy van rao nan': { thuTu: 24, luuVuc: 'Gianh' }, // tên thật khác trên bảng mưa — "Trạm Thủy văn Rào Nan"
   'tu lan lodge': { thuTu: 25, luuVuc: 'Gianh' },
   'hoa son': { thuTu: 26, luuVuc: 'Gianh' },
   'ba don': { thuTu: 28, luuVuc: 'Gianh' },
@@ -181,6 +182,7 @@ export function layLuuVucMucNuoc(ten) {
 const TEN_HIEN_THI_NGAN = {
   'TT Phòng tránh và Giảm nhẹ thiên tai': 'TT PCLB',
   'Thủy văn Rào Nan, Cao Quảng': 'TV Rào Nan',
+  'Trạm Thủy văn Rào Nan': 'TV Rào Nan',
 };
 export function layTenHienThi(ten) {
   return TEN_HIEN_THI_NGAN[ten] || ten;
