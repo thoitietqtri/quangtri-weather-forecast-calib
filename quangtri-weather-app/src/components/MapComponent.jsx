@@ -196,6 +196,7 @@ function mucNuocAlertText(current, alertInfo) {
 
 function MapComponent() {
   const [selectedFeature, setSelectedFeature] = useState(null);
+  const [showChart, setShowChart] = useState(false); // khung biểu đồ chỉ hiện khi đang chọn xã/phường (popup đang mở)
   const [weatherData, setWeatherData] = useState(null);
   const [weatherError, setWeatherError] = useState(null);
   const [weatherById, setWeatherById] = useState({});
@@ -427,6 +428,7 @@ function MapComponent() {
     const layer = L.geoJSON(found.feature);
     const center = layer.getBounds().getCenter();
     setSelectedFeature({ center, name });
+    setShowChart(true);
     setWeatherData(null);
     await fetchWeather(center);
     if (mapRef.current) mapRef.current.setView([center.lat, center.lng], 11);
@@ -438,6 +440,7 @@ function MapComponent() {
     const name = feature.properties.ten || feature.properties.Ten || feature.properties.name || 'Không rõ';
     setSelectedName(name);
     setSelectedFeature({ center, name });
+    setShowChart(true);
     setWeatherData(null);
     await fetchWeather(center);
   };
@@ -446,10 +449,19 @@ function MapComponent() {
     layer.on({ click: handleFeatureClick });
   };
 
+  // Popup xã/phường đóng (bấm nút X, bấm ra ngoài vùng, hoặc mở popup khác) ->
+  // ẩn luôn khung biểu đồ. Khi chọn sang xã/phường khác, thư viện bản đồ gỡ popup
+  // cũ rồi mở lại NGAY trong cùng lượt xử lý, nên kiểm tra sau 1 nhịp: popup đã mở
+  // lại thì giữ biểu đồ, còn đã đóng thật thì ẩn.
+  const khiPopupXaDong = (e) => {
+    const popup = e.target;
+    setTimeout(() => { if (!popup.isOpen()) setShowChart(false); }, 0);
+  };
+
   const renderPopup = () => {
     if (!selectedFeature) return null;
     if (weatherError) return (
-      <Popup position={selectedFeature.center}>
+      <Popup position={selectedFeature.center} eventHandlers={{ remove: khiPopupXaDong }}>
         <div style={{ padding: '10px', color: '#c62828' }}>
           ⚠️ {weatherError}<br />
           <button onClick={() => fetchWeather(selectedFeature.center)} style={{ marginTop: 6 }}>Thử lại</button>
@@ -457,7 +469,7 @@ function MapComponent() {
       </Popup>
     );
     if (!weatherData?.daily) return (
-      <Popup position={selectedFeature.center}>
+      <Popup position={selectedFeature.center} eventHandlers={{ remove: khiPopupXaDong }}>
         <div style={{ padding: '10px' }}>⏳ Đang tải...</div>
       </Popup>
     );
@@ -469,7 +481,7 @@ function MapComponent() {
     const windMs = parseFloat((daily.windspeed_10m_max[0] / 3.6).toFixed(1));
     const warnings = getCanhBao(tmax, tmin, windMs, rain);
     return (
-      <Popup position={center}>
+      <Popup position={center} eventHandlers={{ remove: khiPopupXaDong }}>
         <div style={{ fontSize: '14px', fontWeight: 'bold', lineHeight: '1.7', color: '#333', border: '3px solid #2196f3', borderRadius: '8px', padding: '10px', background: '#f5f5f5', minWidth: '200px' }}>
           <div style={{ fontSize: '16px', color: '#2196f3', marginBottom: '4px' }}>{name}</div>
           <div style={{ fontSize: '13px', marginBottom: '8px', fontWeight: 'normal' }}>Ngày dự báo: {selectedDate || 'Hôm nay'}</div>
@@ -745,7 +757,7 @@ function MapComponent() {
       </div>
 
       {/* Biểu đồ đặt DƯỚI bản đồ */}
-      {weatherData?.hourly && (
+      {showChart && weatherData?.hourly && (
         <div className="chart-wrapper">
           <WeatherChart hourly={weatherData.hourly} regionName={selectedFeature?.name || ''} />
         </div>

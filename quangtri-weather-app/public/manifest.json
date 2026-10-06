@@ -1,6 +1,6 @@
 {
-  "name": "Dự báo thời tiết Quảng Trị",
-  "short_name": "Thời tiết QT",
+  "name": "Thời tiết Quảng Trị",
+  "short_name": "Thời tiết Quảng Trị",
   "description": "Dự báo thời tiết 15 ngày cho các phường/xã tỉnh Quảng Trị, kèm trạm mưa real-time.",
   "start_url": "/",
   "scope": "/",
