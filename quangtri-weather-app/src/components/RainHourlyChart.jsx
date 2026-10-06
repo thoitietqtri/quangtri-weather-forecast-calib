@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './RainHourlyChart.css';
+import CustomSelect from './CustomSelect';
 
 function formatTimeVN(t) {
   const d = new Date(t + 7 * 3600 * 1000);
@@ -42,9 +43,11 @@ export default function RainHourlyChart({ stations, onClose }) {
 
         <div className="rain-hourly-chart-controls">
           <label>Chọn trạm:</label>
-          <select value={stationId} onChange={(e) => setStationId(e.target.value)}>
-            {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <CustomSelect
+            value={stationId}
+            onChange={setStationId}
+            options={stations.map((s) => ({ value: s.id, label: s.name }))}
+          />
         </div>
 
         <div className="rain-hourly-chart-body">
