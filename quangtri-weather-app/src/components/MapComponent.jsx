@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, GeoJSON, Popup, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './MapComponent.css';
+import CustomSelect from './CustomSelect';
 import WeatherChart from './WeatherChart';
 import { getRainStations } from '../services/rainfall';
 import RainTable from './RainTable';
@@ -486,10 +487,12 @@ function MapComponent() {
       <div className="toolbar">
         <div className="toolbar-row-xa-ngay">
           <label>📍 <span className="toolbar-label-text">Chọn xã/phường:</span></label>
-          <select value={selectedName} onChange={(e) => { setSelectedName(e.target.value); selectFeatureByName(e.target.value); }}>
-            <option value="">-- Chọn địa danh --</option>
-            {featureList.map((f, i) => <option key={i} value={f.name}>{f.name}</option>)}
-          </select>
+          <CustomSelect
+            value={selectedName}
+            onChange={(v) => { setSelectedName(v); selectFeatureByName(v); }}
+            placeholder="-- Chọn địa danh --"
+            options={featureList.map((f) => ({ value: f.name, label: f.name }))}
+          />
           <label>📅 <span className="toolbar-label-text">Ngày:</span></label>
           <input
             type="date"

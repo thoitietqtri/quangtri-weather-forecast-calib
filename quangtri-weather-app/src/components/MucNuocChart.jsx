@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import './MucNuocChart.css';
+import CustomSelect from './CustomSelect';
 
 function formatTimeVN(t) {
   const d = new Date(t + 7 * 3600 * 1000);
@@ -78,9 +79,11 @@ export default function MucNuocChart({ stations, onClose }) {
 
         <div className="mucnuoc-chart-controls">
           <label>Trạm:</label>
-          <select value={stationId} onChange={(e) => setStationId(e.target.value)}>
-            {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <CustomSelect
+            value={stationId}
+            onChange={setStationId}
+            options={stations.map((s) => ({ value: s.id, label: s.name }))}
+          />
         </div>
 
         <div className="mucnuoc-chart-body">
