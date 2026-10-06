@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Popup, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Popup, Marker, ImageOverlay, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './MapComponent.css';
@@ -154,6 +154,12 @@ function mucNuocIcon(name, current, alertInfo) {
 // Trạm mực nước cập nhật lại sau mỗi khoảng thời gian này (mili-giây).
 const MUCNUOC_REFRESH_MS = 15 * 60 * 1000;
 
+// Ảnh radar tổ hợp (hymetnet.gov.vn) — ảnh mới 10 phút/lần. Ảnh đã được function
+// `radar` căn chỉnh địa lý (theo đúng hiệu chỉnh trong tool dubaodongset.py) nên
+// khung toạ độ (radarInfo.bounds) do function trả về cùng với ảnh.
+const RADAR_REFRESH_MS = 10 * 60 * 1000;
+const RADAR_OPACITY = 0.7;
+
 // Mô tả cấp báo động cho popup — hiện rõ VƯỢT/DƯỚI ngưỡng bao nhiêu mét,
 // không chỉ lặp lại giá trị ngưỡng. Thêm dòng so sánh với lũ lịch sử nếu
 // trạm có số liệu này.
@@ -200,6 +206,9 @@ function MapComponent() {
   const [riverGeoData, setRiverGeoData] = useState(null);
   const [showRiver, setShowRiver] = useState(true);
   const [showTempColor, setShowTempColor] = useState(true);
+  const [showRadar, setShowRadar] = useState(false); // mặc định KHÔNG hiện
+  const [radarInfo, setRadarInfo] = useState(null); // { available, t, timeVN, url } | { available:false, reason }
+  const [radarLoading, setRadarLoading] = useState(false);
   const [showMaiHoaForecast, setShowMaiHoaForecast] = useState(false);
   const [showDongTamForecast, setShowDongTamForecast] = useState(false);
   const [showMucNuocLuMenu, setShowMucNuocLuMenu] = useState(false);
@@ -292,6 +301,26 @@ function MapComponent() {
     const timer = setInterval(loadRain, RAIN_REFRESH_MS);
     return () => { cancelled = true; clearInterval(timer); };
   }, []);
+
+  // Ảnh radar: chỉ tải khi đang tick, tự làm mới 10 phút/lần; bỏ tick là dừng.
+  useEffect(() => {
+    if (!showRadar) return undefined;
+    let cancelled = false;
+    const loadRadar = () => {
+      setRadarLoading(true);
+      fetch('/.netlify/functions/radar')
+        .then((r) => r.json())
+        .then((info) => { if (!cancelled) setRadarInfo(info); })
+        .catch((err) => {
+          console.error('[Radar] Lỗi tải:', err);
+          if (!cancelled) setRadarInfo({ available: false, reason: 'Không kết nối được' });
+        })
+        .finally(() => { if (!cancelled) setRadarLoading(false); });
+    };
+    loadRadar();
+    const timer = setInterval(loadRadar, RADAR_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [showRadar]);
 
   // Trạm mực nước real-time: tải lần đầu rồi tự làm mới định kỳ.
   useEffect(() => {
@@ -526,6 +555,10 @@ function MapComponent() {
             <input type="checkbox" checked={showTempColor} onChange={(e) => setShowTempColor(e.target.checked)} />
             🌡️ Màu nhiệt độ xã
           </label>
+          <label className="toolbar-rain-toggle">
+            <input type="checkbox" checked={showRadar} onChange={(e) => setShowRadar(e.target.checked)} />
+            📡 Ảnh radar
+          </label>
         </div>
         <InstallButton />
       </div>
@@ -615,6 +648,20 @@ function MapComponent() {
 
       {/* Bản đồ lấp đầy phần còn lại */}
       <div className="map-wrapper">
+        {showRadar && (
+          <div
+            style={{
+              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 1001, background: 'rgba(13,27,42,0.85)', color: '#fff',
+              padding: '3px 10px', borderRadius: 12, fontSize: 12, whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {radarLoading && !radarInfo ? '⏳ Đang tải radar...'
+              : radarInfo?.available ? `📡 Radar tổ hợp ${radarInfo.timeVN} (giờ VN)`
+              : `📡 Không lấy được ảnh radar${radarInfo?.reason ? ` — ${radarInfo.reason}` : ''}`}
+          </div>
+        )}
         <button
           className="locate-btn"
           onClick={dinhViNguoiDung}
@@ -658,6 +705,11 @@ function MapComponent() {
               />
             )}
             <GeoJSON data={geoData} onEachFeature={onEachFeature} style={geoJsonStyle} key={`${JSON.stringify(weatherById)}_${showTempColor}`} />
+            {showRadar && radarInfo?.available && radarInfo.bounds && (
+              <Pane name="radar-pane" style={{ zIndex: 450, pointerEvents: 'none' }}>
+                <ImageOverlay url={radarInfo.url} bounds={radarInfo.bounds} opacity={RADAR_OPACITY} />
+              </Pane>
+            )}
             {renderLabels()}
             <Marker position={[16.5, 112.0]} icon={createIslandIcon('Đặc khu Hoàng Sa - Việt Nam')} interactive={false} />
             <Marker position={[10.5, 114.5]} icon={createIslandIcon('Đặc khu Trường Sa - Việt Nam')} interactive={false} />
