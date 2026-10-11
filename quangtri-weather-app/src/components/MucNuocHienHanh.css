@@ -1,0 +1,12 @@
+.mnhh-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.mnhh-panel { background: #fff; border-radius: 10px; width: 100%; max-width: 1100px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.3); }
+.mnhh-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #0D1B2A; color: #fff; }
+.mnhh-header h3 { margin: 0; font-size: 16px; color: #fff; }
+.mnhh-close { background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+.mnhh-body { padding: 12px 14px 14px; overflow-y: auto; }
+.mnhh-title { text-align: center; font-weight: 800; font-size: 15px; color: #0D1B2A; line-height: 1.35; }
+.mnhh-sub { text-align: center; font-size: 12px; color: #555; margin: 4px 0 6px; }
+.mnhh-scroll { overflow-x: auto; }
+.mnhh-legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; font-size: 12px; margin-top: 6px; }
+.mnhh-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.mnhh-foot { text-align: center; font-size: 11px; color: #666; margin-top: 8px; }
