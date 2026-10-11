@@ -44,6 +44,13 @@ function useKhung() {
   return k;
 }
 
+// Tên dài -> lấy 2 từ cuối (vd "Đo Mưa TĐ Sen Thủy" -> "Sen Thủy").
+function tenNgan(ten) {
+  const tu = String(layTenHienThi(ten)).trim().split(/\s+/);
+  return tu.length > 2 ? tu.slice(-2).join(' ') : tu.join(' ');
+}
+const khoaTen = (t) => t.normalize('NFC').toLowerCase();
+
 const XAH = 74;     // chiều cao vùng tên trạm dưới trục
 const NHOM_H = 34;  // chỗ dành cho dòng nhóm lưu vực dưới cùng
 
@@ -91,14 +98,21 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
     const list = [];
     if (hopLe) {
       for (const s of stations) {
-        if (!s.series || s.series.length === 0) continue;
+        if (!String(s.id).startsWith('kttv_') || !s.series || s.series.length === 0) continue; // chỉ các trạm API KTTV
         let tong = 0; let dem = 0;
         for (const p of s.series) if (p.t > tBd && p.t <= tKt) { tong += p.v || 0; dem += 1; }
         if (dem === 0) continue; // trạm không có số liệu trong khoảng này -> không vẽ cột
         const lv = layLuuVucMua(s.name);
-        list.push({ id: s.id, ten: layTenHienThi(s.name), v: Math.round(tong * 10) / 10, thuTu: lv.thuTu, luuVuc: lv.luuVuc || 'Khác' });
+        list.push({ id: s.id, ten: tenNgan(s.name), v: Math.round(tong * 10) / 10, thuTu: lv.thuTu, luuVuc: lv.luuVuc || 'Khác' });
       }
       list.sort((a, b) => a.thuTu - b.thuTu); // theo lưu vực (Bắc → Nam), cùng thứ tự bảng mưa
+      // Tên rút gọn trùng nhau -> trạm sau thêm số 2 (3...).
+      const dem = {};
+      list.forEach((r) => {
+        const k = khoaTen(r.ten);
+        dem[k] = (dem[k] || 0) + 1;
+        if (dem[k] > 1) r.ten = `${r.ten} ${dem[k]}`;
+      });
     }
     const groups = [];
     list.forEach((r) => {
@@ -209,7 +223,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
                 <span><i style={{ background: '#F9A825' }} />&gt;50–100mm</span>
                 <span><i style={{ background: '#D32F2F' }} />&gt;100mm</span>
               </div>
-              <div className="mtd-foot">Nguồn: số liệu mưa thực đo các trạm KTTV và VRain. Cột xếp theo lưu vực (Bắc → Nam). Tham khảo - Không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị.</div>
+              <div className="mtd-foot">Nguồn: số liệu mưa thực đo các trạm KTTV. Cột xếp theo lưu vực (Bắc → Nam). Tham khảo - Không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị.</div>
             </>
           )}
         </div>
