@@ -10,3 +10,14 @@
 .mnhh-legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; font-size: 12px; margin-top: 6px; }
 .mnhh-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .mnhh-foot { text-align: center; font-size: 11px; color: #666; margin-top: 8px; }
+
+/* Điện thoại dọc: toàn màn hình, gọn để vừa 1 màn hình chụp gửi Zalo */
+.mnhh-hep { padding: 0; align-items: stretch; }
+.mnhh-hep .mnhh-panel { max-height: 100vh; height: 100%; border-radius: 0; }
+.mnhh-hep .mnhh-header { padding: 6px 12px; }
+.mnhh-hep .mnhh-header h3 { font-size: 14px; }
+.mnhh-hep .mnhh-body { padding: 6px 6px 8px; }
+.mnhh-hep .mnhh-title { font-size: 12.5px; line-height: 1.25; }
+.mnhh-hep .mnhh-sub { font-size: 10px; margin: 2px 0 4px; }
+.mnhh-hep .mnhh-legend { font-size: 10.5px; gap: 8px; margin-top: 4px; }
+.mnhh-hep .mnhh-foot { font-size: 9px; margin-top: 4px; }

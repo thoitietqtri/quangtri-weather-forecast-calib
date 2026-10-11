@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, LabelList, ResponsiveContainer } from 'recharts';
 import './MucNuocHienHanh.css';
 import { layLuuVucMucNuoc } from './luuVucSong';
@@ -12,6 +12,27 @@ function formatCapNhat(t) {
   const d = new Date(t + 7 * 3600 * 1000); // giờ VN
   const p = (n) => String(n).padStart(2, '0');
   return `${p(d.getUTCHours())}H NGÀY ${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+}
+
+// Trạm hồ chứa (Hồ Nam Thạch Hãn, Hồ Trúc Kinh, Hồ Ái Tử…) không đưa vào đồ thị này.
+function laTramHo(ten) {
+  const s = String(ten).replace(/Đ/g, 'D').replace(/đ/g, 'd').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return /^ho\s/.test(s);
+}
+
+// Màn hình điện thoại dọc (hẹp) -> đồ thị cột NẰM NGANG (thanh ngang) để vừa 1 màn hình, không phải cuộn.
+function useManHinhHep() {
+  const q = '(max-width: 640px)';
+  const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(q).matches : false);
+  const [hep, setHep] = useState(get);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const m = window.matchMedia(q);
+    const f = () => setHep(m.matches);
+    m.addEventListener ? m.addEventListener('change', f) : m.addListener(f);
+    return () => { m.removeEventListener ? m.removeEventListener('change', f) : m.removeListener(f); };
+  }, []);
+  return hep;
 }
 
 // Giá trị mới nhất của trạm (cuối chuỗi) rồi so với cấp báo động của CHÍNH trạm đó
@@ -31,20 +52,20 @@ function soSanh(current, alertInfo) {
   return { mau: MAU_XANH, text: `<${ten} ${(nguong - current).toFixed(2)}`, vuot: false };
 }
 
-function NhanCot({ x, y, width, value, index, data }) {
+function NhanCot({ x, y, width, value, index, data, nho }) {
   const d = data[index];
   if (!d || value == null) return null;
   const cx = x + width / 2;
   return (
     <g>
-      <text x={cx} y={y - 6} textAnchor="middle" fontSize="11" fontWeight="700" fill="#222">{`${Number(value).toFixed(2)} m`}</text>
+      <text x={cx} y={y - 6} textAnchor="middle" fontSize={nho ? 10 : 11} fontWeight="700" fill="#222">{`${Number(value).toFixed(2)} m`}</text>
       {d.text.includes('Không có') ? (
-        <text textAnchor="middle" fontSize="9.5" fill={d.mauChu}>
+        <text textAnchor="middle" fontSize={nho ? 8.5 : 9.5} fill={d.mauChu}>
           <tspan x={cx} y={y - 31}>Không có</tspan>
           <tspan x={cx} y={y - 20}>thông tin</tspan>
         </text>
       ) : (
-        <text x={cx} y={y - 20} textAnchor="middle" fontSize="9.5" fontWeight={d.vuot ? 800 : 500} fill={d.mauChu}>{d.text}</text>
+        <text x={cx} y={y - 20} textAnchor="middle" fontSize={nho ? 8.5 : 9.5} fontWeight={d.vuot ? 800 : 500} fill={d.mauChu}>{d.text}</text>
       )}
     </g>
   );
@@ -62,13 +83,37 @@ function NhanTrucX({ x, y, payload, data }) {
   );
 }
 
+function NhanTrucY({ x, y, payload, data }) {
+  const d = data.find((r) => r.ten === payload.value);
+  return (
+    <text x={x - 3} y={y} dy={3.5} textAnchor="end" fontSize="10" fill="#333">
+      {payload.value}
+      {d && !d.vrain && <tspan fill="red" fontWeight="700"> *</tspan>}
+    </text>
+  );
+}
+
+// Thanh ngang: giá trị đậm + chú thích so sánh nằm bên phải đầu thanh.
+function NhanThanhNgang({ x, y, width, height, value, index, data }) {
+  const d = data[index];
+  if (!d || value == null) return null;
+  const cy = y + height / 2 + 3.5;
+  const khong = d.text.includes('Không có');
+  return (
+    <text x={x + width + 4} y={cy} fontSize="10">
+      <tspan fontWeight="700" fill="#222">{`${Number(value).toFixed(2)} m`}</tspan>
+      <tspan dx="4" fontSize="9" fontWeight={d.vuot ? 800 : 500} fill={d.mauChu}>{khong ? 'Không có thông tin so sánh' : d.text}</tspan>
+    </text>
+  );
+}
+
 // stations: [{ id, name, alertInfo, series: [{t, v}] }, ...] — cùng nguồn với bảng/biểu đồ mực nước.
 export default function MucNuocHienHanh({ stations, onClose }) {
   const { data, capNhat, max } = useMemo(() => {
     const list = [];
     let tMoi = 0;
     for (const s of stations) {
-      if (!s.series || s.series.length === 0) continue;
+      if (!s.series || s.series.length === 0 || laTramHo(s.name)) continue;
       const last = [...s.series].sort((a, b) => a.t - b.t).slice(-1)[0];
       if (last.t > tMoi) tMoi = last.t;
       const sc = soSanh(last.v, s.alertInfo);
@@ -83,10 +128,43 @@ export default function MucNuocHienHanh({ stations, onClose }) {
     return { data: list, capNhat: tMoi, max: Math.ceil((m * 1.12 + 1) / 5) * 5 };
   }, [stations]);
 
-  const width = Math.max(data.length * BAN_RONG_COT + 70, 320);
+  const hep = useManHinhHep();
+  const nhieu = data.length > 20;
+
+  const bieuDoNgang = (
+    <div style={{ width: '100%', height: data.length * 21 + 8 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart layout="vertical" data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap={2}>
+          <XAxis type="number" domain={[0, Math.ceil(max / 0.52)]} hide />
+          <YAxis type="category" dataKey="ten" interval={0} width={96} tick={<NhanTrucY data={data} />} />
+          <Bar dataKey="v" isAnimationActive={false}>
+            {data.map((r) => <Cell key={r.id} fill={r.mau} />)}
+            <LabelList dataKey="v" content={(p) => <NhanThanhNgang {...p} data={data} />} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const bieuDoCot = (
+    <div style={{ width: '100%', height: 400 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 50, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#ccc" />
+          <XAxis dataKey="ten" interval={0} tick={<NhanTrucX data={data} />} height={80} />
+          <YAxis domain={[0, max]} tickCount={7} allowDecimals={false} tick={{ fontSize: 11 }} width={48}
+            label={{ value: 'Mực nước hiện tại (m)', angle: -90, position: 'insideLeft', fontSize: 11, dx: -2, style: { textAnchor: 'middle' } }} />
+          <Bar dataKey="v" isAnimationActive={false} maxBarSize={30}>
+            {data.map((r) => <Cell key={r.id} fill={r.mau} />)}
+            <LabelList dataKey="v" content={(p) => <NhanCot {...p} data={data} nho={nhieu} />} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 
   return (
-    <div className="mnhh-overlay" onClick={onClose}>
+    <div className={`mnhh-overlay${hep ? ' mnhh-hep' : ''}`} onClick={onClose}>
       <div className="mnhh-panel" onClick={(e) => e.stopPropagation()}>
         <div className="mnhh-header">
           <h3>📊 Mực nước hiện hành</h3>
@@ -95,22 +173,7 @@ export default function MucNuocHienHanh({ stations, onClose }) {
         <div className="mnhh-body">
           <div className="mnhh-title">MỰC NƯỚC CÁC TRẠM THỦY VĂN<br />TỈNH QUẢNG TRỊ{capNhat ? ` | CẬP NHẬT ${formatCapNhat(capNhat)}` : ''}</div>
           <div className="mnhh-sub">Đơn vị: m | Giá trị so sánh cấp báo động ghi theo bảng nguồn</div>
-          <div className="mnhh-scroll">
-            <div style={{ width, height: 400 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data} margin={{ top: 50, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#ccc" />
-                  <XAxis dataKey="ten" interval={0} tick={<NhanTrucX data={data} />} height={80} />
-                  <YAxis domain={[0, max]} tickCount={7} allowDecimals={false} tick={{ fontSize: 11 }} width={48}
-                    label={{ value: 'Mực nước hiện tại (m)', angle: -90, position: 'insideLeft', fontSize: 11, dx: -2, style: { textAnchor: 'middle' } }} />
-                  <Bar dataKey="v" isAnimationActive={false} maxBarSize={30}>
-                    {data.map((r) => <Cell key={r.id} fill={r.mau} />)}
-                    <LabelList dataKey="v" content={(p) => <NhanCot {...p} data={data} />} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          {hep ? bieuDoNgang : bieuDoCot}
           <div className="mnhh-legend">
             <span><i style={{ background: MAU_DO }} />Trên cấp báo động</span>
             <span><i style={{ background: MAU_XANH }} />Dưới cấp báo động</span>
