@@ -13,6 +13,7 @@ import MucNuocChart from './MucNuocChart';
 import MucNuocHienHanh from './MucNuocHienHanh';
 import RainHourlyTable from './RainHourlyTable';
 import RainHourlyChart from './RainHourlyChart';
+import MuaThoiDoanChart from './MuaThoiDoanChart';
 import MaiHoaForecast from './MaiHoaForecast';
 import DongTamForecast from './DongTamForecast';
 
@@ -230,6 +231,7 @@ function MapComponent() {
   const [rainHourlyStations, setRainHourlyStations] = useState([]);
   const [showRainHourlyTable, setShowRainHourlyTable] = useState(false);
   const [showRainHourlyChart, setShowRainHourlyChart] = useState(false);
+  const [showMuaThoiDoan, setShowMuaThoiDoan] = useState(false);
   const mapRef = useRef(null);
   const QT_CENTER = [16.75, 107.1];
   const QT_ZOOM = 8;
@@ -583,6 +585,7 @@ function MapComponent() {
             <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo theo thời đoạn</button>
             <button onClick={() => { setShowRainHourlyTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo theo giờ</button>
             <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}>📊 Biểu đồ mưa theo giờ</button>
+            <button onClick={() => { setShowMuaThoiDoan(true); setShowMenu(false); }}>📊 Đồ thị mưa theo thời đoạn</button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
             <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}>📊 Mực nước hiện hành (cột)</button>
@@ -637,6 +640,7 @@ function MapComponent() {
       {showDongTamForecast && <DongTamForecast onClose={() => setShowDongTamForecast(false)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
+      {showMuaThoiDoan && <MuaThoiDoanChart stations={rainHourlyStations} onClose={() => setShowMuaThoiDoan(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
       {showMucNuocChart && <MucNuocChart stations={mucNuocStations} rainStations={rainHourlyStations} onClose={() => setShowMucNuocChart(false)} />}
       {showMucNuocHienHanh && <MucNuocHienHanh stations={mucNuocStations} onClose={() => setShowMucNuocHienHanh(false)} />}
