@@ -105,18 +105,34 @@ export default function MucNuocHienHanh({ stations, onClose }) {
     return { data: list, capNhat: tMoi, max: Math.ceil((m * 1.12 + 1) / 5) * 5 };
   }, [stations]);
 
-  const { w, h } = useKhung();
+  const khung = useKhung();
+  const [ngangTay, setNgangTay] = useState(false); // nút "Xem ngang": xoay giao diện đồ thị 90° khi điện thoại đang cầm dọc
+  const dienThoaiDoc = khung.w < 700 && khung.w < khung.h;
+  const ngang = ngangTay && dienThoaiDoc; // xoay máy ngang thật -> tự tắt chế độ xoay tay
+  // Kích thước "ảo" mà đồ thị được vẽ trong đó: khi xoay tay thì đổi chỗ rộng/cao.
+  const w = ngang ? khung.h : khung.w;
+  const h = ngang ? khung.w : khung.h;
   const gon = w < 700 || h < 520; // điện thoại (dọc hoặc ngang): cửa sổ phủ kín màn hình
   const doc = w < 700;            // điện thoại dọc: nhãn cột viết dọc
-  // Chiều cao đồ thị: điện thoại ngang thì ăn theo chiều cao màn hình (~150px dành cho tiêu đề/chú giải).
+  // Chiều cao đồ thị: điện thoại ngang thì ăn theo chiều cao màn hình (~175px dành cho tiêu đề/chú giải).
   const chieuCao = !gon ? 400 : Math.max(230, Math.min(h - 175, doc ? 560 : 420));
+  const kieuPanel = ngang
+    ? { position: 'fixed', top: 0, left: khung.w, width: khung.h, height: khung.w, maxHeight: 'none', transformOrigin: '0 0', transform: 'rotate(90deg)' }
+    : undefined;
 
   return (
     <div className={`mnhh-overlay${gon ? ' mnhh-hep' : ''}`} onClick={onClose}>
-      <div className="mnhh-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="mnhh-panel" style={kieuPanel} onClick={(e) => e.stopPropagation()}>
         <div className="mnhh-header">
           <h3>📊 Mực nước hiện hành</h3>
-          <button className="mnhh-close" onClick={onClose} aria-label="Đóng">✕</button>
+          <div className="mnhh-actions">
+            {dienThoaiDoc && (
+              <button className="mnhh-rotate" onClick={() => setNgangTay((v) => !v)}>
+                {ngang ? '↺ Xem dọc' : '⟳ Xem ngang'}
+              </button>
+            )}
+            <button className="mnhh-close" onClick={onClose} aria-label="Đóng">✕</button>
+          </div>
         </div>
         <div className="mnhh-body">
           <div className="mnhh-title">MỰC NƯỚC CÁC TRẠM THỦY VĂN<br />TỈNH QUẢNG TRỊ{capNhat ? ` | CẬP NHẬT ${formatCapNhat(capNhat)}` : ''}</div>
