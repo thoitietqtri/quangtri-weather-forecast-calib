@@ -66,10 +66,10 @@ function NhanGiaTri({ x, y, width, value, index, data, doc }) {
   return <text x={cx} y={y - 5} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#222">{txt}</text>;
 }
 
-function NhanTram({ x, y, payload, ten, doc }) {
+function NhanTram({ x, y, payload, ten, doc, mau }) {
   return (
     <g transform={`translate(${x},${y + 6}) rotate(${doc ? -90 : -45})`}>
-      <text x={doc ? -2 : 0} y={doc ? 3 : 0} textAnchor="end" fontSize={doc ? 8.5 : 10.5} fill="#333">{ten[payload.value] || payload.value}</text>
+      <text x={doc ? -2 : 0} y={doc ? 3 : 0} textAnchor="end" fontSize={doc ? 8.5 : 10.5} fontWeight="600" fill={mau[payload.value] || '#000'}>{ten[payload.value] || payload.value}</text>
     </g>
   );
 }
@@ -94,7 +94,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
   const datNhanh = (gio) => { if (!coDuLieu) return; setKt(toInput(tMax)); setBd(toInput(tMax - gio * GIO)); };
 
   // Tổng mưa mỗi trạm trong (bd, kt]: mốc giờ t là lượng mưa tích đến giờ t (giờ 19h = mưa 18h–19h).
-  const { data, nhom, ten, max } = useMemo(() => {
+  const { data, nhom, ten, mauTram, max } = useMemo(() => {
     const list = [];
     if (hopLe) {
       for (const s of stations) {
@@ -123,7 +123,13 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
     list.forEach((r) => { tenMap[r.id] = r.ten; });
     const m = list.reduce((a, r) => Math.max(a, r.v), 0);
     const buoc = m <= 20 ? 5 : m <= 60 ? 10 : m <= 150 ? 25 : 50;
-    return { data: list, nhom: groups, ten: tenMap, max: Math.max(buoc, Math.ceil((m * 1.12 + 1) / buoc) * buoc) };
+    // Màu tên trạm xen kẽ theo lưu vực: xám đậm - đen - xám đậm - đen...
+    const mauMap = {};
+    groups.forEach((g, gi) => {
+      const mauNhom = gi % 2 === 0 ? '#4A4A4A' : '#000000';
+      list.forEach((r) => { if (r.luuVuc === g.ten) mauMap[r.id] = mauNhom; });
+    });
+    return { data: list, nhom: groups, ten: tenMap, mauTram: mauMap, max: Math.max(buoc, Math.ceil((m * 1.12 + 1) / buoc) * buoc) };
   }, [stations, hopLe, tBd, tKt]);
 
   // ---- Kích thước / chế độ điện thoại ----
@@ -186,8 +192,8 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
                           key={`${g.ten}-${i}`}
                           x1={g.dau}
                           x2={g.cuoi}
-                          fill={i % 2 === 0 ? '#E8F0FB' : '#FFFFFF'}
-                          fillOpacity={0.7}
+                          fill={i % 2 === 0 ? '#F6CFE3' : '#D9CCF0'}
+                          fillOpacity={1}
                           stroke="none"
                           ifOverflow="visible"
                           label={{
@@ -199,7 +205,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
                               return (
                                 <g>
                                   <line x1={viewBox.x + 2} x2={viewBox.x + viewBox.width - 2} y1={yb - 11} y2={yb - 11} stroke="#4CAF50" strokeWidth="2" />
-                                  <text x={cx} y={yb + 2} textAnchor="middle" fontSize={doc ? 9 : 11} fontWeight="700" fill="#2E5E2F">{g.ten}</text>
+                                  <text x={cx} y={yb + 2} textAnchor="middle" fontSize={doc ? 9 : 11} fontWeight="700" fill={i % 2 === 0 ? '#4A4A4A' : '#000000'}>{g.ten}</text>
                                 </g>
                               );
                             },
@@ -207,7 +213,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
                         />
                       ))}
                       <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#ccc" />
-                      <XAxis dataKey="id" interval={0} tick={<NhanTram ten={ten} doc={doc} />} height={XAH} />
+                      <XAxis dataKey="id" interval={0} tick={<NhanTram ten={ten} doc={doc} mau={mauTram} />} height={XAH} />
                       <YAxis domain={[0, max]} tickCount={6} allowDecimals={false} width={doc ? 28 : 40} tick={{ fontSize: doc ? 9 : 11 }} />
                       <Bar dataKey="v" isAnimationActive={false} maxBarSize={26}>
                         {data.map((r) => <Cell key={r.id} fill={mauMua(r.v)} />)}
