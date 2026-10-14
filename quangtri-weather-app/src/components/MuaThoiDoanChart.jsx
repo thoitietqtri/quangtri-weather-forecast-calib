@@ -49,6 +49,14 @@ function tenNgan(ten) {
   const tu = String(layTenHienThi(ten)).trim().split(/\s+/);
   return tu.length > 2 ? tu.slice(-2).join(' ') : tu.join(' ');
 }
+// Đặt tên riêng theo id trạm (ưu tiên hơn cách rút gọn 2 từ cuối).
+// kttv_554700 = trạm thủy văn Đông Hà (bảng nguồn ghi "Đông hà"), phân biệt với trạm khí tượng Đông Hà (kttv_557300).
+// kttv_557600 = trạm thủy văn Đồng Hới (bảng mua_oday_thuyvan), kttv_555600 = trạm khí tượng Đồng Hới.
+const TEN_THEO_ID = {
+  kttv_554700: 'TV Đông Hà',
+  kttv_557600: 'TV Đồng Hới',
+  kttv_555600: 'KT Đồng Hới',
+};
 const khoaTen = (t) => t.normalize('NFC').toLowerCase();
 
 const XAH = 74;     // chiều cao vùng tên trạm dưới trục
@@ -103,7 +111,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
         for (const p of s.series) if (p.t > tBd && p.t <= tKt) { tong += p.v || 0; dem += 1; }
         if (dem === 0) continue; // trạm không có số liệu trong khoảng này -> không vẽ cột
         const lv = layLuuVucMua(s.name);
-        list.push({ id: s.id, ten: tenNgan(s.name), v: Math.round(tong * 10) / 10, thuTu: lv.thuTu, luuVuc: lv.luuVuc || 'Khác' });
+        list.push({ id: s.id, ten: TEN_THEO_ID[s.id] || tenNgan(s.name), v: Math.round(tong * 10) / 10, thuTu: lv.thuTu, luuVuc: lv.luuVuc || 'Khác' });
       }
       list.sort((a, b) => a.thuTu - b.thuTu); // theo lưu vực (Bắc → Nam), cùng thứ tự bảng mưa
       // Tên rút gọn trùng nhau -> trạm sau thêm số 2 (3...).
