@@ -157,7 +157,7 @@ export default function MucNuocHienHanh({ stations, onClose }) {
             <span><i style={{ background: MAU_BD[2] }} />BĐII</span>
             <span><i style={{ background: MAU_BD[3] }} />BĐIII</span>
           </div>
-          <div className="mnhh-foot">Nguồn: số liệu quan trắc các trạm KTTV. Sắp xếp Bắc → Nam. Tham khảo - Không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị.</div>
+          <div className="mnhh-foot">Nguồn: số liệu quan trắc các trạm KTTV. Sắp xếp theo lưu vực, Bắc → Nam.</div>
         </div>
       </div>
     </div>

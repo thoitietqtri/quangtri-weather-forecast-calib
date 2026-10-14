@@ -237,7 +237,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
                 <span><i style={{ background: '#F9A825' }} />&gt;50–100mm</span>
                 <span><i style={{ background: '#D32F2F' }} />&gt;100mm</span>
               </div>
-              <div className="mtd-foot">Nguồn: số liệu mưa thực đo các trạm KTTV. Cột xếp theo lưu vực (Bắc → Nam). Tham khảo - Không thay thế bản tin chính thức từ Đài KTTV tỉnh Quảng Trị.</div>
+              <div className="mtd-foot">Nguồn: số liệu mưa thực đo các trạm KTTV. Cột xếp theo lưu vực (Bắc → Nam).</div>
             </>
           )}
         </div>
