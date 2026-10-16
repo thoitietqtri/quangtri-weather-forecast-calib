@@ -28,7 +28,7 @@ const LUU_VUC_TRAM = [
 ];
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
-
+import TroLyAI from './TroLyAI';
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
   if (tmax >= 38) warnings.push({ text: '🔥 Cảnh báo nắng nóng gay gắt', color: '#cc0000' });
@@ -655,6 +655,13 @@ function MapComponent() {
           onClose={() => setShowForecastTable(false)}
         />
       )}
+      <TroLyAI
+        rainStations={rainStations}
+        mucNuocStations={mucNuocStations}
+        featureList={featureList}
+        selectedFeature={selectedFeature}
+        selectedDate={selectedDate}
+      />      
 
       {showRain && (
         <div className="rain-legend">
