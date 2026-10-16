@@ -29,6 +29,7 @@ const LUU_VUC_TRAM = [
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
 import TroLyAI from './TroLyAI';
+
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
   if (tmax >= 38) warnings.push({ text: '🔥 Cảnh báo nắng nóng gay gắt', color: '#cc0000' });
@@ -655,13 +656,6 @@ function MapComponent() {
           onClose={() => setShowForecastTable(false)}
         />
       )}
-      <TroLyAI
-        rainStations={rainStations}
-        mucNuocStations={mucNuocStations}
-        featureList={featureList}
-        selectedFeature={selectedFeature}
-        selectedDate={selectedDate}
-      />      
 
       {showRain && (
         <div className="rain-legend">
@@ -706,6 +700,13 @@ function MapComponent() {
         >
           🏠
         </button>
+        <TroLyAI
+          rainStations={rainStations}
+          mucNuocStations={mucNuocStations}
+          featureList={featureList}
+          selectedFeature={selectedFeature}
+          selectedDate={selectedDate}
+        />
         {geoData ? (
           <MapContainer center={[16.75, 107.1]} zoom={8} className="responsive-map" ref={mapRef}>
             <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)' maxZoom={17} />
