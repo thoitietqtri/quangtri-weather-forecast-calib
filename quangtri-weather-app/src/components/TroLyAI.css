@@ -14,3 +14,8 @@
 .tl-input input{flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;min-width:0}
 .tl-input button{padding:0 14px;border:none;border-radius:8px;background:#1565C0;color:#fff;cursor:pointer}
 .tl-input button:disabled{opacity:.5}
+.tl-head-btns{display:flex;gap:4px;align-items:center}
+.tl-head-btns button{background:none;border:none;color:#fff;font-size:17px;cursor:pointer;padding:2px 6px}
+.tl-input .tl-mic{background:#fff;color:#1565C0;border:1px solid #1565C0;padding:0 10px;font-size:18px}
+.tl-input .tl-mic--on{background:#D32F2F;border-color:#D32F2F;color:#fff;animation:tl-pulse 1s ease-in-out infinite}
+@keyframes tl-pulse{0%,100%{opacity:1}50%{opacity:.55}}

@@ -1,19 +1,48 @@
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import './TroLyAI.css';
+import { LOI_CHAO, GOI_Y, TU_KHOA, HUONG_DAN } from '../data/troLyThuVien';
 
 // ===== Trợ lý theo kịch bản (Lớp 1 — không dùng AI, không tốn phí) =====
-// Mọi con số do CODE lấy từ dữ liệu app đang có, không bịa. Muốn gắn AI sau này
-// (Claude API/Groq...) chỉ cần điền hàm goiAI() ở cuối file; không đụng gì khác.
+// Mọi con số do CODE lấy từ dữ liệu app đang có, không bịa. Nội dung câu hỏi/hướng
+// dẫn nằm ở src/data/troLyThuVien.js. Muốn gắn AI sau này chỉ cần điền goiAI() cuối file.
 
-const chuanHoa = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase();
-const coTu = (q, list) => list.some((k) => q.includes(k));
-const layTen = (f) => f.properties?.ten || f.properties?.Ten || f.properties?.name || '';
+const chuanHoa = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+const thoatRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const chuanHoaDs = (arr) => arr.map(chuanHoa);
+// Khớp theo TỪ/CỤM TỪ nguyên vẹn (tránh "lu" khớp nhầm trong "luc").
+const coTu = (q, list) => list.some((k) => new RegExp(`(^|\\s)${thoatRegex(k)}(\\s|$)`).test(q));
 
-// Tìm các tên (trạm/xã) xuất hiện trong câu hỏi; bỏ tên là phần con của tên dài hơn.
-function timTen(q, danhSach, getName) {
-  const hits = danhSach.map((x) => ({ x, n: chuanHoa(getName(x)) })).filter((h) => h.n && q.includes(h.n));
+// Chuẩn hóa thư viện 1 lần khi nạp
+const TK = Object.fromEntries(Object.entries(TU_KHOA).map(([k, v]) => [k, chuanHoaDs(v)]));
+const HD = HUONG_DAN.map((h) => ({ ...h, k: chuanHoaDs(h.k) }));
+
+// ---- So khớp tên (trạm/xã) ----
+function kc(a, b) { // khoảng cách chỉnh sửa (Levenshtein) — chịu lỗi nghe nhầm khi nói
+  const m = a.length; const n = b.length;
+  const d = Array.from({ length: m + 1 }, (_, i) => { const r = new Array(n + 1).fill(0); r[0] = i; return r; });
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n];
+}
+function timTenChinhXac(q, ds, getName) {
+  const hits = ds.map((x) => ({ x, n: chuanHoa(getName(x)) })).filter((h) => h.n && new RegExp(`(^|\\s)${thoatRegex(h.n)}(\\s|$)`).test(q));
   return hits.filter((h) => !hits.some((o) => o !== h && o.n.length > h.n.length && o.n.includes(h.n))).map((h) => h.x);
+}
+function timTenGanDung(q, ds, getName) {
+  const words = q.split(' ');
+  let best = Infinity; let out = [];
+  for (const x of ds) {
+    const n = chuanHoa(getName(x));
+    if (n.length < 6) continue; // tên quá ngắn: không dò gần đúng để tránh nhầm
+    const k = n.split(' ').length;
+    const nguong = n.length >= 10 ? 2 : 1;
+    for (let i = 0; i + k <= words.length; i++) {
+      const d = kc(words.slice(i, i + k).join(' '), n);
+      if (d <= nguong) { if (d < best) { best = d; out = [x]; } else if (d === best && !out.includes(x)) out.push(x); }
+    }
+  }
+  return out;
 }
 
 // ---- Mực nước (cùng logic với MapComponent, trả chuỗi thuần) ----
@@ -65,69 +94,174 @@ function canhBao(tmax, tmin, wind, rain) {
   return w;
 }
 
-const homNay = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d; };
+// ---- Ngày tháng ----
+const MAX_NGAY = 13; // khớp giới hạn chọn ngày của app (hôm nay + 13)
+const ngayHienTai = () => { const n = new Date(); return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())); };
+const cong = (d, n) => { const x = new Date(d.getTime()); x.setUTCDate(x.getUTCDate() + n); return x; };
 const ymd = (d) => d.toISOString().slice(0, 10);
+const dm = (d) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+const THU = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+const nhan = (d) => `${THU[d.getUTCDay()]} ${dm(d)}`;
+const THU_REGEX = [[/(^|\s)thu (2|hai)(\s|$)/, 1], [/(^|\s)thu (3|ba)(\s|$)/, 2], [/(^|\s)thu (4|tu)(\s|$)/, 3], [/(^|\s)thu (5|nam)(\s|$)/, 4], [/(^|\s)thu (6|sau)(\s|$)/, 5], [/(^|\s)thu (7|bay)(\s|$)/, 6], [/(^|\s)chu nhat(\s|$)/, 0]];
+const dayRange = (start, n) => Array.from({ length: n }, (_, i) => cong(start, i));
 
-function layNgay(q, ngayDangChon) {
-  const d = homNay();
-  if (q.includes('ngay kia') || q.includes('ngay mot')) d.setDate(d.getDate() + 2);
-  else if (q.includes('ngay mai') || q.includes('mai ')) d.setDate(d.getDate() + 1);
-  else if (q.includes('hom nay')) { /* hôm nay */ }
-  else if (ngayDangChon) return ngayDangChon;
-  return ymd(d);
+// Phân tích câu hỏi -> danh sách ngày cần dự báo.
+// Trả { cuThe, dates (mảng Date UTC), ghiChu, loi }. cuThe=true nếu câu hỏi có nêu ngày/khoảng ngày.
+function layYeuCau(q, ngayDangChon, homNay = ngayHienTai()) {
+  const han = cong(homNay, MAX_NGAY);
+  const ghi = (dates, ghiChu = '') => ({ cuThe: true, dates, ghiChu });
+  // 1) ngày cụ thể: "ngày 20/10", "20/10", "ngày 20 tháng 10"
+  let m = q.match(/ngay (\d{1,2}) thang (\d{1,2})/) || q.match(/(?:^|\s)(\d{1,2}) ?[/.-] ?(\d{1,2})(?![\d/]|\s?ngay)/);
+  if (m) {
+    const dd = +m[1]; const mm = +m[2];
+    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+      let y = homNay.getUTCFullYear();
+      let d = new Date(Date.UTC(y, mm - 1, dd));
+      if (d.getUTCMonth() !== mm - 1) return { cuThe: true, loi: `Ngày ${dd}/${mm} không hợp lệ, anh/chị kiểm tra lại giúp em.` };
+      if (d < homNay) { const d2 = new Date(Date.UTC(y + 1, mm - 1, dd)); if (d2 <= han) d = d2; }
+      if (d < homNay) return { cuThe: true, loi: `Ngày ${dd}/${mm} đã qua, em chỉ có dự báo từ hôm nay (${dm(homNay)}) đến ${dm(han)}.` };
+      if (d > han) return { cuThe: true, loi: `Ngày ${dd}/${mm} nằm ngoài phạm vi. App chỉ có dự báo đến ${dm(han)} (tối đa ${MAX_NGAY} ngày tới).` };
+      return ghi([d]);
+    }
+  }
+  // 2) "N ngày tới", "dự báo N ngày"
+  m = q.match(/(\d{1,2}) ngay (toi|nua|sap toi|tiep theo)/) || q.match(/du bao (\d{1,2}) ngay/);
+  if (m) {
+    let n = +m[1]; let ghiChu = '';
+    if (n < 1) n = 1;
+    if (n > MAX_NGAY) { n = MAX_NGAY; ghiChu = `\n(App chỉ có dự báo tối đa ${MAX_NGAY} ngày tới nên em trả ${MAX_NGAY} ngày.)`; }
+    return ghi(dayRange(homNay, n), ghiChu);
+  }
+  // 3) tuần tới
+  if (/(^|\s)tuan (toi|sau)(\s|$)/.test(q) || /(^|\s)(1|mot) tuan(\s|$)/.test(q)) return ghi(dayRange(homNay, 7));
+  // 4) cuối tuần
+  if (q.includes('cuoi tuan')) {
+    const dow = homNay.getUTCDay();
+    if (dow === 0) return ghi([homNay]);
+    if (dow === 6) return ghi([homNay, cong(homNay, 1)]);
+    const toSat = 6 - dow;
+    return ghi([cong(homNay, toSat), cong(homNay, toSat + 1)]);
+  }
+  // 5) thứ trong tuần
+  for (const [re, dow] of THU_REGEX) {
+    if (re.test(q)) return ghi([cong(homNay, (dow - homNay.getUTCDay() + 7) % 7)]);
+  }
+  // 6) hôm nay / ngày mai / ngày kia
+  if (q.includes('ngay kia') || q.includes('ngay mot')) return ghi([cong(homNay, 2)]);
+  if (q.includes('ngay mai') || /(^|\s)mai(\s|$)/.test(q)) return ghi([cong(homNay, 1)]);
+  if (q.includes('hom nay')) return ghi([homNay]);
+  // 7) mặc định: ngày đang chọn trên app hoặc hôm nay
+  if (ngayDangChon) { const d = new Date(`${ngayDangChon}T00:00:00Z`); if (!isNaN(d)) return { cuThe: false, dates: [d] }; }
+  return { cuThe: false, dates: [homNay] };
 }
 
-async function traLoiDuBao(ten, center, ngay) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto&models=ecmwf_ifs&start_date=${ngay}&end_date=${ngay}`;
+async function traLoiDuBao(ten, center, dates) {
+  const start = ymd(dates[0]); const end = ymd(dates[dates.length - 1]);
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto&models=ecmwf_ifs&start_date=${start}&end_date=${end}`;
   const c = new AbortController();
   const timer = setTimeout(() => c.abort(), 12000);
   try {
     const r = await fetch(url, { signal: c.signal });
     if (!r.ok) throw new Error(r.status);
     const d = (await r.json()).daily;
-    const tmax = d.temperature_2m_max[0]; const tmin = d.temperature_2m_min[0];
-    const rain = d.precipitation_sum[0]; const wind = parseFloat((d.windspeed_10m_max[0] / 3.6).toFixed(1));
-    if (tmax == null) return `Chưa có dự báo cho ${ten} ngày ${ngay}.`;
-    const w = canhBao(tmax, tmin, wind, rain);
-    return `📍 Dự báo ${ten} — ngày ${ngay} (ECMWF IFS):\n• Nhiệt độ: ${tmin}–${tmax}°C\n• Mưa: ${rain} mm\n• Gió mạnh nhất: ${wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}`;
+    if (!d || !d.time) throw new Error('no data');
+    const rows = d.time.map((t, i) => {
+      const day = new Date(`${t}T00:00:00Z`);
+      const tmax = d.temperature_2m_max[i]; const tmin = d.temperature_2m_min[i];
+      const rain = d.precipitation_sum[i]; const wind = d.windspeed_10m_max[i] == null ? null : parseFloat((d.windspeed_10m_max[i] / 3.6).toFixed(1));
+      return { day, tmax, tmin, rain, wind, ok: tmax != null && tmin != null && rain != null && wind != null };
+    });
+    if (rows.length === 1) {
+      const x = rows[0];
+      if (!x.ok) return `Chưa có dự báo cho ${ten} ngày ${nhan(x.day)}.`;
+      const w = canhBao(x.tmax, x.tmin, x.wind, x.rain);
+      return `📍 Dự báo ${ten} — ${nhan(x.day)} (ECMWF IFS):\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}`;
+    }
+    const lines = rows.map((x) => (x.ok
+      ? `• ${nhan(x.day)}: ${x.tmin}–${x.tmax}°C · mưa ${x.rain}mm · gió ${x.wind}m/s${canhBao(x.tmax, x.tmin, x.wind, x.rain).length ? ' ⚠️' : ''}`
+      : `• ${nhan(x.day)}: chưa có dự báo`));
+    const okRows = rows.filter((x) => x.ok);
+    const tong = okRows.reduce((s, x) => s + x.rain, 0);
+    const max = okRows.reduce((b, x) => (b == null || x.rain > b.rain ? x : b), null);
+    const tomTat = max ? `\nTổng mưa ${okRows.length} ngày: ${tong.toFixed(1)}mm. Mưa nhiều nhất: ${nhan(max.day)} (${max.rain}mm).` : '';
+    const cb = okRows.map((x) => ({ x, w: canhBao(x.tmax, x.tmin, x.wind, x.rain) })).filter((o) => o.w.length);
+    const canh = cb.length ? '\n⚠️ Cảnh báo:\n' + cb.map((o) => `• ${dm(o.x.day)}: ${o.w.join('; ')}`).join('\n') : '\n✅ Không có cảnh báo thiên tai trong khoảng này.';
+    return `📍 Dự báo ${ten} — ${rows.length} ngày (ECMWF IFS):\n${lines.join('\n')}${tomTat}${canh}`;
   } catch (e) {
     return 'Không tải được dự báo (mạng chậm hoặc máy chủ bận), anh/chị thử lại sau.';
   } finally { clearTimeout(timer); }
 }
 
-// ---- Hướng dẫn sử dụng ----
-const HUONG_DAN = [
-  { k: ['chon xa', 'chon phuong', 'xem du bao', 'dia danh'], a: '📍 Chọn xã/phường: dùng ô "Chọn xã/phường" ở thanh trên cùng, hoặc bấm trực tiếp vào xã trên bản đồ. Popup hiện nhiệt độ, mưa, gió và cảnh báo; biểu đồ theo giờ hiện dưới bản đồ.' },
-  { k: ['ngay', 'lich', 'hom khac'], a: '📅 Ô "Ngày" chọn được tối đa +13 ngày kể từ hôm nay. Chọn xã trước rồi đổi ngày, dự báo sẽ tải lại.' },
-  { k: ['tram mua', 'giot nuoc', 'mau mua', 'chu thich'], a: '💧 Tick "Trạm mưa" để hiện trạm đo. Màu theo mưa 24h: xám 0mm · xanh dương <25 · xanh lá 25–50 · cam 50–100 · đỏ nhấp nháy >100mm. Bấm vào trạm xem 1h/3h/6h/24h/48h/72h.' },
-  { k: ['tram muc nuoc', 'bao dong', 'mau muc nuoc'], a: '🌊 Tick "Trạm mực nước". Màu theo cấp báo động của từng trạm: xanh dưới BĐI · vàng BĐI · cam BĐII · đỏ ≥BĐIII. Trạm hồ chứa chưa phân cấp nên màu xám.' },
-  { k: ['radar'], a: '📡 Tick "Ảnh radar" để phủ ảnh radar tổ hợp lên bản đồ, tự làm mới 10 phút/lần; bỏ tick là dừng.' },
-  { k: ['dinh vi', 'vi tri cua toi', 'gps'], a: '📍 Nút định vị (trên bản đồ) đưa bản đồ tới vị trí của anh/chị — cần cho phép truy cập vị trí. Nút 🏠 đưa về toàn tỉnh Quảng Trị.' },
-  { k: ['menu', 'chuc nang', 'bang', 'bieu do', 'thoi doan'], a: '☰ Menu (góc trên trái) có: mưa thực đo theo thời đoạn/giờ, đồ thị mưa, mực nước thực đo, biểu đồ mực nước, mực nước hiện hành (cột), bảng dự báo mưa/nhiệt/gió và dự báo mực nước khi có lũ.' },
-  { k: ['mai hoa', 'dong tam', 'du bao muc nuoc', 'dinh lu'], a: '🌊 Dự báo mực nước khi có lũ: Menu → "Dự báo Mực nước (khi có lũ)" → Sông Gianh → Đồng Tâm hoặc Mai Hóa. Các trạm khác đang xây dựng.' },
-  { k: ['cai dat', 'cai app', 'install', 'man hinh chinh'], a: '📲 Dùng nút cài đặt ở thanh công cụ (hoặc "Thêm vào màn hình chính" của trình duyệt) để cài app như ứng dụng điện thoại.' },
-  { k: ['mau nhiet', 'mau xa', 'mang song', 'lop'], a: '🎛️ Các ô tick dưới thanh chọn xã: Trạm mưa, Trạm mực nước, Mạng lưới sông, Màu nhiệt độ xã, Ảnh radar — bật/tắt từng lớp trên bản đồ.' },
-];
-const GOI_Y = ['Hướng dẫn sử dụng', 'Mưa nhiều nhất hiện nay', 'Mực nước các trạm', 'Dự báo ngày mai'];
-const LOI_CHAO = 'Xin chào! Em là trợ lý của app Thời tiết Quảng Trị. Anh/chị hỏi về cách dùng app, mưa và mực nước hiện tại, hoặc dự báo một xã/phường (ví dụ: "mưa Đồng Tâm", "mực nước Mai Hóa", "dự báo Đông Hà ngày mai").\nSố liệu chỉ để tham khảo, tin chính thức theo bản tin của Đài KTTV.';
+// ---- Giọng nói ----
+const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+const layGiongViet = () => (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.getVoices().find((v) => /^vi/i.test(v.lang)) : null);
+
+// Đổi chữ/ký hiệu sang dạng dễ đọc thành tiếng.
+function lamSachDeDoc(t) {
+  return String(t)
+    .replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F]/gu, '')
+    .replace(/BĐIII/g, 'báo động ba').replace(/BĐII/g, 'báo động hai').replace(/BĐI/g, 'báo động một')
+    .replace(/(\d)\s*mm\b/g, '$1 milimét')
+    .replace(/°C/g, ' độ C')
+    .replace(/m\/s/g, ' mét trên giây')
+    .replace(/(\d{1,2})\/(\d{1,2})/g, '$1 tháng $2')
+    .replace(/(\d)\s*[–-]\s*(\d)/g, '$1 đến $2')
+    .replace(/(\d+)h\b/g, '$1 giờ')
+    .replace(/(\d)\.(\d)/g, '$1 phẩy $2')
+    .replace(/(\d)m\b/g, '$1 mét')
+    .replace(/\+(\d)/g, 'cộng $1').replace(/-(\d)/g, 'trừ $1')
+    .replace(/[•·]/g, ',').replace(/—/g, ',').replace(/→/g, ',');
+}
+function noiThanhTieng(text) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const giong = layGiongViet();
+  lamSachDeDoc(text).split('\n').map((s) => s.trim()).filter(Boolean).forEach((dong) => {
+    const u = new SpeechSynthesisUtterance(dong);
+    u.lang = 'vi-VN'; u.rate = 1;
+    if (giong) u.voice = giong;
+    window.speechSynthesis.speak(u);
+  });
+}
 
 export default function TroLyAI({ rainStations = [], mucNuocStations = [], featureList = [], selectedFeature = null, selectedDate = '' }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: LOI_CHAO }]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [nghe, setNghe] = useState(false);
+  const [docTo, setDocTo] = useState(false);
+  const [coGiong, setCoGiong] = useState(false);
   const endRef = useRef(null);
+  const recRef = useRef(null);
+  const guiRef = useRef(null);
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [msgs, open]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return undefined;
+    const capNhat = () => setCoGiong(!!layGiongViet());
+    capNhat();
+    window.speechSynthesis.addEventListener?.('voiceschanged', capNhat);
+    return () => { window.speechSynthesis.removeEventListener?.('voiceschanged', capNhat); window.speechSynthesis.cancel(); recRef.current?.abort?.(); };
+  }, []);
 
   async function traLoi(raw) {
     const q = chuanHoa(raw);
-    const tram = timTen(q, rainStations, (s) => s.name);
-    const nuoc = timTen(q, mucNuocStations, (s) => s.name);
-    const xa = timTen(q, featureList, (f) => f.name);
-    const hoiMua = coTu(q, ['mua', 'tram mua']);
-    const hoiNuoc = coTu(q, ['nuoc', 'lu', 'bao dong', 'muc']);
-    const hoiDuBao = coTu(q, ['du bao', 'ngay mai', 'ngay kia', 'nhiet', 'nong', 'ret', 'gio', 'thoi tiet']);
-    const huongDan = coTu(q, ['huong dan', 'cach', 'lam sao', 'lam the nao', 'o dau', 'bam', 'su dung', 'chuc nang']);
+    const qNgay = q.replace(/mai hoa/g, ' '); // tránh "Mai Hóa" bị hiểu là "ngày mai"
+    const yc = layYeuCau(qNgay, selectedDate);
+
+    let tram = timTenChinhXac(q, rainStations, (s) => s.name);
+    let nuoc = timTenChinhXac(q, mucNuocStations, (s) => s.name);
+    let xa = timTenChinhXac(q, featureList, (f) => f.name);
+    if (!tram.length && !nuoc.length && !xa.length) { // không khớp chính xác -> dò gần đúng (chịu lỗi nghe nhầm khi nói)
+      tram = timTenGanDung(q, rainStations, (s) => s.name);
+      nuoc = timTenGanDung(q, mucNuocStations, (s) => s.name);
+      xa = timTenGanDung(q, featureList, (f) => f.name);
+    }
+    const hoiMua = coTu(q, TK.mua);
+    const hoiNuoc = coTu(q, TK.nuoc);
+    const hoiDuBao = coTu(q, TK.duBao) || yc.cuThe || /(^|\s)mai(\s|$)/.test(qNgay);
+    const huongDan = coTu(q, TK.huongDan);
 
     // 1) Số liệu thực đo theo tên trạm
     if (!hoiDuBao && (tram.length || nuoc.length) && !huongDan) {
@@ -136,18 +270,21 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
       if (nuoc.length && (hoiNuoc || !hoiMua)) nuoc.slice(0, 3).forEach((s) => out.push(traLoiMucNuoc(s)));
       if (out.length) return out.join('\n\n');
     }
-    // 2) Dự báo xã/phường (đã nêu tên, hoặc xã đang chọn)
+    // 2) Dự báo xã/phường (nêu tên, hoặc xã đang chọn) — 1 ngày, nhiều ngày hoặc ngày cụ thể
     if (hoiDuBao || xa.length) {
       if (!huongDan || xa.length) {
+        if (yc.loi) return yc.loi;
         let ten; let center;
         if (xa.length) { ten = xa[0].name; center = L.geoJSON(xa[0].feature).getBounds().getCenter(); }
+        else if ((tram.length || nuoc.length) && !selectedFeature) return 'Dự báo của app tính theo xã/phường. Anh/chị cho em tên xã/phường (ví dụ "dự báo Đông Hà 5 ngày tới"), hoặc chọn xã trên bản đồ trước.';
         else if (selectedFeature) { ten = selectedFeature.name; center = selectedFeature.center; }
         else return 'Anh/chị cho em biết xã/phường cần xem (ví dụ: "dự báo Đông Hà ngày mai"), hoặc chọn xã trên bản đồ trước.';
-        return traLoiDuBao(ten, center, layNgay(q, selectedDate));
+        const kq = await traLoiDuBao(ten, center, yc.dates);
+        return kq + (yc.ghiChu || '');
       }
     }
     // 3) Tổng quan mưa / mực nước
-    if (hoiMua && coTu(q, ['nhieu nhat', 'lon nhat', 'cao nhat', 'tong quan', 'hien nay', 'dang mua'])) {
+    if (hoiMua && coTu(q, TK.tongQuanMua)) {
       const ds = rainStations.filter((s) => Number(s.rain_24h) > 0).sort((a, b) => b.rain_24h - a.rain_24h).slice(0, 5);
       if (!ds.length) return '💧 Hiện chưa trạm nào ghi nhận mưa trong 24h qua (hoặc chưa có số liệu).';
       return '💧 Mưa 24h lớn nhất:\n' + ds.map((s, i) => `${i + 1}. ${s.name}: ${s.rain_24h}mm (3h: ${s.rain_3h ?? '—'}mm)`).join('\n');
@@ -155,28 +292,25 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
     if (hoiNuoc || coTu(q, ['tram nuoc'])) {
       const ds = mucNuocStations.map((s) => ({ s, ...tomTatMucNuoc(s.series) })).filter((x) => x.current != null);
       if (!ds.length) return '🌊 Hiện chưa có số liệu mực nước.';
-      const vuot = ds.filter((x) => x.s.alertInfo && capBaoDong(x.current, x.s.alertInfo).match(/trên|TRÊN/));
+      const vuot = ds.filter((x) => x.s.alertInfo && /trên|TRÊN/.test(capBaoDong(x.current, x.s.alertInfo)));
       const dong = vuot.length ? 'Trạm đang vượt ngưỡng:\n' + vuot.map((x) => `• ${x.s.name}: ${x.current}m — ${capBaoDong(x.current, x.s.alertInfo)}`).join('\n') : 'Chưa trạm nào vượt báo động/ngưỡng cảnh báo.';
       const len = ds.filter((x) => x.change24h > 0.3).sort((a, b) => b.change24h - a.change24h).slice(0, 3);
       return `🌊 Mực nước (${ds.length} trạm):\n${dong}${len.length ? '\nĐang lên nhanh (24h): ' + len.map((x) => `${x.s.name} ${dau(x.change24h)}m`).join(', ') : ''}\n(Hỏi tên trạm để xem chi tiết, ví dụ "mực nước Mai Hóa")`;
     }
-    if (hoiMua) {
-      return 'Anh/chị cho em tên trạm (ví dụ "mưa Đồng Tâm"), hoặc hỏi "mưa nhiều nhất hiện nay".';
-    }
+    if (hoiMua) return 'Anh/chị cho em tên trạm (ví dụ "mưa Đồng Tâm"), hoặc hỏi "mưa nhiều nhất hiện nay".';
     // 4) Hướng dẫn
-    if (huongDan || q.includes('huong dan')) {
-      const ds = HUONG_DAN.filter((h) => coTu(q, h.k));
+    const ds = HD.filter((h) => coTu(q, h.k));
+    if (huongDan || coTu(q, ['huong dan'])) {
       if (ds.length) return ds.slice(0, 2).map((h) => h.a).join('\n\n');
-      return 'Em hướng dẫn được: chọn xã/phường · chọn ngày · trạm mưa · trạm mực nước · radar · định vị · menu chức năng · dự báo mực nước Mai Hóa/Đồng Tâm · cài app. Anh/chị muốn xem mục nào?';
+      return 'Em hướng dẫn được: chọn xã/phường · chọn ngày · trạm mưa · trạm mực nước · radar · định vị · menu chức năng · dự báo mực nước Mai Hóa/Đồng Tâm · cài app · giọng nói. Anh/chị muốn xem mục nào?';
     }
-    const ds = HUONG_DAN.filter((h) => coTu(q, h.k));
     if (ds.length) return ds[0].a;
     const ai = await goiAI(raw, { rainStations, mucNuocStations, selectedFeature, selectedDate });
     if (ai) return ai;
-    return 'Em chưa hiểu câu hỏi. Anh/chị thử: "Hướng dẫn sử dụng", "Mưa Đồng Tâm", "Mực nước Mai Hóa", "Dự báo Đông Hà ngày mai".';
+    return 'Em chưa hiểu câu hỏi. Anh/chị thử: "Hướng dẫn sử dụng", "Mưa Đồng Tâm", "Mực nước Mai Hóa", "Dự báo Đông Hà 5 ngày tới".';
   }
 
-  async function gui(text) {
+  async function gui(text, opts = {}) {
     const t = (text ?? input).trim();
     if (!t || busy) return;
     setInput('');
@@ -186,6 +320,54 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
     try { kq = await traLoi(t); } catch (e) { console.error('[Trợ lý]', e); kq = 'Có lỗi khi xử lý, anh/chị thử lại.'; }
     setMsgs((m) => [...m, { role: 'bot', text: kq }]);
     setBusy(false);
+    if ((opts.noi || docTo) && coGiong) noiThanhTieng(kq);
+  }
+  guiRef.current = gui;
+
+  function batDauNghe() {
+    if (!SR || busy) return;
+    if (nghe) { recRef.current?.stop?.(); return; }
+    window.speechSynthesis?.cancel();
+    try {
+      if (!localStorage.getItem('tl_mic_luu_y')) {
+        setMsgs((m) => [...m, { role: 'bot', text: '🎤 Lưu ý: khi nói, trình duyệt (Chrome/Edge) gửi đoạn âm thanh lên máy chủ của hãng để chuyển thành chữ. Hãy cho phép micro khi trình duyệt hỏi, rồi nói câu hỏi.' }]);
+        localStorage.setItem('tl_mic_luu_y', '1');
+      }
+    } catch { /* bỏ qua khi không dùng được localStorage */ }
+    const rec = new SR();
+    rec.lang = 'vi-VN'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    let cuoi = ''; let loi = false;
+    rec.onresult = (e) => {
+      const t = Array.from(e.results).map((r) => r[0].transcript).join('');
+      setInput(t);
+      if (e.results[e.results.length - 1].isFinal) cuoi = t;
+    };
+    rec.onerror = (e) => {
+      loi = true;
+      const thongBao = e.error === 'not-allowed' || e.error === 'service-not-allowed'
+        ? 'Trình duyệt chưa cho phép dùng micro. Anh/chị bấm biểu tượng ổ khóa cạnh địa chỉ trang, chọn cho phép Micro rồi thử lại.'
+        : e.error === 'no-speech' ? 'Em chưa nghe thấy giọng nói, anh/chị bấm micro và nói lại nhé.'
+          : e.error === 'network' ? 'Không kết nối được dịch vụ nhận dạng giọng nói (cần mạng). Anh/chị gõ chữ giúp em nhé.'
+            : e.error === 'aborted' ? '' : 'Không nhận dạng được giọng nói, anh/chị thử lại hoặc gõ chữ.';
+      if (thongBao) setMsgs((m) => [...m, { role: 'bot', text: thongBao }]);
+    };
+    rec.onend = () => {
+      setNghe(false); recRef.current = null;
+      if (!loi && cuoi.trim()) guiRef.current(cuoi, { noi: true });
+      else if (!loi) setInput('');
+    };
+    recRef.current = rec;
+    try { rec.start(); setNghe(true); } catch { setNghe(false); recRef.current = null; }
+  }
+
+  function dong() {
+    recRef.current?.abort?.();
+    window.speechSynthesis?.cancel();
+    setOpen(false);
+  }
+  function batTatDoc() {
+    if (docTo) window.speechSynthesis?.cancel();
+    setDocTo((v) => !v);
   }
 
   return (
@@ -197,7 +379,10 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
         <div className="tl-panel" role="dialog" aria-label="Trợ lý">
           <div className="tl-head">
             <span>🤖 Trợ lý Thời tiết Quảng Trị</span>
-            <button onClick={() => setOpen(false)} aria-label="Đóng">✕</button>
+            <span className="tl-head-btns">
+              {coGiong && <button onClick={batTatDoc} aria-label={docTo ? 'Tắt đọc to' : 'Bật đọc to'} title={docTo ? 'Đang đọc to mọi câu trả lời — bấm để tắt' : 'Bật đọc to mọi câu trả lời'}>{docTo ? '🔊' : '🔇'}</button>}
+              <button onClick={dong} aria-label="Đóng">✕</button>
+            </span>
           </div>
           <div className="tl-body">
             {msgs.map((m, i) => <div key={i} className={`tl-msg tl-msg--${m.role}`}>{m.text}</div>)}
@@ -208,7 +393,10 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
             {GOI_Y.map((g) => <button key={g} onClick={() => gui(g)} disabled={busy}>{g}</button>)}
           </div>
           <form className="tl-input" onSubmit={(e) => { e.preventDefault(); gui(); }}>
-            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Nhập câu hỏi..." />
+            {SR && (
+              <button type="button" className={`tl-mic${nghe ? ' tl-mic--on' : ''}`} onClick={batDauNghe} disabled={busy} aria-label={nghe ? 'Dừng nghe' : 'Nói câu hỏi'} title={nghe ? 'Đang nghe — bấm để dừng' : 'Bấm để nói câu hỏi'}>🎤</button>
+            )}
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={nghe ? 'Đang nghe... hãy nói' : 'Nhập câu hỏi...'} />
             <button type="submit" disabled={busy || !input.trim()}>Gửi</button>
           </form>
         </div>
