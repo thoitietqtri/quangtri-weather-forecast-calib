@@ -175,7 +175,7 @@ async function traLoiDuBao(ten, center, dates) {
       const x = rows[0];
       if (!x.ok) return `Chưa có dự báo cho ${ten} ngày ${nhan(x.day)}.`;
       const w = canhBao(x.tmax, x.tmin, x.wind, x.rain);
-      return `📍 Dự báo ${ten} — ${nhan(x.day)} (ECMWF IFS):\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}`;
+      return `📍 Dự báo ${ten} — ${nhan(x.day)}:\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}`;
     }
     const lines = rows.map((x) => (x.ok
       ? `• ${nhan(x.day)}: ${x.tmin}–${x.tmax}°C · mưa ${x.rain}mm · gió ${x.wind}m/s${canhBao(x.tmax, x.tmin, x.wind, x.rain).length ? ' ⚠️' : ''}`
@@ -186,7 +186,7 @@ async function traLoiDuBao(ten, center, dates) {
     const tomTat = max ? `\nTổng mưa ${okRows.length} ngày: ${tong.toFixed(1)}mm. Mưa nhiều nhất: ${nhan(max.day)} (${max.rain}mm).` : '';
     const cb = okRows.map((x) => ({ x, w: canhBao(x.tmax, x.tmin, x.wind, x.rain) })).filter((o) => o.w.length);
     const canh = cb.length ? '\n⚠️ Cảnh báo:\n' + cb.map((o) => `• ${dm(o.x.day)}: ${o.w.join('; ')}`).join('\n') : '\n✅ Không có cảnh báo thiên tai trong khoảng này.';
-    return `📍 Dự báo ${ten} — ${rows.length} ngày (ECMWF IFS):\n${lines.join('\n')}${tomTat}${canh}`;
+    return `📍 Dự báo ${ten} — ${rows.length} ngày:\n${lines.join('\n')}${tomTat}${canh}`;
   } catch (e) {
     return 'Không tải được dự báo (mạng chậm hoặc máy chủ bận), anh/chị thử lại sau.';
   } finally { clearTimeout(timer); }
