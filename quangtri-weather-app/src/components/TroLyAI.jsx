@@ -224,6 +224,35 @@ function noiThanhTieng(text) {
   });
 }
 
+// Hình đại diện trợ lý (cô gái đội nón lá) — vẽ bằng SVG, không cần file ảnh, không dùng id nên dùng được nhiều nơi cùng lúc.
+function TroLyAvatar({ size = '100%' }) {
+  return (
+    <svg className="tl-avatar" viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
+      <rect width="100" height="100" fill="#4FA3E0" />
+      <ellipse cx="20" cy="26" rx="13" ry="6" fill="#fff" opacity=".35" />
+      <ellipse cx="82" cy="20" rx="10" ry="5" fill="#fff" opacity=".3" />
+      <path d="M26 36C19 60 20 86 27 97L73 97C80 86 81 60 74 36Z" fill="#1F1A24" />
+      <path d="M12 100C15 83 30 77 50 77C70 77 85 83 88 100Z" fill="#fff" />
+      <path d="M50 77L38 100M50 77L62 100" stroke="#D6E2EE" strokeWidth="1.2" fill="none" />
+      <rect x="43" y="63" width="14" height="17" rx="6" fill="#F2BE98" />
+      <path d="M39 77Q50 86 61 77L58 71Q50 78 42 71Z" fill="#E6EFF8" />
+      <ellipse cx="50" cy="52" rx="19" ry="20" fill="#F8CFAB" />
+      <path d="M50 4L88 38Q50 47 12 38Z" fill="#EBD28D" />
+      <path d="M50 4L27 40M50 4L38 43M50 4L50 44M50 4L62 43M50 4L73 40" stroke="#C7A65A" strokeWidth=".9" fill="none" />
+      <path d="M12 38Q50 47 88 38" stroke="#B8934A" strokeWidth="1.6" fill="none" />
+      <path d="M33 41C30 55 34 66 42 70M67 41C70 55 66 66 58 70" stroke="#D32F2F" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M38 48Q42 45.5 46 48M54 48Q58 45.5 62 48" stroke="#2B2020" strokeWidth="1.7" fill="none" strokeLinecap="round" />
+      <ellipse cx="42" cy="54" rx="2.7" ry="3.5" fill="#2B2020" />
+      <ellipse cx="58" cy="54" rx="2.7" ry="3.5" fill="#2B2020" />
+      <circle cx="43" cy="52.8" r="1" fill="#fff" />
+      <circle cx="59" cy="52.8" r="1" fill="#fff" />
+      <circle cx="36.5" cy="61" r="3.6" fill="#F59DA0" opacity=".6" />
+      <circle cx="63.5" cy="61" r="3.6" fill="#F59DA0" opacity=".6" />
+      <path d="M44.5 62Q50 68 55.5 62" stroke="#B3363F" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function TroLyAI({ rainStations = [], mucNuocStations = [], featureList = [], selectedFeature = null, selectedDate = '' }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: LOI_CHAO }]);
@@ -373,20 +402,22 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
   return (
     <>
       {!open && (
-        <button className="tl-fab" onClick={() => setOpen(true)} aria-label="Mở trợ lý" title="Hỏi trợ lý">💬</button>
+        <button className="tl-fab" onClick={() => setOpen(true)} aria-label="Mở trợ lý" title="Hỏi trợ lý"><TroLyAvatar /></button>
       )}
       {open && (
         <div className="tl-panel" role="dialog" aria-label="Trợ lý">
           <div className="tl-head">
-            <span>🤖 Trợ lý Thời tiết Quảng Trị</span>
+            <span className="tl-title"><TroLyAvatar size={30} />Trợ lý Thời tiết Quảng Trị</span>
             <span className="tl-head-btns">
               {coGiong && <button onClick={batTatDoc} aria-label={docTo ? 'Tắt đọc to' : 'Bật đọc to'} title={docTo ? 'Đang đọc to mọi câu trả lời — bấm để tắt' : 'Bật đọc to mọi câu trả lời'}>{docTo ? '🔊' : '🔇'}</button>}
               <button onClick={dong} aria-label="Đóng">✕</button>
             </span>
           </div>
           <div className="tl-body">
-            {msgs.map((m, i) => <div key={i} className={`tl-msg tl-msg--${m.role}`}>{m.text}</div>)}
-            {busy && <div className="tl-msg tl-msg--bot">⏳ Đang xử lý...</div>}
+            {msgs.map((m, i) => (m.role === 'bot'
+              ? <div key={i} className="tl-row"><TroLyAvatar size={28} /><div className="tl-msg tl-msg--bot">{m.text}</div></div>
+              : <div key={i} className="tl-msg tl-msg--user">{m.text}</div>))}
+            {busy && <div className="tl-row"><TroLyAvatar size={28} /><div className="tl-msg tl-msg--bot">⏳ Đang xử lý...</div></div>}
             <div ref={endRef} />
           </div>
           <div className="tl-chips">

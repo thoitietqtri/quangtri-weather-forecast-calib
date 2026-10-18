@@ -1,4 +1,4 @@
-.tl-fab{position:absolute;top:104px;right:12px;z-index:1001;width:40px;height:40px;padding:0;border-radius:50%;border:none;background:#1565C0;color:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.tl-fab{position:absolute;top:104px;right:12px;z-index:1001;width:40px;height:40px;padding:0;overflow:hidden;border-radius:50%;border:2px solid #fff;background:#1565C0;color:#fff;font-size:0;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.4)}
 @media (max-width:768px){.tl-fab{top:88px;right:8px;width:34px;height:34px;font-size:16px}}
 .tl-fab:active{transform:scale(.95)}
 .tl-panel{position:fixed;right:14px;bottom:56px;z-index:2000;width:min(380px,calc(100vw - 28px));height:min(520px,calc(100vh - 130px));display:flex;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.4);overflow:hidden;font-size:14px}
@@ -19,3 +19,9 @@
 .tl-input .tl-mic{background:#fff;color:#1565C0;border:1px solid #1565C0;padding:0 10px;font-size:18px}
 .tl-input .tl-mic--on{background:#D32F2F;border-color:#D32F2F;color:#fff;animation:tl-pulse 1s ease-in-out infinite}
 @keyframes tl-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.tl-avatar{display:block;border-radius:50%;overflow:hidden;flex-shrink:0;background:#4FA3E0}
+.tl-title{display:flex;align-items:center;gap:8px}
+.tl-title .tl-avatar{box-shadow:0 0 0 2px #fff}
+.tl-row{display:flex;gap:6px;align-items:flex-start;align-self:flex-start;max-width:96%}
+.tl-row .tl-msg{max-width:none}
+.tl-row .tl-avatar{margin-top:2px}
