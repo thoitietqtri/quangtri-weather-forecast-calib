@@ -26,6 +26,7 @@ export const TU_KHOA = {
   ],
   huongDan: ['hướng dẫn', 'cách', 'làm sao', 'làm thế nào', 'ở đâu', 'bấm', 'sử dụng', 'chức năng'],
   tongQuanMua: ['nhiều nhất', 'lớn nhất', 'cao nhất', 'tổng quan', 'hiện nay', 'đang mưa'],
+  dinhLu: ['đỉnh lũ', 'đỉnh', 'lũ lên', 'nước lên', 'nước rút', 'lũ rút', 'lên bao nhiêu'],
 };
 
 // Mục hướng dẫn: k = các từ khóa kích hoạt, a = câu trả lời.
@@ -52,3 +53,18 @@ export const MO_TA_MUA = [
   { duoi: 100, text: 'Nhiều mây, có mưa vừa, mưa to.' },
   { duoi: Infinity, text: 'Có mưa to đến rất to, cần đề phòng lũ quét, sạt lở đất ở vùng núi, ngập lụt ở vùng trũng thấp.' },
 ];
+
+// ---- Dự báo mực nước 6/12/18/24h (lấy từ hàm Netlify giống menu "Dự báo Mực nước (khi có lũ)") ----
+// nguong = bd1/bd2/bd3 (m) — GIỮ KHỚP với MaiHoaForecast.jsx / DongTamForecast.jsx.
+// doTinCay = % mẫu kiểm nghiệm đạt sai số ±1m theo từng mốc (lấy từ ghi chú trong 2 màn hình dự báo).
+export const TRAM_DU_BAO_MUC_NUOC = [
+  { ten: 'Mai Hóa', fn: 'forecast-maihoa', hienTaiKey: 'maihoaHienTai', nguong: { bd1: 3, bd2: 5, bd3: 6.5 }, doTinCay: { 6: 91.5, 12: 76, 18: 74.5, 24: 81.6 } },
+  { ten: 'Đồng Tâm', fn: 'forecast-dongtam', hienTaiKey: 'dongtamHienTai', nguong: { bd1: 7, bd2: 13, bd3: 16 }, doTinCay: { 6: 74.7, 12: 68.4, 18: 71.1, 24: 75.9 } },
+];
+// Số liệu mới nhất cũ hơn bao nhiêu giờ thì cảnh báo.
+export const NGUONG_SO_LIEU_CU_GIO = 3;
+export const CAU_MUC_NUOC = {
+  luuY: 'Số liệu tham khảo, không thay bản tin chính thức của Đài KTTV. Dự báo tính với hệ số hiệu chỉnh mưa mặc định 1.0; khi có bão/áp thấp nhiệt đới, mực nước thực tế có thể cao hơn.',
+  khuyenCao: 'Mực nước đang hoặc dự kiến vượt báo động II: anh/chị theo dõi bản tin chính thức của Đài KTTV, tuân thủ chỉ đạo của chính quyền địa phương; khi khẩn cấp gọi 112.',
+  chuaCoLu: 'Mực nước chưa vượt báo động I nên chưa có đỉnh lũ để dự báo.',
+};
