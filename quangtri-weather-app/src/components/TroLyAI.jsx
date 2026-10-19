@@ -211,7 +211,13 @@ async function goiDuBaoMucNuoc(cfg) {
   try {
     const r = await fetch(`/.netlify/functions/${cfg.fn}?hesoHieuChinh=1.0`, { signal: c.signal });
     if (!r.ok) return null;
-    return await r.json();
+    const d = await r.json();
+    if (!cfg.tramKey) return d;
+    // forecast-nhatle trả cả 2 trạm: lấy phần của trạm đang hỏi, đưa về cùng dạng với Mai Hóa/Đồng Tâm
+    if (!d || !d.available) return d;
+    const t = d.tram && d.tram[cfg.tramKey];
+    if (!t) return { available: false, reason: 'chưa có số liệu trạm này' };
+    return { available: true, thoiDiemHienTai: t.thoiDiemHienTai, hienTai: t.hienTai, cheDo: t.cheDo, duBaoTheoMoc: t.duBaoTheoMoc, nhanDinhDinh: t.nhanDinhDinh };
   } catch { return null; } finally { clearTimeout(timer); }
 }
 
@@ -223,7 +229,9 @@ function traLoiDuBaoMucNuoc(cfg, data, stThucDo, hoiDinh) {
   if (ch24 != null) out.push(`• 24h qua: ${dau(ch24)}m (${ch24 > 0.02 ? 'đang lên' : ch24 < -0.02 ? 'đang xuống' : 'gần như không đổi'})`);
   let max = hienTai;
 
-  if (data.cheDo === 'ngay_thuong') {
+  if (cfg.tramKey && data.cheDo === 'ngay_thuong') {
+    out.push(`Mực nước dưới ${cfg.nguongLu}m, chưa có lũ nên chưa có dự báo 6, 12, 18, 24 giờ tới.`);
+  } else if (data.cheDo === 'ngay_thuong') {
     out.push(`• Đồng Tâm: ${data.dongtamHienTai}m (dưới ngưỡng lũ)`);
     out.push(`• Ước tính theo mô hình triều: ${data.maihoaDuBao}m`);
     out.push('Chưa có lũ nên chưa có dự báo 6, 12, 18, 24 giờ tới.');
@@ -247,6 +255,7 @@ function traLoiDuBaoMucNuoc(cfg, data, stThucDo, hoiDinh) {
     }
   }
   if (Date.now() - tHT > NGUONG_SO_LIEU_CU_GIO * 3600000) out.push(`⚠️ Số liệu mới nhất lúc ${gioVN(tHT)}, đã cũ hơn ${NGUONG_SO_LIEU_CU_GIO} giờ; dự báo có thể chưa phản ánh tình hình hiện tại.`);
+  if (cfg.thamKhao && data.cheDo !== 'ngay_thuong') out.push(CAU_MUC_NUOC.thamKhaoKienGiang);
   if (max >= cfg.nguong.bd2) out.push(`⚠️ ${CAU_MUC_NUOC.khuyenCao}`);
   out.push(CAU_MUC_NUOC.luuY);
   return out.join('\n');
@@ -354,7 +363,7 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
     const hoiDuBao = coTu(q, TK.duBao) || yc.cuThe || /(^|\s)mai(\s|$)/.test(qNgay);
     const huongDan = coTu(q, TK.huongDan);
 
-    // 0) Dự báo mực nước 6/12/18/24h cho Mai Hóa, Đồng Tâm; trạm khác chỉ có số liệu thực đo
+    // 0) Dự báo mực nước 6/12/18/24h cho Mai Hóa, Đồng Tâm, Kiến Giang, Lệ Thủy; trạm khác chỉ có số liệu thực đo
     const coMoc = /(^|\s)(6|12|18|24) ?(h|gio)(\s|$)/.test(q);
     const hoiDinh = coTu(q, TK.dinhLu);
     const yMucNuoc = (hoiNuoc || hoiDinh || coMoc) && !(hoiMua && !hoiNuoc && !hoiDinh);
@@ -371,9 +380,9 @@ export default function TroLyAI({ rainStations = [], mucNuocStations = [], featu
         return kqs.join('\n\n');
       }
       if (nuoc.length) {
-        return nuoc.slice(0, 3).map((s) => `${traLoiMucNuoc(s)}\nTrạm ${s.name} chưa có dự báo mực nước (hiện chỉ có Đồng Tâm và Mai Hóa), anh/chị xem số liệu thực đo ở trên.`).join('\n\n');
+        return nuoc.slice(0, 3).map((s) => `${traLoiMucNuoc(s)}\nTrạm ${s.name} chưa có dự báo mực nước (hiện có Đồng Tâm, Mai Hóa, Kiến Giang, Lệ Thủy), anh/chị xem số liệu thực đo ở trên.`).join('\n\n');
       }
-      if (!xa.length && !tram.length && (coTu(q, ['du bao']) || coMoc || hoiDinh)) return 'Hiện app có dự báo mực nước 6, 12, 18, 24 giờ tới cho trạm Đồng Tâm và Mai Hóa. Anh/chị cho em tên trạm, ví dụ "mực nước Mai Hóa".';
+      if (!xa.length && !tram.length && (coTu(q, ['du bao']) || coMoc || hoiDinh)) return 'Hiện app có dự báo mực nước 6, 12, 18, 24 giờ tới cho trạm Đồng Tâm, Mai Hóa, Kiến Giang và Lệ Thủy. Anh/chị cho em tên trạm, ví dụ "mực nước Mai Hóa".';
     }
 
     // 1) Số liệu thực đo theo tên trạm

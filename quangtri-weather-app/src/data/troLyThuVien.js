@@ -60,11 +60,15 @@ export const MO_TA_MUA = [
 export const TRAM_DU_BAO_MUC_NUOC = [
   { ten: 'Mai Hóa', fn: 'forecast-maihoa', hienTaiKey: 'maihoaHienTai', nguong: { bd1: 3, bd2: 5, bd3: 6.5 }, doTinCay: { 6: 91.5, 12: 76, 18: 74.5, 24: 81.6 } },
   { ten: 'Đồng Tâm', fn: 'forecast-dongtam', hienTaiKey: 'dongtamHienTai', nguong: { bd1: 7, bd2: 13, bd3: 16 }, doTinCay: { 6: 74.7, 12: 68.4, 18: 71.1, 24: 75.9 } },
+  // Sông Nhật Lệ: một hàm trả về cả 2 trạm (tramKey chọn trạm). thamKhao: độ chính xác thấp, chỉ nêu để tham khảo.
+  { ten: 'Kiến Giang', fn: 'forecast-nhatle', tramKey: 'kiengiang', hienTaiKey: 'hienTai', nguong: { bd1: 8, bd2: 11, bd3: 13 }, nguongLu: 7, thamKhao: true },
+  { ten: 'Lệ Thủy', fn: 'forecast-nhatle', tramKey: 'lethuy', hienTaiKey: 'hienTai', nguong: { bd1: 1.2, bd2: 2.2, bd3: 2.7 }, nguongLu: 1, thamKhao: false },
 ];
 // Số liệu mới nhất cũ hơn bao nhiêu giờ thì cảnh báo.
 export const NGUONG_SO_LIEU_CU_GIO = 3;
 export const CAU_MUC_NUOC = {
   luuY: 'Số liệu tham khảo, không thay bản tin chính thức của Đài KTTV tỉnh Quảng Trị. Dự báo tính với hệ số hiệu chỉnh mưa mặc định 1.0; khi có bão/áp thấp nhiệt đới, mực nước thực tế có thể cao hơn.',
   khuyenCao: 'Mực nước đang hoặc dự kiến vượt báo động II: anh/chị theo dõi bản tin chính thức của Đài KTTV tỉnh Quảng Trị, tuân thủ chỉ đạo của chính quyền địa phương; khi khẩn cấp gọi 112.',
+  thamKhaoKienGiang: 'Lưu ý: dự báo Kiến Giang (trạm thượng nguồn) độ chính xác thấp, chỉ mang tính tham khảo; đỉnh lũ thường bị dự báo thấp hơn thực tế.',
   chuaCoLu: 'Mực nước chưa vượt báo động I nên chưa có đỉnh lũ để dự báo.',
 };
