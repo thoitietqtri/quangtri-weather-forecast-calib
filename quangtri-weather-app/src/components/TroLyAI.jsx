@@ -69,7 +69,7 @@ function capBaoDong(cur, a) {
   if (cur >= a.binhThuongMax) return `mức cảnh báo (+${(cur - a.binhThuongMax).toFixed(2)}m so với bình thường)`;
   return 'dưới mức bình thường';
 }
-const gio = (t) => new Date(t).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+const gio = (t) => { const d = new Date(t + 7 * 3600 * 1000); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())} ngày ${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}`; }; // giờ VN, không phụ thuộc định dạng của trình duyệt
 const dau = (v) => (v > 0 ? `+${v}` : `${v}`);
 
 function traLoiMucNuoc(st) {
@@ -262,6 +262,7 @@ function lamSachDeDoc(t) {
     .replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F]/gu, '')
     .replace(/KTTV/g, 'khí tượng thủy văn')
     .replace(/BĐIII/g, 'báo động ba').replace(/BĐII/g, 'báo động hai').replace(/BĐI/g, 'báo động một')
+    .replace(/(\d{1,2}):(\d{2})/g, (_, h, m) => (m === '00' ? `${+h} giờ` : `${+h} giờ ${+m} phút`))
     .replace(/(\d)\s*mm\b/g, '$1 milimét')
     .replace(/°C/g, ' độ C')
     .replace(/m\/s/g, ' mét trên giây')
