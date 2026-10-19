@@ -119,7 +119,7 @@ export default function NhatLeForecast({ onClose, tram = 'lethuy' }) {
               )}
 
               <div className="dongtam-forecast-inputs">
-                <div className="dongtam-forecast-row"><span>Mưa vùng thấp 24h đã qua:</span><b>{t.rainDaQua24h}mm</b></div>
+                <div className="dongtam-forecast-row"><span>Mưa tại trạm 24h đã qua:</span><b>{t.rainDaQua24h}mm</b></div>
                 {tram === 'kiengiang' && (
                   <div className="dongtam-forecast-row"><span>Mưa Trường Sơn 24h đã qua:</span><b>{t.rainTruongSonDaQua24h}mm</b></div>
                 )}
@@ -128,7 +128,7 @@ export default function NhatLeForecast({ onClose, tram = 'lethuy' }) {
                   if (!m) return null;
                   return (
                     <div className="dongtam-forecast-row" key={h}>
-                      <span>Mưa dự báo +{h}h {tram === 'kiengiang' ? '(vùng thấp / Trường Sơn)' : '(vùng thấp)'}:</span>
+                      <span>Mưa dự báo +{h}h {tram === 'kiengiang' ? '(tại trạm / Trường Sơn)' : '(tại trạm)'}:</span>
                       <b>
                         {m.vungThap.sauHieuChinh}mm{tram === 'kiengiang' && m.truongSon ? ` / ${m.truongSon.sauHieuChinh}mm` : ''}
                       </b>
