@@ -11,6 +11,8 @@ function formatTimeVN(t) {
 export default function MaiHoaForecast({ onClose }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [showBacktest, setShowBacktest] = useState(false);
+  const [asofInput, setAsofInput] = useState('');
   const [heSo, setHeSo] = useState('1.0');
 
   const load = (asof, hs) => {
@@ -39,13 +41,33 @@ export default function MaiHoaForecast({ onClose }) {
         </div>
 
         <div className="maihoa-forecast-body">
-          <div className="dongtam-forecast-hesobox">
-            <label>Hệ số hiệu chỉnh mưa dự báo ECMWF (mặc định 1.0 — chỉnh lên 2-2.5 nếu đang có bão/ATNĐ):</label>
-            <div className="dongtam-forecast-hesobox-row">
-              <input type="number" step="0.1" min="0.1" value={heSo} onChange={(e) => setHeSo(e.target.value)} />
-              <button onClick={() => load(null, heSo)}>Áp dụng</button>
+          {!showBacktest && (
+            <div className="dongtam-forecast-hesobox">
+              <label>Hệ số hiệu chỉnh mưa dự báo ECMWF (mặc định 1.0 — chỉnh lên 2-2.5 nếu đang có bão/ATNĐ):</label>
+              <div className="dongtam-forecast-hesobox-row">
+                <input type="number" step="0.1" min="0.1" value={heSo} onChange={(e) => setHeSo(e.target.value)} />
+                <button onClick={() => load(null, heSo)}>Áp dụng</button>
+              </div>
             </div>
-          </div>
+          )}
+
+          <button className="maihoa-forecast-backtest-toggle" onClick={() => setShowBacktest((v) => !v)}>
+            🔧 Chế độ kiểm nghiệm (kỹ thuật)
+          </button>
+          {showBacktest && (
+            <div className="maihoa-forecast-backtest-box">
+              <label>Giả lập "bây giờ" là (giờ VN):</label>
+              <input type="text" placeholder="2026-09-14 05:00:00" value={asofInput} onChange={(e) => setAsofInput(e.target.value)} />
+              <div className="maihoa-forecast-backtest-btns">
+                <button onClick={() => load(asofInput)}>Kiểm tra</button>
+                <button onClick={() => { setAsofInput(''); load(null, heSo); }}>Về chế độ thật</button>
+              </div>
+            </div>
+          )}
+
+          {data && data.backtestMode && (
+            <div className="maihoa-forecast-backtest-note">🕑 Đang xem lại quá khứ — mốc: {data.asof} (mưa "dự báo" là mưa thật đã xảy ra sau mốc này, giả lập dự báo hoàn hảo)</div>
+          )}
 
           {error && <div className="maihoa-forecast-error">⚠️ Lỗi: {error}</div>}
           {!error && !data && <div className="maihoa-forecast-loading">⏳ Đang tải...</div>}
