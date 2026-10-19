@@ -248,7 +248,6 @@ function traLoiDuBaoMucNuoc(cfg, data, stThucDo, hoiDinh) {
   }
   if (Date.now() - tHT > NGUONG_SO_LIEU_CU_GIO * 3600000) out.push(`⚠️ Số liệu mới nhất lúc ${gioVN(tHT)}, đã cũ hơn ${NGUONG_SO_LIEU_CU_GIO} giờ; dự báo có thể chưa phản ánh tình hình hiện tại.`);
   if (max >= cfg.nguong.bd2) out.push(`⚠️ ${CAU_MUC_NUOC.khuyenCao}`);
-  if (data.cheDo !== 'ngay_thuong') out.push(`Độ tin cậy (kiểm nghiệm, đạt sai số ±1m): ${[6, 12, 18, 24].map((h) => `${h}h ${cfg.doTinCay[h]}%`).join(', ')}.`);
   out.push(CAU_MUC_NUOC.luuY);
   return out.join('\n');
 }
@@ -261,6 +260,7 @@ const layGiongViet = () => (typeof window !== 'undefined' && 'speechSynthesis' i
 function lamSachDeDoc(t) {
   return String(t)
     .replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F]/gu, '')
+    .replace(/KTTV/g, 'khí tượng thủy văn')
     .replace(/BĐIII/g, 'báo động ba').replace(/BĐII/g, 'báo động hai').replace(/BĐI/g, 'báo động một')
     .replace(/(\d)\s*mm\b/g, '$1 milimét')
     .replace(/°C/g, ' độ C')

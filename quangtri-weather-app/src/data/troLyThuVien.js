@@ -5,7 +5,7 @@
 // ============================================================================
 
 export const LOI_CHAO =
-  'Xin chào! Em là trợ lý của app Thời tiết Quảng Trị. Anh/chị hỏi về cách dùng app, mưa và mực nước hiện tại, hoặc dự báo một xã/phường (ví dụ: "mưa Đồng Tâm", "mực nước Mai Hóa", "dự báo Đông Hà 5 ngày tới", "ngày 20/10 Đông Hà có mưa không").\nSố liệu chỉ để tham khảo, tin chính thức theo bản tin của Đài KTTV.';
+  'Xin chào! Em là trợ lý của app Thời tiết Quảng Trị. Anh/chị hỏi về cách dùng app, mưa và mực nước hiện tại, hoặc dự báo một xã/phường (ví dụ: "mưa Đồng Tâm", "mực nước Mai Hóa", "dự báo Đông Hà 5 ngày tới", "ngày 20/10 Đông Hà có mưa không").\nSố liệu chỉ để tham khảo, tin chính thức theo bản tin của Đài KTTV tỉnh Quảng Trị.';
 
 // Các nút gợi ý nhanh dưới khung chat.
 export const GOI_Y = [
@@ -64,7 +64,7 @@ export const TRAM_DU_BAO_MUC_NUOC = [
 // Số liệu mới nhất cũ hơn bao nhiêu giờ thì cảnh báo.
 export const NGUONG_SO_LIEU_CU_GIO = 3;
 export const CAU_MUC_NUOC = {
-  luuY: 'Số liệu tham khảo, không thay bản tin chính thức của Đài KTTV. Dự báo tính với hệ số hiệu chỉnh mưa mặc định 1.0; khi có bão/áp thấp nhiệt đới, mực nước thực tế có thể cao hơn.',
-  khuyenCao: 'Mực nước đang hoặc dự kiến vượt báo động II: anh/chị theo dõi bản tin chính thức của Đài KTTV, tuân thủ chỉ đạo của chính quyền địa phương; khi khẩn cấp gọi 112.',
+  luuY: 'Số liệu tham khảo, không thay bản tin chính thức của Đài KTTV tỉnh Quảng Trị. Dự báo tính với hệ số hiệu chỉnh mưa mặc định 1.0; khi có bão/áp thấp nhiệt đới, mực nước thực tế có thể cao hơn.',
+  khuyenCao: 'Mực nước đang hoặc dự kiến vượt báo động II: anh/chị theo dõi bản tin chính thức của Đài KTTV tỉnh Quảng Trị, tuân thủ chỉ đạo của chính quyền địa phương; khi khẩn cấp gọi 112.',
   chuaCoLu: 'Mực nước chưa vượt báo động I nên chưa có đỉnh lũ để dự báo.',
 };
