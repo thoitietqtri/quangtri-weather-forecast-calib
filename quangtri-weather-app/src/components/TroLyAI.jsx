@@ -178,7 +178,7 @@ async function traLoiDuBao(ten, center, dates) {
       const x = rows[0];
       if (!x.ok) return `Chưa có dự báo cho ${ten} ngày ${nhan(x.day)}.`;
       const w = canhBao(x.tmax, x.tmin, x.wind, x.rain);
-      return `📍 Dự báo ${ten} — ${nhan(x.day)}:\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}\nDự báo thời tiết cho ${ten} ngày ${dm(x.day)} là: ${moTaMua(x.rain)}`;
+      return `Dự báo thời tiết cho ${ten} ngày ${dm(x.day)} là: ${moTaMua(x.rain)} Cụ thể:\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}`;
     }
     const lines = rows.map((x) => (x.ok
       ? `• ${nhan(x.day)}: ${x.tmin}–${x.tmax}°C · mưa ${x.rain}mm · gió ${x.wind}m/s${canhBao(x.tmax, x.tmin, x.wind, x.rain).length ? ' ⚠️' : ''}`
@@ -195,8 +195,8 @@ async function traLoiDuBao(ten, center, dates) {
       const text = moTaMua(x.rain); const cuoi = nhom[nhom.length - 1];
       if (cuoi && cuoi.text === text) cuoi.den = x.day; else nhom.push({ text, tu: x.day, den: x.day });
     });
-    const nhanDinh = nhom.length ? `\nDự báo thời tiết cho ${ten} là:\n` + nhom.map((g) => `• ${g.tu === g.den ? dm(g.tu) : `${dm(g.tu)} đến ${dm(g.den)}`}: ${g.text}`).join('\n') : '';
-    return `📍 Dự báo ${ten} — ${rows.length} ngày:\n${lines.join('\n')}${tomTat}${canh}${nhanDinh}`;
+    const nhanDinh = nhom.length ? `Dự báo thời tiết cho ${ten} từ ${dm(rows[0].day)} đến ${dm(rows[rows.length - 1].day)} là:\n` + nhom.map((g) => `• ${g.tu === g.den ? dm(g.tu) : `${dm(g.tu)} đến ${dm(g.den)}`}: ${g.text}`).join('\n') : '';
+    return `${nhanDinh}${nhanDinh ? '\nCụ thể:\n' : ''}${lines.join('\n')}${tomTat}${canh}`;
   } catch (e) {
     return 'Không tải được dự báo (mạng chậm hoặc máy chủ bận), anh/chị thử lại sau.';
   } finally { clearTimeout(timer); }
