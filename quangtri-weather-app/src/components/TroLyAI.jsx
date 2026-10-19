@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import './TroLyAI.css';
-import { LOI_CHAO, GOI_Y, TU_KHOA, HUONG_DAN } from '../data/troLyThuVien';
+import { LOI_CHAO, GOI_Y, TU_KHOA, HUONG_DAN, MO_TA_MUA } from '../data/troLyThuVien';
 
 // ===== Trợ lý theo kịch bản (Lớp 1 — không dùng AI, không tốn phí) =====
 // Mọi con số do CODE lấy từ dữ liệu app đang có, không bịa. Nội dung câu hỏi/hướng
@@ -94,6 +94,9 @@ function canhBao(tmax, tmin, wind, rain) {
   return w;
 }
 
+// Câu nhận định theo lượng mưa dự báo 24h (ngưỡng và lời văn sửa ở troLyThuVien.js).
+const moTaMua = (rain) => (MO_TA_MUA.find((m) => rain < m.duoi) || MO_TA_MUA[MO_TA_MUA.length - 1]).text;
+
 // ---- Ngày tháng ----
 const MAX_NGAY = 13; // khớp giới hạn chọn ngày của app (hôm nay + 13)
 const ngayHienTai = () => { const n = new Date(); return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())); };
@@ -175,7 +178,7 @@ async function traLoiDuBao(ten, center, dates) {
       const x = rows[0];
       if (!x.ok) return `Chưa có dự báo cho ${ten} ngày ${nhan(x.day)}.`;
       const w = canhBao(x.tmax, x.tmin, x.wind, x.rain);
-      return `📍 Dự báo ${ten} — ${nhan(x.day)}:\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}`;
+      return `📍 Dự báo ${ten} — ${nhan(x.day)}:\n• Nhiệt độ: ${x.tmin}–${x.tmax}°C\n• Mưa: ${x.rain} mm\n• Gió mạnh nhất: ${x.wind} m/s\n${w.length ? '⚠️ Cảnh báo: ' + w.join('; ') : '✅ Không có cảnh báo thiên tai'}\nDự báo thời tiết cho ${ten} ngày ${dm(x.day)} là: ${moTaMua(x.rain)}`;
     }
     const lines = rows.map((x) => (x.ok
       ? `• ${nhan(x.day)}: ${x.tmin}–${x.tmax}°C · mưa ${x.rain}mm · gió ${x.wind}m/s${canhBao(x.tmax, x.tmin, x.wind, x.rain).length ? ' ⚠️' : ''}`
@@ -186,7 +189,14 @@ async function traLoiDuBao(ten, center, dates) {
     const tomTat = max ? `\nTổng mưa ${okRows.length} ngày: ${tong.toFixed(1)}mm. Mưa nhiều nhất: ${nhan(max.day)} (${max.rain}mm).` : '';
     const cb = okRows.map((x) => ({ x, w: canhBao(x.tmax, x.tmin, x.wind, x.rain) })).filter((o) => o.w.length);
     const canh = cb.length ? '\n⚠️ Cảnh báo:\n' + cb.map((o) => `• ${dm(o.x.day)}: ${o.w.join('; ')}`).join('\n') : '\n✅ Không có cảnh báo thiên tai trong khoảng này.';
-    return `📍 Dự báo ${ten} — ${rows.length} ngày:\n${lines.join('\n')}${tomTat}${canh}`;
+    // Nhận định theo mưa: gộp các ngày liền nhau có cùng nhận định cho gọn.
+    const nhom = [];
+    okRows.forEach((x) => {
+      const text = moTaMua(x.rain); const cuoi = nhom[nhom.length - 1];
+      if (cuoi && cuoi.text === text) cuoi.den = x.day; else nhom.push({ text, tu: x.day, den: x.day });
+    });
+    const nhanDinh = nhom.length ? `\nDự báo thời tiết cho ${ten} là:\n` + nhom.map((g) => `• ${g.tu === g.den ? dm(g.tu) : `${dm(g.tu)} đến ${dm(g.den)}`}: ${g.text}`).join('\n') : '';
+    return `📍 Dự báo ${ten} — ${rows.length} ngày:\n${lines.join('\n')}${tomTat}${canh}${nhanDinh}`;
   } catch (e) {
     return 'Không tải được dự báo (mạng chậm hoặc máy chủ bận), anh/chị thử lại sau.';
   } finally { clearTimeout(timer); }

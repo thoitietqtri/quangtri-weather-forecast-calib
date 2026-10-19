@@ -42,3 +42,13 @@ export const HUONG_DAN = [
   { k: ['màu nhiệt', 'màu xã', 'mạng sông', 'lớp'], a: '🎛️ Các ô tick dưới thanh chọn xã: Trạm mưa, Trạm mực nước, Mạng lưới sông, Màu nhiệt độ xã, Ảnh radar — bật/tắt từng lớp trên bản đồ.' },
   { k: ['giọng nói', 'nói', 'micro', 'đọc to'], a: '🎤 Bấm nút micro cạnh ô nhập để nói câu hỏi bằng tiếng Việt; trợ lý sẽ đọc to câu trả lời. Nút 🔊 trên đầu khung chat để bật/tắt đọc to mọi câu trả lời. Cần trình duyệt Chrome/Edge (hoặc Safari mới) và cho phép dùng micro.' },
 ];
+
+// Câu nhận định cuối câu trả lời dự báo, theo mưa dự báo 24h (mm).
+// "duoi" = chặn trên (không gồm): mưa < duoi thì dùng câu đó; xét từ trên xuống.
+// Hiện: <10mm · 10–<25mm · 25–<100mm · từ 100mm trở lên.
+export const MO_TA_MUA = [
+  { duoi: 10, text: 'Có lúc có mưa nhỏ, ngày nắng.' },
+  { duoi: 25, text: 'Có mưa nhỏ, ngày nắng gián đoạn.' },
+  { duoi: 100, text: 'Nhiều mây, có mưa vừa, mưa to.' },
+  { duoi: Infinity, text: 'Có mưa to đến rất to, cần đề phòng lũ quét, sạt lở đất ở vùng núi, ngập lụt ở vùng trũng thấp.' },
+];
