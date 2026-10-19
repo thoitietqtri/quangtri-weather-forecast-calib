@@ -643,7 +643,7 @@ function MapComponent() {
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
       {showMaiHoaForecast && <MaiHoaForecast onClose={() => setShowMaiHoaForecast(false)} />}
       {showDongTamForecast && <DongTamForecast onClose={() => setShowDongTamForecast(false)} />}
-      {nhatLeTram && <NhatLeForecast tramBanDau={nhatLeTram} onClose={() => setNhatLeTram(null)} />}
+      {nhatLeTram && <NhatLeForecast tram={nhatLeTram} onClose={() => setNhatLeTram(null)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMuaThoiDoan && <MuaThoiDoanChart stations={rainHourlyStations} onClose={() => setShowMuaThoiDoan(false)} />}

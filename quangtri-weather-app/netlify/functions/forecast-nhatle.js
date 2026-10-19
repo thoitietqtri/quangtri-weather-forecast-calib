@@ -203,17 +203,14 @@ export default async (request) => {
     const kgAtLt = findValueAt(kgSeries, cur.lethuy.t);
     const kgForLt = { v: kgAtLt != null ? kgAtLt : cur.kiengiang.v, rate6: cur.kiengiang.r6 };
 
-    const needForecast = Object.keys(LEVEL_STATIONS).some((k) => cur[k].v >= LEVEL_STATIONS[k].nguongMoHinh);
-    let rainFc = null;
-    if (needForecast) {
-      rainFc = await fetchForecastRainAfter(Math.min(cur.kiengiang.t, cur.lethuy.t));
-      if (!rainFc) return json({ available: false, reason: 'Không lấy được mưa dự báo ECMWF' });
-    }
+    // Luôn dự báo (kể cả chưa có lũ) để vẽ đồ thị; cheDo='ngay_thuong' chỉ là cờ báo mực nước dưới ngưỡng mô hình lũ
+    const rainFc = await fetchForecastRainAfter(Math.min(cur.kiengiang.t, cur.lethuy.t));
+    if (!rainFc) return json({ available: false, reason: 'Không lấy được mưa dự báo ECMWF' });
     const r1d = (x) => Math.round(x * 10) / 10;
-    out.mucMuaDuBao = rainFc ? Object.fromEntries(LEADS.map((L) => [L, {
+    out.mucMuaDuBao = Object.fromEntries(LEADS.map((L) => [L, {
       vungThap: { goc: r1d(sum(rainFc.thap, L)), sauHieuChinh: r1d(sum(rainFc.thap, L) * heSoHieuChinh) },
       truongSon: { goc: r1d(sum(rainFc.nui, L)), sauHieuChinh: r1d(sum(rainFc.nui, L) * heSoHieuChinh) },
-    }])) : null;
+    }]));
 
     for (const key of ['kiengiang', 'lethuy']) {
       const st = LEVEL_STATIONS[key]; const c = cur[key];
@@ -225,8 +222,7 @@ export default async (request) => {
         thoiDiemHienTai: c.t, hienTai: r2(c.v), tocDo6h: Math.round(c.r6 * 1000) / 1000,
         rainDaQua24h: r1d(mua.thap.h24), rainTruongSonDaQua24h: r1d(mua.nui.h24), nguong: st.nguong,
       };
-      if (c.v < st.nguongMoHinh) { out.tram[key] = { ...base, cheDo: 'ngay_thuong' }; continue; }
-      out.tram[key] = { ...base, cheDo: 'lu', ...duBaoMotTram(key, c.v, c, kgForLt, mua, rainFc, heSoHieuChinh) };
+      out.tram[key] = { ...base, nguongMoHinh: st.nguongMoHinh, cheDo: c.v < st.nguongMoHinh ? 'ngay_thuong' : 'lu', ...duBaoMotTram(key, c.v, c, kgForLt, mua, rainFc, heSoHieuChinh) };
     }
     return json(out);
   } catch (e) {

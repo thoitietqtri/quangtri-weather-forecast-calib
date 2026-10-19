@@ -217,7 +217,7 @@ async function goiDuBaoMucNuoc(cfg) {
     if (!d || !d.available) return d;
     const t = d.tram && d.tram[cfg.tramKey];
     if (!t) return { available: false, reason: 'chưa có số liệu trạm này' };
-    return { available: true, thoiDiemHienTai: t.thoiDiemHienTai, hienTai: t.hienTai, cheDo: t.cheDo, duBaoTheoMoc: t.duBaoTheoMoc, nhanDinhDinh: t.nhanDinhDinh };
+    return { available: true, thoiDiemHienTai: t.thoiDiemHienTai, hienTai: t.hienTai, cheDo: 'lu', duoiNguong: t.cheDo === 'ngay_thuong', duBaoTheoMoc: t.duBaoTheoMoc, nhanDinhDinh: t.nhanDinhDinh };
   } catch { return null; } finally { clearTimeout(timer); }
 }
 
@@ -229,15 +229,14 @@ function traLoiDuBaoMucNuoc(cfg, data, stThucDo, hoiDinh) {
   if (ch24 != null) out.push(`• 24h qua: ${dau(ch24)}m (${ch24 > 0.02 ? 'đang lên' : ch24 < -0.02 ? 'đang xuống' : 'gần như không đổi'})`);
   let max = hienTai;
 
-  if (cfg.tramKey && data.cheDo === 'ngay_thuong') {
-    out.push(`Mực nước dưới ${cfg.nguongLu}m, chưa có lũ nên chưa có dự báo 6, 12, 18, 24 giờ tới.`);
-  } else if (data.cheDo === 'ngay_thuong') {
+  if (data.cheDo === 'ngay_thuong') {
     out.push(`• Đồng Tâm: ${data.dongtamHienTai}m (dưới ngưỡng lũ)`);
     out.push(`• Ước tính theo mô hình triều: ${data.maihoaDuBao}m`);
     out.push('Chưa có lũ nên chưa có dự báo 6, 12, 18, 24 giờ tới.');
     if (hoiDinh && hienTai < cfg.nguong.bd1) out.push(CAU_MUC_NUOC.chuaCoLu);
   } else {
     const MOC = [6, 12, 18, 24];
+    if (data.duoiNguong) out.push(`(Chưa có lũ, mực nước dưới ${cfg.nguongLu}m — dự báo dưới đây chỉ mang tính tham khảo.)`);
     MOC.forEach((h) => {
       const v = data.duBaoTheoMoc[h]; max = Math.max(max, v);
       out.push(`• ${h}h tới (${gioVN(tHT + h * 3600000)}): ${v}m — ${capBaoDong(v, ng)}`);

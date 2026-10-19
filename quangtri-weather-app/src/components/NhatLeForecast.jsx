@@ -13,12 +13,11 @@ const TRAM = {
   lethuy: { ten: 'Lệ Thủy', thamKhao: false, nguongMoHinh: 1 },
 };
 
-// tramBanDau: 'kiengiang' | 'lethuy'
-export default function NhatLeForecast({ onClose, tramBanDau = 'lethuy' }) {
+// tram: 'kiengiang' | 'lethuy' (mỗi trạm một khung riêng)
+export default function NhatLeForecast({ onClose, tram = 'lethuy' }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [heSo, setHeSo] = useState('1.0');
-  const [tram, setTram] = useState(tramBanDau);
 
   const load = (hs) => {
     setData(null);
@@ -33,7 +32,8 @@ export default function NhatLeForecast({ onClose, tramBanDau = 'lethuy' }) {
 
   const t = data && data.available ? data.tram && data.tram[tram] : null;
   const cfg = TRAM[tram];
-  const luDangXayRa = t && t.cheDo === 'lu' && t.duBaoTheoMoc;
+  const coDuBao = !!(t && t.duBaoTheoMoc);
+  const duoiNguong = !!(t && t.cheDo === 'ngay_thuong');
 
   return (
     <div className="dongtam-forecast-overlay" onClick={onClose}>
@@ -47,22 +47,6 @@ export default function NhatLeForecast({ onClose, tramBanDau = 'lethuy' }) {
         </div>
 
         <div className="dongtam-forecast-body">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            {Object.keys(TRAM).map((k) => (
-              <button
-                key={k}
-                onClick={() => setTram(k)}
-                style={{
-                  flex: 1, padding: '8px 6px', borderRadius: 6, border: '1px solid #1565C0',
-                  background: tram === k ? '#1565C0' : 'transparent',
-                  color: tram === k ? '#fff' : 'inherit', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                {TRAM[k].ten}
-              </button>
-            ))}
-          </div>
-
           <div className="dongtam-forecast-hesobox">
             <label>Hệ số hiệu chỉnh mưa dự báo ECMWF (mặc định 1.0 — chỉnh lên 2-2.5 nếu đang có bão/ATNĐ/đới gió đông kết hợp KKL):</label>
             <div className="dongtam-forecast-hesobox-row">
@@ -89,13 +73,13 @@ export default function NhatLeForecast({ onClose, tramBanDau = 'lethuy' }) {
                 {' '}· tốc độ 6h qua: <b>{t.tocDo6h > 0 ? '+' : ''}{t.tocDo6h}m</b>
               </div>
 
-              {!luDangXayRa && (
+              {duoiNguong && (
                 <div className="dongtam-forecast-empty">
-                  ✅ Hiện chưa có lũ ({cfg.ten} dưới {cfg.nguongMoHinh}m) — mô hình dự báo lũ chưa áp dụng.
+                  ✅ Hiện chưa có lũ ({cfg.ten} dưới {cfg.nguongMoHinh}m). Mô hình xây từ mẫu mùa lũ nên khi mực nước thấp, kết quả dưới đây chỉ mang tính tham khảo (có thể lệch cao nhẹ).
                 </div>
               )}
 
-              {luDangXayRa && (
+              {coDuBao && (
                 <>
                   <table className="dongtam-forecast-table">
                     <thead>
