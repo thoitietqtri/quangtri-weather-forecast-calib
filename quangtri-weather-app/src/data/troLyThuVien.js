@@ -66,6 +66,8 @@ export const TRAM_DU_BAO_MUC_NUOC = [
   // Sông Thạch Hãn: một hàm trả về cả 2 trạm
   { ten: 'Đakrông', fn: 'forecast-thachhan', tramKey: 'dakrong', hienTaiKey: 'hienTai', nguong: { bd1: 29.5, bd2: 31.5, bd3: 33.5 }, nguongLu: 25, thamKhao: false },
   { ten: 'Thạch Hãn', fn: 'forecast-thachhan', tramKey: 'thachhan', hienTaiKey: 'hienTai', nguong: { bd1: 3, bd2: 4.5, bd3: 6 }, nguongLu: 1, thamKhao: false },
+  // Sông Thạch Hãn - Đông Hà (một trạm, chịu triều)
+  { ten: 'Đông Hà', fn: 'forecast-dongha', tramKey: 'dongha', hienTaiKey: 'hienTai', nguong: { bd1: 2, bd2: 3, bd3: 4 }, nguongLu: 1.2, thamKhao: false },
 ];
 // Số liệu mới nhất cũ hơn bao nhiêu giờ thì cảnh báo.
 export const NGUONG_SO_LIEU_CU_GIO = 3;
