@@ -65,7 +65,7 @@ export default function ThachHanForecast({ onClose, tram = 'thachhan' }) {
             <>
               <div className="dongtam-forecast-hiennay">
                 {cfg.ten} hiện tại ({formatTimeVN(t.thoiDiemHienTai)}): <b>{t.hienTai}m</b>
-                {' '}· tốc độ 6h qua: <b>{t.tocDo6h > 0 ? '+' : ''}{t.tocDo6h}m</b>
+                {' '}· cường suất 6h qua: <b>{t.tocDo6h > 0 ? '+' : ''}{t.tocDo6h}m/h</b>
               </div>
 
               {duoiNguong && (
