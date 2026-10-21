@@ -262,7 +262,13 @@ function traLoiDuBaoMucNuoc(cfg, data, stThucDo, hoiDinh) {
 
 // ---- Giọng nói ----
 const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
-const layGiongViet = () => (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.getVoices().find((v) => /^vi/i.test(v.lang)) : null);
+// Ưu tiên giọng Việt "tự nhiên" (Microsoft HoaiMy/NamMinh online, Google...) hơn giọng máy cũ.
+const layGiongViet = () => {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const ds = window.speechSynthesis.getVoices().filter((v) => /^vi/i.test(v.lang));
+  const diem = (v) => (/natural|online/i.test(v.name) ? 4 : 0) + (/hoaimy|hoai my|namminh|nam minh/i.test(v.name) ? 3 : 0) + (/google/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+  return ds.sort((a, b) => diem(b) - diem(a))[0] || null;
+};
 
 // Đổi chữ/ký hiệu sang dạng dễ đọc thành tiếng.
 function lamSachDeDoc(t) {
@@ -286,9 +292,10 @@ function noiThanhTieng(text) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const giong = layGiongViet();
-  lamSachDeDoc(text).split('\n').map((s) => s.trim()).filter(Boolean).forEach((dong) => {
+  // Tách theo câu để có quãng nghỉ như phát thanh viên; đọc chậm hơn và trầm hơn một chút.
+  lamSachDeDoc(text).split('\n').flatMap((d) => d.split(/(?<=[.;!?:])\s+/)).map((s) => s.trim()).filter(Boolean).forEach((dong) => {
     const u = new SpeechSynthesisUtterance(dong);
-    u.lang = 'vi-VN'; u.rate = 1;
+    u.lang = 'vi-VN'; u.rate = 0.88; u.pitch = 0.95;
     if (giong) u.voice = giong;
     window.speechSynthesis.speak(u);
   });
