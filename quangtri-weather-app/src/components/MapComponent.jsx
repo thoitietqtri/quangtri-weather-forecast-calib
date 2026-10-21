@@ -596,7 +596,7 @@ function MapComponent() {
             <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}>📊 Mực nước hiện hành (cột)</button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
             <button onClick={() => setShowMucNuocLuMenu((v) => !v)}>
-              🌊 Dự báo Mực nước (khi có lũ) {showMucNuocLuMenu ? '▲' : '▼'}
+              🌊 Dự báo Mực nước {showMucNuocLuMenu ? '▲' : '▼'}
             </button>
             {showMucNuocLuMenu && (
               <div className="menu-submenu-cap2">
