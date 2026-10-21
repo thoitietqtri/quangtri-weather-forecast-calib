@@ -67,6 +67,12 @@ export default function ThachHanForecast({ onClose, tram = 'thachhan' }) {
                 {cfg.ten} hiện tại ({formatTimeVN(t.thoiDiemHienTai)}): <b>{t.hienTai}m</b>
                 {' '}· cường suất 6h qua: <b>{t.tocDo6h > 0 ? '+' : ''}{t.tocDo6h}m/h</b>
               </div>
+              {tram === 'thachhan' && data.tram.dakrong && (
+                <div className="dongtam-forecast-hiennay">
+                  Đakrông hiện tại ({formatTimeVN(data.tram.dakrong.thoiDiemHienTai)}): <b>{data.tram.dakrong.hienTai}m</b>
+                  {' '}· cường suất 6h qua: <b>{data.tram.dakrong.tocDo6h > 0 ? '+' : ''}{data.tram.dakrong.tocDo6h}m/h</b>
+                </div>
+              )}
 
               {duoiNguong && (
                 <div className="dongtam-forecast-empty">
