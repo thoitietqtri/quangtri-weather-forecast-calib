@@ -17,6 +17,7 @@ import MuaThoiDoanChart from './MuaThoiDoanChart';
 import MaiHoaForecast from './MaiHoaForecast';
 import DongTamForecast from './DongTamForecast';
 import NhatLeForecast from './NhatLeForecast';
+import ThachHanForecast from './ThachHanForecast';
 
 // Cấu trúc menu "Dự báo Mực nước (khi có lũ)" — theo từng lưu vực sông.
 // ready:true là trạm đã có chức năng dự báo thật (hiện chỉ Mai Hóa); các
@@ -25,7 +26,7 @@ const LUU_VUC_TRAM = [
   { song: 'Sông Gianh', trams: [{ name: 'Đồng Tâm', ready: true }, { name: 'Mai Hóa', ready: true }] },
   { song: 'Sông Nhật Lệ', trams: [{ name: 'Kiến Giang', ready: true }, { name: 'Lệ Thủy', ready: true }, { name: 'Đồng Hới', ready: false }] },
   { song: 'Sông Bến Hải', trams: [{ name: 'Gia Vòng', ready: false }, { name: 'Hiền Lương', ready: false }] },
-  { song: 'Sông Thạch Hãn', trams: [{ name: 'Đakrong', ready: false }, { name: 'Đông Hà', ready: false }, { name: 'Thạch Hãn', ready: false }] },
+  { song: 'Sông Thạch Hãn', trams: [{ name: 'Đakrong', ready: true }, { name: 'Đông Hà', ready: false }, { name: 'Thạch Hãn', ready: true }] },
 ];
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
@@ -217,6 +218,7 @@ function MapComponent() {
   const [showMaiHoaForecast, setShowMaiHoaForecast] = useState(false);
   const [showDongTamForecast, setShowDongTamForecast] = useState(false);
   const [nhatLeTram, setNhatLeTram] = useState(null); // 'kiengiang' | 'lethuy' | null
+  const [thachHanTram, setThachHanTram] = useState(null); // 'dakrong' | 'thachhan' | null
   const [showMucNuocLuMenu, setShowMucNuocLuMenu] = useState(false);
   const [openLuuVuc, setOpenLuuVuc] = useState(null);
   const [featureList, setFeatureList] = useState([]);
@@ -616,6 +618,8 @@ function MapComponent() {
                                 if (tr.name === 'Đồng Tâm') setShowDongTamForecast(true);
                                 else if (tr.name === 'Kiến Giang') setNhatLeTram('kiengiang');
                                 else if (tr.name === 'Lệ Thủy') setNhatLeTram('lethuy');
+                                else if (tr.name === 'Đakrong') setThachHanTram('dakrong');
+                                else if (tr.name === 'Thạch Hãn') setThachHanTram('thachhan');
                                 else setShowMaiHoaForecast(true);
                                 setShowMenu(false);
                                 setShowMucNuocLuMenu(false);
@@ -644,6 +648,7 @@ function MapComponent() {
       {showMaiHoaForecast && <MaiHoaForecast onClose={() => setShowMaiHoaForecast(false)} />}
       {showDongTamForecast && <DongTamForecast onClose={() => setShowDongTamForecast(false)} />}
       {nhatLeTram && <NhatLeForecast tram={nhatLeTram} onClose={() => setNhatLeTram(null)} />}
+      {thachHanTram && <ThachHanForecast tram={thachHanTram} onClose={() => setThachHanTram(null)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMuaThoiDoan && <MuaThoiDoanChart stations={rainHourlyStations} onClose={() => setShowMuaThoiDoan(false)} />}

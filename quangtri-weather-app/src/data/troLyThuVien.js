@@ -63,6 +63,9 @@ export const TRAM_DU_BAO_MUC_NUOC = [
   // Sông Nhật Lệ: một hàm trả về cả 2 trạm (tramKey chọn trạm). thamKhao: độ chính xác thấp, chỉ nêu để tham khảo.
   { ten: 'Kiến Giang', fn: 'forecast-nhatle', tramKey: 'kiengiang', hienTaiKey: 'hienTai', nguong: { bd1: 8, bd2: 11, bd3: 13 }, nguongLu: 7, thamKhao: true },
   { ten: 'Lệ Thủy', fn: 'forecast-nhatle', tramKey: 'lethuy', hienTaiKey: 'hienTai', nguong: { bd1: 1.2, bd2: 2.2, bd3: 2.7 }, nguongLu: 1, thamKhao: false },
+  // Sông Thạch Hãn: một hàm trả về cả 2 trạm
+  { ten: 'Đakrông', fn: 'forecast-thachhan', tramKey: 'dakrong', hienTaiKey: 'hienTai', nguong: { bd1: 29.5, bd2: 31.5, bd3: 33.5 }, nguongLu: 25, thamKhao: false },
+  { ten: 'Thạch Hãn', fn: 'forecast-thachhan', tramKey: 'thachhan', hienTaiKey: 'hienTai', nguong: { bd1: 3, bd2: 4.5, bd3: 6 }, nguongLu: 1, thamKhao: false },
 ];
 // Số liệu mới nhất cũ hơn bao nhiêu giờ thì cảnh báo.
 export const NGUONG_SO_LIEU_CU_GIO = 3;
