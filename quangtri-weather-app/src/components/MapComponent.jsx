@@ -14,22 +14,7 @@ import MucNuocHienHanh from './MucNuocHienHanh';
 import RainHourlyTable from './RainHourlyTable';
 import RainHourlyChart from './RainHourlyChart';
 import MuaThoiDoanChart from './MuaThoiDoanChart';
-import MaiHoaForecast from './MaiHoaForecast';
-import DongTamForecast from './DongTamForecast';
-import NhatLeForecast from './NhatLeForecast';
-import ThachHanForecast from './ThachHanForecast';
-import DongHaForecast from './DongHaForecast';
-import BenHaiForecast from './BenHaiForecast';
-
-// Cấu trúc menu "Dự báo Mực nước 6/12/18/24h tới" — theo từng lưu vực sông.
-// ready:true là trạm đã có chức năng dự báo thật (hiện chỉ Mai Hóa); các
-// trạm còn lại hiện "chưa xây dựng" khi bấm vào, chờ mở rộng dần sau này.
-const LUU_VUC_TRAM = [
-  { song: 'Sông Gianh', trams: [{ name: 'Đồng Tâm', ready: true }, { name: 'Mai Hóa', ready: true }] },
-  { song: 'Sông Nhật Lệ', trams: [{ name: 'Kiến Giang', ready: true }, { name: 'Lệ Thủy', ready: true }, { name: 'Đồng Hới', ready: false }] },
-  { song: 'Sông Bến Hải', trams: [{ name: 'Gia Vòng', ready: true }, { name: 'Hiền Lương', ready: true }] },
-  { song: 'Sông Thạch Hãn', trams: [{ name: 'Đakrong', ready: true }, { name: 'Đông Hà', ready: true }, { name: 'Thạch Hãn', ready: true }] },
-];
+import DuBaoMucNuoc from './DuBaoMucNuoc';
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
 import TroLyAI from './TroLyAI';
@@ -158,6 +143,18 @@ function mucNuocIcon(name, current, alertInfo) {
   });
 }
 
+// Màu cấp báo động HIỆN TẠI của từng trạm KTTV, khóa theo mã trạm (id "kttv_<mã>") — dùng cho
+// chấm màu trên thanh chọn trạm của cửa sổ dự báo; cùng màu với trạm trên bản đồ.
+function mauCapBaoDongTheoMaTram(stations) {
+  const out = {};
+  for (const s of stations) {
+    if (typeof s.id === 'string' && s.id.startsWith('kttv_')) {
+      out[s.id.slice(5)] = mucNuocColor(mucNuocSummary(s.series).current, s.alertInfo);
+    }
+  }
+  return out;
+}
+
 // Trạm mực nước cập nhật lại sau mỗi khoảng thời gian này (mili-giây).
 const MUCNUOC_REFRESH_MS = 15 * 60 * 1000;
 
@@ -217,14 +214,7 @@ function MapComponent() {
   const [showRadar, setShowRadar] = useState(false); // mặc định KHÔNG hiện
   const [radarInfo, setRadarInfo] = useState(null); // { available, t, timeVN, url } | { available:false, reason }
   const [radarLoading, setRadarLoading] = useState(false);
-  const [showMaiHoaForecast, setShowMaiHoaForecast] = useState(false);
-  const [showDongTamForecast, setShowDongTamForecast] = useState(false);
-  const [nhatLeTram, setNhatLeTram] = useState(null); // 'kiengiang' | 'lethuy' | null
-  const [thachHanTram, setThachHanTram] = useState(null); // 'dakrong' | 'thachhan' | null
-  const [showDongHa, setShowDongHa] = useState(false);
-  const [benHaiTram, setBenHaiTram] = useState(null); // 'giavong' | 'hienluong' | null
-  const [showMucNuocLuMenu, setShowMucNuocLuMenu] = useState(false);
-  const [openLuuVuc, setOpenLuuVuc] = useState(null);
+  const [showDuBaoMucNuoc, setShowDuBaoMucNuoc] = useState(false); // cửa sổ "Dự báo Mực nước 6/12/18/24h tới"
   const [featureList, setFeatureList] = useState([]);
   const [selectedName, setSelectedName] = useState('');
   const [rainStations, setRainStations] = useState([]);
@@ -599,65 +589,15 @@ function MapComponent() {
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
             <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}>📊 Mực nước hiện hành (cột)</button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
-            <button onClick={() => setShowMucNuocLuMenu((v) => !v)}>
-              🌊 Dự báo Mực nước 6/12/18/24h tới {showMucNuocLuMenu ? '▲' : '▼'}
+            <button onClick={() => { setShowDuBaoMucNuoc(true); setShowMenu(false); }}>
+              🌊 Dự báo Mực nước 6/12/18/24h tới
             </button>
-            {showMucNuocLuMenu && (
-              <div className="menu-submenu-cap2">
-                {LUU_VUC_TRAM.map((lv) => (
-                  <div key={lv.song}>
-                    <button
-                      className="menu-submenu-header"
-                      onClick={() => setOpenLuuVuc(openLuuVuc === lv.song ? null : lv.song)}
-                    >
-                      {lv.song} {openLuuVuc === lv.song ? '▲' : '▼'}
-                    </button>
-                    {openLuuVuc === lv.song && (
-                      <div className="menu-submenu-cap3">
-                        {lv.trams.map((tr) => (
-                          <button
-                            key={tr.name}
-                            onClick={() => {
-                              if (tr.ready) {
-                                if (tr.name === 'Đồng Tâm') setShowDongTamForecast(true);
-                                else if (tr.name === 'Kiến Giang') setNhatLeTram('kiengiang');
-                                else if (tr.name === 'Lệ Thủy') setNhatLeTram('lethuy');
-                                else if (tr.name === 'Đakrong') setThachHanTram('dakrong');
-                                else if (tr.name === 'Thạch Hãn') setThachHanTram('thachhan');
-                                else if (tr.name === 'Đông Hà') setShowDongHa(true);
-                                else if (tr.name === 'Gia Vòng') setBenHaiTram('giavong');
-                                else if (tr.name === 'Hiền Lương') setBenHaiTram('hienluong');
-                                else setShowMaiHoaForecast(true);
-                                setShowMenu(false);
-                                setShowMucNuocLuMenu(false);
-                                setOpenLuuVuc(null);
-                              } else {
-                                alert(`Chức năng dự báo mực nước ${tr.name} chưa được xây dựng.`);
-                              }
-                            }}
-                            style={!tr.ready ? { opacity: 0.55 } : undefined}
-                          >
-                            {tr.name}{!tr.ready ? ' (chưa có)' : ''}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            
           </div>
         </div>
       )}
 
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
-      {showMaiHoaForecast && <MaiHoaForecast onClose={() => setShowMaiHoaForecast(false)} />}
-      {showDongTamForecast && <DongTamForecast onClose={() => setShowDongTamForecast(false)} />}
-      {nhatLeTram && <NhatLeForecast tram={nhatLeTram} onClose={() => setNhatLeTram(null)} />}
-      {thachHanTram && <ThachHanForecast tram={thachHanTram} onClose={() => setThachHanTram(null)} />}
-      {showDongHa && <DongHaForecast onClose={() => setShowDongHa(false)} />}
-      {benHaiTram && <BenHaiForecast tram={benHaiTram} onClose={() => setBenHaiTram(null)} />}
+      {showDuBaoMucNuoc && <DuBaoMucNuoc mauTheoMaTram={mauCapBaoDongTheoMaTram(mucNuocStations)} onClose={() => setShowDuBaoMucNuoc(false)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMuaThoiDoan && <MuaThoiDoanChart stations={rainHourlyStations} onClose={() => setShowMuaThoiDoan(false)} />}

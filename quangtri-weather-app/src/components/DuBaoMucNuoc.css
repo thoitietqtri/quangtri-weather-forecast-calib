@@ -1,0 +1,138 @@
+/* ===== Cửa sổ "Dự báo Mực nước 6/12/18/24h tới": thanh chọn trạm + khung dự báo =====
+   Các khung dự báo (Đồng Tâm, Mai Hóa, Nhật Lệ, Thạch Hãn, Đông Hà, Bến Hải) vẫn dùng CSS riêng
+   của chúng; ở đây chỉ chỉnh lại cách đặt khi nằm trong cửa sổ này (nhờ lớp bao ngoài
+   .dubao-co-thanh-chon nên không ảnh hưởng nơi nào khác). */
+
+.dubao-co-thanh-chon {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.45);
+  /* làm nhòe nhẹ trang phía sau để chữ của thanh công cụ không lộ lem nhem qua khe giữa thanh và khung */
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 8px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Khung dự báo: không còn tự phủ kín màn hình, mà nằm dưới thanh chọn trạm, chiếm phần còn lại. */
+.dubao-co-thanh-chon .dongtam-forecast-overlay,
+.dubao-co-thanh-chon .maihoa-forecast-overlay {
+  position: static;
+  background: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 500px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.dubao-co-thanh-chon .dongtam-forecast-panel,
+.dubao-co-thanh-chon .maihoa-forecast-panel {
+  flex: 0 1 auto;
+  min-height: 0;
+  height: auto;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 10px;
+}
+
+/* Điện thoại / máy tính bảng nhỏ: khung dài hết phần còn lại như bản cũ (chiếm hết chiều cao). */
+@media (max-width: 768px) {
+  .dubao-co-thanh-chon .dongtam-forecast-panel,
+  .dubao-co-thanh-chon .maihoa-forecast-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---- Thanh chọn trạm ---- */
+.dbm-bar-wrap {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 500px;
+  padding-bottom: 8px; /* khoảng cách với khung bên dưới; bấm vào đây không đóng cửa sổ */
+}
+
+.dbm-bar {
+  position: relative;
+  background: #0D1B2A;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.dbm-hop {
+  position: relative; /* để tính đúng vị trí chip khi tự cuộn */
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 7px 10px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.dbm-hop::-webkit-scrollbar { height: 5px; }
+.dbm-hop::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 3px; }
+
+.dbm-nhom {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+.dbm-nhom:first-child { border-left: none; padding-left: 0; }
+.dbm-nhom:last-child { padding-right: 0; }
+
+.dbm-nhan {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #90CAF9;
+  white-space: nowrap;
+}
+
+.dbm-chips { display: flex; gap: 6px; }
+
+.dbm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.dbm-chip:hover:not(:disabled):not(.dbm-chip--on) { background: rgba(255, 255, 255, 0.17); }
+.dbm-chip--on { background: #1565C0; border-color: #64B5F6; font-weight: 700; }
+.dbm-chip:disabled { opacity: 0.45; cursor: default; }
+.dbm-chip:focus-visible { outline: 2px solid #64B5F6; outline-offset: 2px; }
+
+/* Chấm màu cấp báo động; viền trắng để vẫn thấy rõ trên chip đang chọn (nền xanh). */
+.dbm-cham {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+/* Mờ dần ở mép thanh khi còn chip bị che (gợi ý vuốt ngang). */
+.dbm-mo { position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; }
+.dbm-mo--phai { right: 0; background: linear-gradient(90deg, rgba(13, 27, 42, 0), #0D1B2A); }
+.dbm-mo--trai { left: 0; background: linear-gradient(270deg, rgba(13, 27, 42, 0), #0D1B2A); }
