@@ -49,6 +49,28 @@
   .dubao-co-thanh-chon .maihoa-forecast-panel {
     flex: 1 1 auto;
   }
+
+  /* Điện thoại: phủ kín mép màn hình (bỏ lề 8px, bỏ giới hạn 500px, bỏ bo góc ngoài) */
+  .dubao-co-thanh-chon {
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  .dubao-co-thanh-chon .dbm-bar-wrap,
+  .dubao-co-thanh-chon .dongtam-forecast-overlay,
+  .dubao-co-thanh-chon .maihoa-forecast-overlay,
+  .dubao-co-thanh-chon .dongtam-forecast-panel,
+  .dubao-co-thanh-chon .maihoa-forecast-panel {
+    max-width: none;
+  }
+  .dubao-co-thanh-chon .dbm-bar-wrap { padding-bottom: 0; }
+  .dubao-co-thanh-chon .dbm-bar {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+  .dubao-co-thanh-chon .dongtam-forecast-panel,
+  .dubao-co-thanh-chon .maihoa-forecast-panel {
+    border-radius: 0;
+  }
 }
 
 /* ---- Thanh chọn trạm ---- */
