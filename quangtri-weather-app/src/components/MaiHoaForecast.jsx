@@ -73,26 +73,88 @@ export default function MaiHoaForecast({ onClose }) {
           {!error && !data && <div className="maihoa-forecast-loading">⏳ Đang tải...</div>}
           {data && !data.available && <div className="maihoa-forecast-empty">ℹ️ {data.reason}</div>}
 
-          {data && data.available && data.cheDo === 'ngay_thuong' && (
+          {data && data.available && data.cheDo === 'dieu_hoa' && (
             <>
               <div className="dongtam-forecast-hiennay">
                 Mai Hóa hiện tại ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
-                {' | '}Đồng Tâm: <b>{data.dongtamHienTai}m</b> (dưới ngưỡng lũ — dùng mô hình triều)
+                {' | '}Đồng Tâm: {data.dongtamHienTai != null ? <b>{data.dongtamHienTai}m</b> : <b style={{ color: '#FFB74D' }}>mất số liệu</b>}
+                {data.dongtamHienTai != null && ' (dưới ngưỡng lũ — dùng mô hình triều)'}
               </div>
+
+              {data.canhBaoMua === 'do' && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFCDD2', background: 'rgba(211,47,47,0.16)', border: '1px solid rgba(239,83,80,0.7)' }}>
+                  🔴 Mưa lưu vực dự báo 24 giờ tới {data.mucMuaDuBao[24].sauHieuChinh}mm (từ 100mm): có nguy cơ lũ lên — khoảng một phần ba đến một nửa trường hợp như vậy Mai Hóa vượt báo động I (3m) trong 24 giờ tới. Mô hình triều thường THẤP hơn thực tế (sai số trung bình khoảng 0,9m). Theo dõi Đồng Tâm; khi Đồng Tâm từ 5.6m hệ thống tự chuyển sang mô hình lũ.
+                </div>
+              )}
+              {data.canhBaoMua === 'vang' && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFE082', background: 'rgba(249,168,37,0.14)', border: '1px solid rgba(249,168,37,0.6)' }}>
+                  ⚠️ Mưa lưu vực dự báo 24 giờ tới {data.mucMuaDuBao[24].sauHieuChinh}mm (từ 30mm): mô hình triều chưa phản ánh đủ ảnh hưởng của mưa, sai số có thể tới 0,3 đến 0,5m.
+                </div>
+              )}
+              {data.thieuMuaDuBao && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFE082', background: 'rgba(249,168,37,0.14)', border: '1px solid rgba(249,168,37,0.6)' }}>
+                  ⚠️ Không lấy được mưa dự báo ECMWF — kết quả tính với mưa dự báo bằng 0, có thể thấp hơn thực tế nếu sắp có mưa.
+                </div>
+              )}
+              {data.thieuDongTam && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFE082', background: 'rgba(249,168,37,0.14)', border: '1px solid rgba(249,168,37,0.6)' }}>
+                  ⚠️ Đồng Tâm đang mất số liệu nên chưa kiểm tra được ngưỡng lũ. Mai Hóa đang dưới 3m nên vẫn tính bằng mô hình triều, nhưng cần xem lại khi Đồng Tâm có số liệu.
+                </div>
+              )}
+              {data.tang === 'rut_gon' && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12 }}>
+                  ℹ️ Mai Hóa thiếu một số số liệu giờ trong 24 giờ qua nên dùng mô hình rút gọn (sai số tăng thêm khoảng 0,01 đến 0,02m).
+                </div>
+              )}
+
+              <table className="dongtam-forecast-table">
+                <thead>
+                  <tr><th></th><th>+6h</th><th>+12h</th><th>+18h</th><th>+24h</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Giờ</td>
+                    {[6, 12, 18, 24].map((h) => <td key={h}>{formatTimeVN(data.thoiDiemHienTai + h * 3600000)}</td>)}
+                  </tr>
+                  <tr className="dongtam-forecast-table-value">
+                    <td>Mực nước</td>
+                    {[6, 12, 18, 24].map((h) => <td key={h}><b>{data.duBaoTheoMoc[h]}m</b></td>)}
+                  </tr>
+                </tbody>
+              </table>
+
+              <DuBaoChart
+                hienTaiT={data.thoiDiemHienTai}
+                hienTaiV={data.duongTrieu[0].v}
+                duBaoTheoMoc={data.duBaoTheoMoc}
+                duongCong={data.duongTrieu}
+                diemCuc={[
+                  { ...data.trieuCao, loai: 'cao' },
+                  { ...data.trieuThap, loai: 'thap' },
+                ]}
+              />
+
               <div className="dongtam-forecast-dinh">
-                🌊 Mai Hóa ước tính (ảnh hưởng triều): <b>{data.maihoaDuBao}m</b>
+                🌊 Trong 24 giờ tới, triều cao nhất <b>{data.trieuCao.v}m</b> lúc {formatTimeVN(data.trieuCao.t)}; thấp nhất <b>{data.trieuThap.v}m</b> lúc {formatTimeVN(data.trieuThap.t)}
               </div>
+
               <div className="maihoa-forecast-inputs">
-                <div className="maihoa-forecast-row"><span>Tân Mỹ (trễ 8h):</span><b>{data.tanmyLag8h}m</b></div>
-                <div className="maihoa-forecast-row"><span>Mưa lưu vực 24h qua:</span><b>{data.rainDaQua24h}mm</b></div>
+                <div className="maihoa-forecast-row"><span>Mưa lưu vực 24h đã qua:</span><b>{data.rainDaQua24h}mm</b></div>
+                {[6, 12, 18, 24].map((h) => (
+                  <div className="maihoa-forecast-row" key={h}>
+                    <span>Mưa dự báo +{h}h (ECMWF→HC):</span>
+                    <b>{data.mucMuaDuBao[h].goc != null ? `${data.mucMuaDuBao[h].goc}mm → ${data.mucMuaDuBao[h].sauHieuChinh}mm` : 'không có'}</b>
+                  </div>
+                ))}
               </div>
+
               <div className="maihoa-forecast-note">
-                📊 Mô hình riêng cho ngày thường (không lũ) — dựa vào triều trạm Tân Mỹ (trễ 8h) + mực nước Đồng Tâm + mưa nhẹ, R²=0.56. Chỉ dùng khi Đồng Tâm dưới 5.6m — khi vượt mức này, hệ thống tự chuyển sang mô hình lũ (không dùng Tân Mỹ nữa, vì lũ phá vỡ quy luật triều).
+                📊 Mô hình ngày thường: hàm điều hòa thủy triều dựng từ chính số liệu Mai Hóa 2020-2025, hiệu chỉnh theo mực nước thực đo 24 giờ gần nhất và mưa lưu vực. Sai số trung bình (kiểm chứng ngoài mẫu): +6h 0.08m, +12h 0.09m, +18h 0.10m, +24h 0.10m. Chỉ dùng khi Mai Hóa dưới 3m và Đồng Tâm dưới 5.6m — khi có lũ hệ thống tự chuyển sang mô hình lũ (quan hệ với Đồng Tâm và mưa lưu vực), vì lũ phá vỡ quy luật triều. Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>
           )}
 
-          {data && data.available && data.cheDo !== 'ngay_thuong' && (
+          {data && data.available && data.cheDo !== 'dieu_hoa' && (
             <>
               <div className="dongtam-forecast-hiennay">
                 Mai Hóa hiện tại ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
@@ -111,7 +173,7 @@ export default function MaiHoaForecast({ onClose }) {
               {data.mucNuocThap && (
                 <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFCDD2', background: 'rgba(211,47,47,0.16)', border: '1px solid rgba(239,83,80,0.7)' }}>
                   ⚠️ Mai Hóa đang dưới báo động I (3m): công thức lũ không phù hợp với mực nước thấp (còn chịu ảnh hưởng triều), kết quả thường THẤP hơn thực tế khoảng 0,7 đến 1m. Chỉ tham khảo.
-                  {data.tanmyLyDo ? <><br />Mô hình ngày thường (Tân Mỹ) chưa dùng được: {data.tanmyLyDo}.</> : null}
+                  {data.dieuHoaLyDo ? <><br />Mô hình triều (ngày thường) chưa dùng được: {data.dieuHoaLyDo}.</> : null}
                 </div>
               )}
 

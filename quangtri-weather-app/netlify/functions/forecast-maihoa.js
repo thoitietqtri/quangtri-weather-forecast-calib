@@ -13,6 +13,12 @@
 //   +18h: = -1.1161 + 0.4004×MaiHóa + 0.2150×ĐồngTâm - 0.0256×TânLâm - 0.0040×mưa_đã_qua + 0.0236×mưa_dự_báo_18h
 //   +24h: = -0.7898 + 0.4349×MaiHóa + 0.1336×ĐồngTâm - 0.0255×TânLâm - 0.0059×mưa_đã_qua + 0.0222×mưa_dự_báo_24h
 //
+// NGÀY THƯỜNG (22/10/2026): khi Mai Hóa < 3m VÀ Đồng Tâm < 5,6m dùng HÀM ĐIỀU HÒA (thủy triều 12 phân triều dựng từ
+// chính số liệu Mai Hóa 2020-2025) + hiệu chỉnh theo phần dư thực đo 24 giờ gần nhất + mưa lưu vực, thay cho công thức
+// Tân Mỹ cũ (không còn gọi Tân Mỹ). Sai số TB 0,08 / 0,09 / 0,10 / 0,10 m cho +6/+12/+18/+24h (kiểm chứng bỏ-một-năm
+// 2020-2025). Từ Đồng Tâm >= 5,6m hoặc Mai Hóa >= 3m: GIỮ NGUYÊN công thức lũ bên dưới. Tính lại hệ số mỗi năm một lần:
+// tinh-he-so-dieu-hoa.py (đi kèm gói maihoa-dieu-hoa, không nằm trong repo).
+//
 // PHƯƠNG ÁN DỰ PHÒNG KHI TÂN LÂM MẤT SỐ LIỆU (22/10/2026): nếu không có số liệu Tân Lâm trong
 // ±2h quanh giờ đo mới nhất của Mai Hóa thì BỎ QUA Tân Lâm, dùng công thức MODEL_KHONG_TANLAM
 // (chỉ Mai Hóa + Đồng Tâm + mưa lưu vực), thay vì báo lỗi. Cách tính hệ số: xem MODEL_KHONG_TANLAM.
@@ -24,9 +30,7 @@ const OPENMETEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOURS_BACK = 48;
 const LEADS = [6, 12, 18, 24];
 const NEON_CUTOFF = new Date('2026-01-01T00:00:00Z');
-const NGUONG_CHUYEN_DOI_DONGTAM = 5.6; // 80% BĐI Đồng Tâm (7m) — dưới ngưỡng này dùng mô hình triều (Tân Mỹ), từ ngưỡng này trở lên dùng mô hình lũ (bỏ Tân Mỹ)
-const TANMY_MUCNUOC = { matram: '555800', ten_table: 'mucnuoc_oday', neonColumn: null }; // trạm cửa biển, đại diện triều — cần Hudson xác nhận đúng matram
-const MODEL_NGAY_THUONG = { intercept: -0.6241, tanmy: 0.4856, rain24h: 0.0036, dongtam: 0.2189 };
+const NGUONG_CHUYEN_DOI_DONGTAM = 5.6; // 80% BĐI Đồng Tâm (7m) — dưới ngưỡng này (và Mai Hóa < 3m) là "ngày thường" dùng hàm điều hòa, từ ngưỡng này trở lên dùng công thức lũ
 
 const DONGTAM = { matram: '555300', ten_table: 'mucnuoc_oday', neonColumn: 'dongtam_m' };
 const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday', neonColumn: 'maihoa_m' };
@@ -63,6 +67,43 @@ const MODEL_KHONG_TANLAM = {
   18: { intercept: -1.5974, maihoa: 0.3273, dongtam: 0.2214, daQua: -0.0030, duBao: 0.0244 },
   24: { intercept: -1.2711, maihoa: 0.3788, dongtam: 0.1374, daQua: -0.0050, duBao: 0.0227 },
 };
+// ===== HÀM ĐIỀU HÒA CHO NGÀY THƯỜNG =====
+// Hằng số + hệ số học trên các giờ ngày thường 2020-2025 (biên độ triều Mai Hóa đã tăng ~30% so với 2006-2016 nên không dùng số liệu cũ hơn).
+// Sinh từ tinh-he-so-dieu-hoa.py (file he-so-dieu-hoa.json). Gốc thời gian: 00h 01/01/2000 giờ VN.
+// Hai tầng: day_du (cần đủ số liệu giờ 0/3/6/12/24 trước giờ phát tin) và rut_gon (khi thiếu giờ giữa chừng).
+const PHAN_TRIEU = [
+  { ten: 'Q1', w: 13.3986609, a: 0.06802891436810404, b: 0.01985657291307313 },
+  { ten: 'O1', w: 13.9430356, a: 0.07399096868511468, b: -0.31813044429643883 },
+  { ten: 'P1', w: 14.9589314, a: -0.04639301008281349, b: 0.06623659571908577 },
+  { ten: 'K1', w: 15.0410686, a: -0.06720371657753184, b: 0.2265481331982655 },
+  { ten: 'N2', w: 28.4397295, a: 0.048392893974178376, b: -0.005119041767292436 },
+  { ten: 'M2', w: 28.9841042, a: -0.06697767282588282, b: -0.2863666429427042 },
+  { ten: 'S2', w: 30.0, a: -0.016512990203918686, b: 0.07583417285634597 },
+  { ten: 'K2', w: 30.0821373, a: -0.000411021516062175, b: -0.04628758323788101 },
+  { ten: 'M4', w: 57.9682084, a: 0.00846346247121594, b: 0.0014701794151035586 },
+  { ten: 'MS4', w: 58.9841042, a: -0.004652101012601827, b: -0.0027420063364692803 },
+  { ten: 'MN4', w: 57.4238337, a: -0.0008426910131179852, b: 0.003321027225796119 },
+  { ten: 'M6', w: 86.9523127, a: -0.002829007614767266, b: -0.0035863013739837303 },
+];
+const HE_SO_DIEU_HOA = {
+  day_du: {
+    6: { intercept: -0.0005753864735957922, Hf: 1.00145984095027, zt: 2.3355480354406724, r0: 0.3822647258848818, r3: -0.3828677799487883, r6: -0.24526752652976871, r12: -0.7216669410378286, r24: -0.4754429311003271, daqua: 0.0011675114106928966, dubao: 0.007661335823043595 },
+    12: { intercept: -0.01035633655988716, Hf: 0.9975113259479379, zt: 0.43401777829932553, r0: 0.40546264951587546, r3: 0.04024479469765096, r6: -0.21871213440650522, r12: 0.5098497240194791, r24: -0.3002347533377654, daqua: 0.0012313649933156105, dubao: 0.009781897345327296 },
+    18: { intercept: -0.021173208585714375, Hf: 0.9980523757717232, zt: 0.19661597346706794, r0: 0.2812146295800619, r3: -0.3092160203988817, r6: 0.8079118520076977, r12: 0.004174873535453628, r24: -0.1361929709741574, daqua: 0.000724799893083695, dubao: 0.011334139007556138 },
+    24: { intercept: -0.028804290671803814, Hf: 0.994375330203141, zt: 0.026799646567285087, r0: 0.6685814389363985, r3: 0.2853386032773879, r6: -0.04412036127125828, r12: 0.01577000690667878, r24: -0.08724241937996938, daqua: -0.0009753785431653093, dubao: 0.011465509383706175 },
+  },
+  rut_gon: {
+    6: { intercept: -0.0019410013887348955, Hf: 0.9981279060574285, zt: 0.7522196831402717, r0: 0.10844657122331934, daqua: 0.0017768162694136902, dubao: 0.00863066450915621 },
+    12: { intercept: -0.011906604290598742, Hf: 0.9962765226988665, zt: 0.537308106356508, r0: 0.31178010044103366, daqua: 0.0017394742527061908, dubao: 0.009900197279474323 },
+    18: { intercept: -0.02179498587045939, Hf: 0.9967999961917624, zt: 0.7885492489355264, r0: 0.0014407699971915164, daqua: 0.0016038968391811975, dubao: 0.011649521474991468 },
+    24: { intercept: -0.029208147816067294, Hf: 0.9944081001156744, zt: 0.08928378384094215, r0: 0.7598813859983236, daqua: -0.0006859045034758117, dubao: 0.011512934412836576 },
+  },
+};
+const T0_DIEU_HOA_MS = Date.UTC(2000, 0, 1) - 7 * 3600000; // 00h 01/01/2000 giờ VN, tính bằng ms UTC thật
+const RAD = Math.PI / 180;
+const NGUONG_LECH_TRIEU_RMS = 0.5; // m: nếu 24 giờ qua lệch khỏi triều điều hòa hơn mức này thì không dùng (có thể đang lũ/nước dâng hoặc sai mốc giờ số liệu)
+const NGUONG_MUA_VANG_MM = 30; // mưa dự báo 24h (đã hiệu chỉnh) từ mức này: sai số hàm điều hòa tăng (khoảng 0,3 đến 0,5 m)
+const NGUONG_MUA_DO_MM = 100; // từ mức này: nguy cơ lũ lên (khoảng 1/3 đến 1/2 trường hợp Mai Hóa vượt 3m trong 24h), hàm điều hòa thường hụt thấp
 const BDI_MAIHOA_M = 3; // Báo động I Mai Hóa — công thức lũ chỉ được xây từ các giờ Mai Hóa >= mức này
 
 function vnNow() {
@@ -250,6 +291,184 @@ function nhanDienDinh(hienTaiV, duBaoTheoMoc) {
   return { coDinh: false, dangTiepTucLen: diem[diem.length - 1].v >= diem[diem.length - 2].v };
 }
 
+// ===================== HÀM ĐIỀU HÒA (NGÀY THƯỜNG) =====================
+// (f, u[rad]) hiệu chỉnh nút (Schureman rút gọn) của phân triều `ten` tại h = số giờ kể từ T0_DIEU_HOA_MS
+function heSoNut(h, ten) {
+  const d = (h - 19) / 24;
+  const N = (125.0445479 - 0.0529539222 * d) * RAD;
+  const c1 = Math.cos(N); const c2 = Math.cos(2 * N); const c3 = Math.cos(3 * N);
+  const s1 = Math.sin(N); const s2 = Math.sin(2 * N); const s3 = Math.sin(3 * N);
+  const m2 = () => [1.0004 - 0.0373 * c1 + 0.0002 * c2, -2.14 * s1 * RAD];
+  switch (ten) {
+    case 'M2': case 'N2': case 'MS4': return m2();
+    case 'O1': case 'Q1': return [1.0089 + 0.1871 * c1 - 0.0147 * c2 + 0.0014 * c3, (10.80 * s1 - 1.34 * s2 + 0.19 * s3) * RAD];
+    case 'K1': return [1.0060 + 0.1150 * c1 - 0.0088 * c2 + 0.0006 * c3, (-8.86 * s1 + 0.68 * s2 - 0.07 * s3) * RAD];
+    case 'K2': return [1.0241 + 0.2863 * c1 + 0.0083 * c2 - 0.0015 * c3, (-17.74 * s1 + 0.68 * s2 - 0.04 * s3) * RAD];
+    case 'M4': case 'MN4': { const [f, u] = m2(); return [f * f, 2 * u]; }
+    case 'M6': { const [f, u] = m2(); return [f * f * f, 3 * u]; }
+    default: return [1, 0]; // S2, P1
+  }
+}
+
+// Thủy triều điều hòa tại Mai Hóa (m, quanh mực nền) tại thời điểm tMs (ms UTC thật)
+function trieuDieuHoa(tMs) {
+  const h = (tMs - T0_DIEU_HOA_MS) / 3600000;
+  let tong = 0;
+  for (const c of PHAN_TRIEU) {
+    const [f, u] = heSoNut(h, c.ten);
+    const x = c.w * RAD * h + u;
+    tong += f * (c.a * Math.cos(x) + c.b * Math.sin(x));
+  }
+  return tong;
+}
+
+// Sóng mưa dự báo ECMWF CÓ NHÃN GIỜ (Open-Meteo: chuỗi giờ bắt đầu từ 00h hôm nay, nhãn T = mưa của giờ trước T).
+// Chỉ nhánh hàm điều hòa dùng; nhánh lũ cũ vẫn dùng fetchForecastRainHourly/sumWindow như trước.
+async function fetchForecastRainTimed() {
+  const results = await Promise.all(RAIN_STATIONS.map(async (s) => {
+    try {
+      const url = `${OPENMETEO_FORECAST_URL}?latitude=${s.lat}&longitude=${s.lng}`
+        + `&hourly=precipitation&forecast_days=2&timezone=Asia%2FBangkok&models=ecmwf_ifs`;
+      const res = await fetchWithTimeout(url, 8000);
+      if (!res.ok) return null;
+      const js = await res.json();
+      const time = js?.hourly?.time; const pr = js?.hourly?.precipitation;
+      if (!Array.isArray(time) || !Array.isArray(pr) || time.length === 0) return null;
+      return { time, pr };
+    } catch {
+      return null;
+    }
+  }));
+  const valid = results.filter(Boolean);
+  if (valid.length === 0) return null;
+  const goc = valid[0].time[0];
+  const dongBo = valid.filter((v) => v.time[0] === goc); // cùng trục thời gian
+  const n = Math.min(...dongBo.map((v) => v.pr.length));
+  const values = [];
+  for (let i = 0; i < n; i++) values.push(dongBo.reduce((a, v) => a + (v.pr[i] || 0), 0) / dongBo.length);
+  const gio0 = Math.round((Date.parse(`${goc}:00Z`) - 7 * 3600000) / 3600000); // chỉ số giờ (UTC thật) của phần tử đầu
+  return { gio0, values };
+}
+
+// Mưa thực đo trong khoảng [tBd, tKt] (ms UTC thật) cho 1 trạm — dùng khi kiểm nghiệm quá khứ (mưa "dự báo hoàn hảo").
+async function fetchMuaKhoang(station, tBd, tKt) {
+  const nhanKt = new Date(tKt + 7 * 3600000); // nhãn giờ VN (dạng "UTC giả") để hỏi DB/API
+  if (nhanKt < NEON_CUTOFF && station.neonColumn) {
+    return fetchNeonSeries(station.neonColumn, new Date(tBd + 7 * 3600000), nhanKt);
+  }
+  const full = await fetchKttvSeries(station, '1', nhanKt);
+  return full.filter((p) => p.t >= tBd && p.t <= tKt);
+}
+
+// Dự báo ngày thường bằng hàm điều hòa. Trả { ok:true, ... } hoặc { ok:false, lyDo } (khi đó nhánh lũ làm phương án dự phòng).
+async function duBaoDieuHoa({ maihoaSeries, current, rainDaQua24h, backtestMode, heSoHieuChinh }) {
+  const Tc = Math.round(current.t / 3600000); // chỉ số giờ phát tin
+  const mh = new Map();
+  const lech = new Map();
+  for (const p of maihoaSeries) {
+    const k = Math.round(p.t / 3600000);
+    const d = Math.abs(p.t - k * 3600000);
+    if (!lech.has(k) || d < lech.get(k)) { mh.set(k, p.v); lech.set(k, d); }
+  }
+  const phanDu = (lag) => {
+    const v = mh.get(Tc - lag);
+    return v == null ? null : v - trieuDieuHoa((Tc - lag) * 3600000);
+  };
+  const r0 = phanDu(0);
+  if (r0 == null) return { ok: false, lyDo: `Mai Hóa chưa có số liệu đúng giờ ${gioVN(Tc * 3600000)} để hiệu chỉnh theo triều` };
+  const cuaSo = [];
+  for (let k = 0; k < 24; k++) { const r = phanDu(k); if (r != null) cuaSo.push(r); }
+  if (cuaSo.length < 12) return { ok: false, lyDo: `Mai Hóa chỉ có ${cuaSo.length}/24 số liệu giờ trong 24 giờ qua (cần ít nhất 12)` };
+  const zt = cuaSo.reduce((a, b) => a + b, 0) / cuaSo.length;
+  const doLech = Math.sqrt(cuaSo.reduce((a, b) => a + (b - zt) ** 2, 0) / cuaSo.length);
+  if (doLech >= NGUONG_LECH_TRIEU_RMS) {
+    return { ok: false, lyDo: `Mai Hóa lệch khỏi quy luật triều quá nhiều trong 24 giờ qua (độ lệch ${doLech.toFixed(2)}m, từ ${NGUONG_LECH_TRIEU_RMS}m trở lên): có thể đang có lũ hoặc nước dâng, hoặc mốc giờ số liệu bị lệch` };
+  }
+  const r3 = phanDu(3); const r6 = phanDu(6); const r12 = phanDu(12); const r24 = phanDu(24);
+  const dayDu = [r3, r6, r12, r24].every((v) => v != null);
+  const tang = dayDu ? 'day_du' : 'rut_gon';
+
+  // mưa dự báo trong từng hạn (mm, đã nhân hệ số hiệu chỉnh khi chạy thật)
+  const mucMuaDuBao = {};
+  let thieuMuaDuBao = false;
+  const muaTheoHan = {};
+  if (!backtestMode) {
+    const fc = await fetchForecastRainTimed();
+    for (const L of LEADS) {
+      let tong = 0; let du = fc != null;
+      for (let j = 1; j <= L && du; j++) {
+        const v = fc.values[Tc + j - fc.gio0];
+        if (v == null || !Number.isFinite(v)) du = false; else tong += v;
+      }
+      if (du) {
+        muaTheoHan[L] = tong * heSoHieuChinh;
+        mucMuaDuBao[L] = { goc: Math.round(tong * 10) / 10, sauHieuChinh: Math.round(tong * heSoHieuChinh * 10) / 10 };
+      } else {
+        thieuMuaDuBao = true; muaTheoHan[L] = 0; mucMuaDuBao[L] = { goc: null, sauHieuChinh: null };
+      }
+    }
+  } else {
+    const arr = await Promise.all(RAIN_STATIONS.map((s) => fetchMuaKhoang(s, Tc * 3600000 + 1, (Tc + 24) * 3600000)));
+    const theoGio = new Map();
+    for (const series of arr) {
+      for (const p of series) {
+        const b = Math.floor(p.t / 3600000) * 3600000;
+        if (!theoGio.has(b)) theoGio.set(b, []);
+        theoGio.get(b).push(p.v);
+      }
+    }
+    for (const L of LEADS) {
+      const that = sumRainInWindow(theoGio, (Tc + L) * 3600000, L); // mưa thật t+1..t+L (dự báo hoàn hảo)
+      muaTheoHan[L] = that;
+      mucMuaDuBao[L] = { goc: Math.round(that * 10) / 10, sauHieuChinh: Math.round(that * 10) / 10 };
+    }
+  }
+
+  const duBaoRaw = {};
+  const phanDuMoc = [r0];
+  for (const L of LEADS) {
+    const c = HE_SO_DIEU_HOA[tang][L];
+    const Hf = trieuDieuHoa((Tc + L) * 3600000);
+    let y = c.intercept + c.Hf * Hf + c.zt * zt + c.r0 * r0 + c.daqua * rainDaQua24h + c.dubao * muaTheoHan[L];
+    if (dayDu) y += c.r3 * r3 + c.r6 * r6 + c.r12 * r12 + c.r24 * r24;
+    duBaoRaw[L] = y;
+    phanDuMoc.push(y - Hf);
+  }
+  // đường triều từng giờ: triều điều hòa + phần hiệu chỉnh nội suy tuyến tính giữa các mốc 0/6/12/18/24h
+  const mocGio = [0, ...LEADS];
+  const duongTrieu = [];
+  for (let k = 0; k <= 24; k++) {
+    let i = 0;
+    while (i < mocGio.length - 2 && k > mocGio[i + 1]) i++;
+    const w = (k - mocGio[i]) / (mocGio[i + 1] - mocGio[i]);
+    const hc = phanDuMoc[i] + w * (phanDuMoc[i + 1] - phanDuMoc[i]);
+    duongTrieu.push({ h: k, v: trieuDieuHoa((Tc + k) * 3600000) + hc });
+  }
+  let cao = 1; let thap = 1;
+  for (let k = 2; k <= 24; k++) {
+    if (duongTrieu[k].v > duongTrieu[cao].v) cao = k;
+    if (duongTrieu[k].v < duongTrieu[thap].v) thap = k;
+  }
+  const lamTron = (v) => Math.round(v * 100) / 100;
+  const diem = (k) => ({ gio: k, t: (Tc + k) * 3600000, v: lamTron(duongTrieu[k].v) });
+
+  const mua24 = mucMuaDuBao[24].sauHieuChinh;
+  const canhBaoMua = mua24 == null ? null : (mua24 >= NGUONG_MUA_DO_MM ? 'do' : (mua24 >= NGUONG_MUA_VANG_MM ? 'vang' : null));
+  return {
+    ok: true,
+    gioHienTai: Tc * 3600000,
+    tang,
+    doLechTrieu: lamTron(doLech),
+    duBaoTheoMoc: Object.fromEntries(LEADS.map((h) => [h, lamTron(duBaoRaw[h])])),
+    duongTrieu: duongTrieu.map((p) => ({ h: p.h, v: lamTron(p.v) })),
+    trieuCao: diem(cao),
+    trieuThap: diem(thap),
+    mucMuaDuBao,
+    thieuMuaDuBao,
+    canhBaoMua,
+  };
+}
+
 export default async (request) => {
   try {
     const url = new URL(request.url);
@@ -288,48 +507,41 @@ export default async (request) => {
     }
     const rainDaQua24h = sumRainInWindow(rainByHour, current.t, 24);
 
-    // ============ NHÁNH NGÀY THƯỜNG (Đồng Tâm dưới ngưỡng 80% BĐI) ============
-    // Chỉ dùng triều Tân Mỹ khi mực nước còn thấp — lúc có lũ, sóng lũ phá
-    // vỡ hẳn quy luật triều nên KHÔNG dùng Tân Mỹ (theo đúng yêu cầu).
-    let tanmyLyDo = null; // vì sao không dùng được mô hình Tân Mỹ (để báo trên khung dự báo)
-    if (dongtamNow != null && dongtamNow < NGUONG_CHUYEN_DOI_DONGTAM) {
-      const tanmySeries = refNow && refNow < NEON_CUTOFF
-        ? await fetchSoLieuLichSu('Tan My', 'mucnuoc', new Date(refNow.getTime() - 60 * 3600000), refNow)
-        : await fetchKttvSeries(TANMY_MUCNUOC, '0', refNow);
-
-      // Kiểm tra máy Tân Mỹ có đang hỏng không (đứng yên bất thường) — đo độ
-      // lệch chuẩn 48h gần nhất, dưới 0.2m coi như nghi ngờ hỏng, không dùng.
-      const tanmyGanDay = tanmySeries.filter((p) => p.t >= current.t - 48 * 3600000 && p.t <= current.t);
-      const tanmyValues = tanmyGanDay.map((p) => p.v);
-      const tanmyMean = tanmyValues.reduce((a, b) => a + b, 0) / (tanmyValues.length || 1);
-      const tanmyStd = tanmyValues.length > 1
-        ? Math.sqrt(tanmyValues.reduce((a, b) => a + (b - tanmyMean) ** 2, 0) / tanmyValues.length)
-        : 0;
-      const tanmyDangHoat = tanmyValues.length >= 10 && tanmyStd >= 0.2;
-
-      const tanmyLag8h = findValueAt(tanmySeries, current.t - 8 * 3600000, 2 * 3600000);
-
-      if (tanmyDangHoat && tanmyLag8h != null) {
-        const predicted = MODEL_NGAY_THUONG.intercept + MODEL_NGAY_THUONG.tanmy * tanmyLag8h + MODEL_NGAY_THUONG.rain24h * rainDaQua24h + MODEL_NGAY_THUONG.dongtam * dongtamNow;
+    // ============ NHÁNH NGÀY THƯỜNG: HÀM ĐIỀU HÒA (Mai Hóa < 3m và Đồng Tâm < 5,6m) ============
+    // Khi có lũ, sóng lũ phá vỡ quy luật triều nên KHÔNG dùng hàm điều hòa: từ Đồng Tâm >= 5,6m hoặc Mai Hóa >= 3m
+    // chạy tiếp công thức lũ bên dưới (giữ nguyên). Hàm điều hòa không cần Đồng Tâm (chỉ dùng để xác định ngày thường),
+    // nên thiếu Đồng Tâm vẫn chạy được (có báo trên khung).
+    let dieuHoaLyDo = null; // vì sao không dùng được hàm điều hòa (để báo trên khung dự báo)
+    const maiHoaThap = current.v < BDI_MAIHOA_M;
+    if (maiHoaThap && (dongtamNow == null || dongtamNow < NGUONG_CHUYEN_DOI_DONGTAM)) {
+      const dh = await duBaoDieuHoa({ maihoaSeries, current, rainDaQua24h, backtestMode, heSoHieuChinh });
+      if (dh.ok) {
         return json({
           available: true,
-          cheDo: 'ngay_thuong',
+          cheDo: 'dieu_hoa',
           backtestMode,
           dataSource,
-          thoiDiemHienTai: current.t,
+          asof: asofParam || null,
+          thoiDiemHienTai: dh.gioHienTai,
           maihoaHienTai: Math.round(current.v * 100) / 100,
-          dongtamHienTai: Math.round(dongtamNow * 100) / 100,
-          tanmyLag8h: Math.round(tanmyLag8h * 100) / 100,
+          dongtamHienTai: dongtamNow != null ? Math.round(dongtamNow * 100) / 100 : null,
+          thieuDongTam: dongtamNow == null,
+          tang: dh.tang,
+          doLechTrieu: dh.doLechTrieu,
           rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
-          maihoaDuBao: Math.round(predicted * 100) / 100,
+          heSoHieuChinh,
+          mucMuaDuBao: dh.mucMuaDuBao,
+          thieuMuaDuBao: dh.thieuMuaDuBao,
+          canhBaoMua: dh.canhBaoMua,
+          duBaoTheoMoc: dh.duBaoTheoMoc,
+          duongTrieu: dh.duongTrieu,
+          trieuCao: dh.trieuCao,
+          trieuThap: dh.trieuThap,
         });
       }
-      // Nếu Tân Mỹ hỏng/thiếu số liệu — RƠI XUỐNG dùng mô hình lũ bên dưới
-      // như phương án dự phòng (dù đang ở mức thấp, vẫn còn hơn không có gì).
-      if (tanmySeries.length === 0) tanmyLyDo = `Tân Mỹ: ${tanmySeries.lyDo || 'không có số liệu'}`;
-      else if (tanmyValues.length < 10) tanmyLyDo = `Tân Mỹ chỉ có ${tanmyValues.length} số liệu trong 48 giờ qua (cần ít nhất 10; số liệu mới nhất lúc ${gioVN(tanmySeries[tanmySeries.length - 1].t)})`;
-      else if (tanmyStd < 0.2) tanmyLyDo = `Tân Mỹ dao động quá nhỏ trong 48 giờ qua (độ lệch chuẩn ${tanmyStd.toFixed(2)}m, dưới 0.2m — nghi máy đứng hoặc kỳ triều kém)`;
-      else tanmyLyDo = `Tân Mỹ thiếu số liệu cách đây 8 giờ (quanh ${gioVN(current.t - 8 * 3600000)})`;
+      dieuHoaLyDo = dh.lyDo; // rơi xuống công thức lũ làm phương án dự phòng (thường hụt thấp khi Mai Hóa < 3m)
+    } else if (maiHoaThap) {
+      dieuHoaLyDo = `Đồng Tâm đang ${(Math.round(dongtamNow * 100) / 100)}m, từ ${NGUONG_CHUYEN_DOI_DONGTAM}m trở lên là chế độ lũ`;
     }
     // ============ HẾT NHÁNH NGÀY THƯỜNG — TỪ ĐÂY LÀ MÔ HÌNH LŨ (CŨ) ============
 
@@ -400,7 +612,7 @@ export default async (request) => {
       tanlamLyDo: tanlamNow == null ? (tanlamSeries.lyDo || 'không có số liệu quanh giờ đo Mai Hóa') : null,
       // Mai Hóa dưới BĐ I: công thức lũ ngoài vùng xây dựng, kết quả thường thấp hơn thực tế
       mucNuocThap: current.v < BDI_MAIHOA_M,
-      tanmyLyDo,
+      dieuHoaLyDo,
       rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
       heSoHieuChinh,
       mucMuaDuBao,
