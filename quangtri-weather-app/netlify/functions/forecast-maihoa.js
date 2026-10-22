@@ -12,6 +12,10 @@
 //   +12h: = -1.4981 + 0.4246×MaiHóa + 0.2946×ĐồngTâm - 0.0227×TânLâm - 0.0019×mưa_đã_qua + 0.0224×mưa_dự_báo_12h
 //   +18h: = -1.1161 + 0.4004×MaiHóa + 0.2150×ĐồngTâm - 0.0256×TânLâm - 0.0040×mưa_đã_qua + 0.0236×mưa_dự_báo_18h
 //   +24h: = -0.7898 + 0.4349×MaiHóa + 0.1336×ĐồngTâm - 0.0255×TânLâm - 0.0059×mưa_đã_qua + 0.0222×mưa_dự_báo_24h
+//
+// PHƯƠNG ÁN DỰ PHÒNG KHI TÂN LÂM MẤT SỐ LIỆU (22/10/2026): nếu không có số liệu Tân Lâm trong
+// ±2h quanh giờ đo mới nhất của Mai Hóa thì BỎ QUA Tân Lâm, dùng công thức MODEL_KHONG_TANLAM
+// (chỉ Mai Hóa + Đồng Tâm + mưa lưu vực), thay vì báo lỗi. Cách tính hệ số: xem MODEL_KHONG_TANLAM.
 
 import { neon } from '@neondatabase/serverless';
 
@@ -42,6 +46,25 @@ const MODEL_THEO_MOC = {
   24: { intercept: -0.7898, maihoa: 0.4349, dongtam: 0.1336, tanlam: -0.0255, daQua: -0.0059, duBao: 0.0222 },
 };
 
+// ===== CÔNG THỨC DỰ PHÒNG — KHÔNG DÙNG TÂN LÂM =====
+// Học lại bằng bình phương tối thiểu từ CHÍNH 212 mẫu của công thức trên (mẫu 6h: giờ 5/11/17/23,
+// Mai Hóa >= 3m, tháng 9-12, 2010-2025; mưa dự báo = mưa thật sau mốc), bỏ biến Tân Lâm, thêm một
+// hệ số "thời đại": từ 2019 mực nước Mai Hóa ứng với cùng Đồng Tâm thấp hơn khoảng 0,4-0,6m so với
+// trước đó, nên hằng số dưới đây là hằng số của thời đại hiện tại (đã cộng hệ số thời đại).
+// Kiểm chứng chéo theo năm (loại từng năm): sai số tuyệt đối TB 0,50 / 0,76 / 0,79 / 0,68 m cho
+// +6 / +12 / +18 / +24h, đạt ±1m: 91,5% / 70,3% / 67,5% / 78,8% — sai số TB ngang công thức có Tân Lâm
+// khi học lại và kiểm chứng cùng cách (có Tân Lâm: 0,51 / 0,79 / 0,81 / 0,68 m).
+// Lưu ý: số liệu lịch sử Tân Lâm đứng yên ở 7,65m suốt 2014-2018 (và lệch gốc 2011-2012) nên hệ số Tân Lâm
+// của công thức cũ mang dấu ÂM (vô lý về vật lý); học riêng từ 2019 thì dương.
+// Tính lại hệ số: script tinh-he-so-khong-tanlam.py (đi kèm gói maihoa-khong-tanlam, không nằm trong repo).
+const MODEL_KHONG_TANLAM = {
+  6: { intercept: -1.6181, maihoa: 0.5464, dongtam: 0.2811, daQua: -0.0005, duBao: 0.0202 },
+  12: { intercept: -1.9553, maihoa: 0.3324, dongtam: 0.3109, daQua: -0.0009, duBao: 0.0236 },
+  18: { intercept: -1.5974, maihoa: 0.3273, dongtam: 0.2214, daQua: -0.0030, duBao: 0.0244 },
+  24: { intercept: -1.2711, maihoa: 0.3788, dongtam: 0.1374, daQua: -0.0050, duBao: 0.0227 },
+};
+const BDI_MAIHOA_M = 3; // Báo động I Mai Hóa — công thức lũ chỉ được xây từ các giờ Mai Hóa >= mức này
+
 function vnNow() {
   return new Date(Date.now() + 7 * 3600 * 1000);
 }
@@ -52,6 +75,23 @@ function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+// Gắn lý do vào mảng rỗng (mảng vẫn dùng bình thường) để thông báo đúng vì sao thiếu số liệu.
+function coTrangThai(arr, lyDo) {
+  arr.lyDo = lyDo;
+  return arr;
+}
+// "HHh dd/MM" theo giờ VN, từ mốc thời gian UTC (ms) — cùng kiểu hiển thị với khung dự báo.
+function gioVN(t) {
+  const d = new Date(t + 7 * 3600 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getUTCHours())}h ${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}`;
+}
+function moTaSoLieu(ten, series) {
+  if (!series || series.length === 0) return `${ten}: ${(series && series.lyDo) || 'không có số liệu'}`;
+  const cuoi = series[series.length - 1];
+  return `${ten}: số liệu mới nhất lúc ${gioVN(cuoi.t)} (${Math.round(cuoi.v * 100) / 100}m)`;
 }
 
 let sqlClient = null;
@@ -71,18 +111,19 @@ async function fetchKttvSeries(station, tinhtong = '1', refNow = null) {
     + `&thoigianbd='${fmtVN(start)}'&thoigiankt='${fmtVN(end)}'`;
   try {
     const res = await fetchWithTimeout(url);
-    if (!res.ok) return [];
+    if (!res.ok) return coTrangThai([], `máy chủ KTTV trả lỗi ${res.status}`);
     const js = await res.json();
-    if (!Array.isArray(js) || js.length === 0) return [];
+    if (!Array.isArray(js) || js.length === 0) return coTrangThai([], 'KTTV không có số liệu trong 48 giờ qua');
     const sampleKeys = Object.keys(js[0]).reduce((acc, k) => ({ ...acc, [k.toLowerCase()]: k }), {});
     const valKey = sampleKeys['solieu'] || 'Solieu';
     const timeKey = sampleKeys['thoigian_sl'] || 'Thoigian_SL';
-    return js
+    const ketQua = js
       .map((r) => ({ t: new Date(`${r[timeKey]}Z`.replace(' ', 'T')).getTime() - 7 * 3600 * 1000, v: parseFloat(r[valKey]) }))
       .filter((r) => Number.isFinite(r.v))
       .sort((a, b) => a.t - b.t);
-  } catch {
-    return [];
+    return ketQua.length === 0 ? coTrangThai(ketQua, 'KTTV trả về số liệu rỗng') : ketQua;
+  } catch (e) {
+    return coTrangThai([], e && e.name === 'AbortError' ? 'máy chủ KTTV không trả lời kịp (quá 8 giây)' : 'không kết nối được máy chủ KTTV');
   }
 }
 
@@ -221,6 +262,7 @@ export default async (request) => {
     }
     const heSoParam = parseFloat(url.searchParams.get('hesoHieuChinh'));
     const heSoHieuChinh = Number.isFinite(heSoParam) && heSoParam > 0 ? heSoParam : 1.0;
+    const epKhongTanLam = url.searchParams.get('khongTanLam') === '1'; // chỉ để thử/so sánh: ép dùng công thức không Tân Lâm
     const dataSource = backtestMode ? (refNow < NEON_CUTOFF ? 'Neon (lịch sử 2006-2025)' : 'API KTTV sống') : 'API KTTV sống';
 
     const [dongtamSeries, maihoaSeries, tanlamSeries] = await Promise.all([
@@ -229,7 +271,7 @@ export default async (request) => {
       fetchTanLamMucNuocSmart(refNow),
     ]);
     if (maihoaSeries.length === 0) {
-      return json({ available: false, reason: 'Không lấy được dữ liệu Mai Hóa', backtestMode });
+      return json({ available: false, reason: `Không lấy được dữ liệu Mai Hóa (${maihoaSeries.lyDo || 'không có số liệu'})`, backtestMode });
     }
     const current = maihoaSeries[maihoaSeries.length - 1];
     const dongtamNow = findValueAt(dongtamSeries, current.t, 2 * 3600000);
@@ -249,6 +291,7 @@ export default async (request) => {
     // ============ NHÁNH NGÀY THƯỜNG (Đồng Tâm dưới ngưỡng 80% BĐI) ============
     // Chỉ dùng triều Tân Mỹ khi mực nước còn thấp — lúc có lũ, sóng lũ phá
     // vỡ hẳn quy luật triều nên KHÔNG dùng Tân Mỹ (theo đúng yêu cầu).
+    let tanmyLyDo = null; // vì sao không dùng được mô hình Tân Mỹ (để báo trên khung dự báo)
     if (dongtamNow != null && dongtamNow < NGUONG_CHUYEN_DOI_DONGTAM) {
       const tanmySeries = refNow && refNow < NEON_CUTOFF
         ? await fetchSoLieuLichSu('Tan My', 'mucnuoc', new Date(refNow.getTime() - 60 * 3600000), refNow)
@@ -283,13 +326,31 @@ export default async (request) => {
       }
       // Nếu Tân Mỹ hỏng/thiếu số liệu — RƠI XUỐNG dùng mô hình lũ bên dưới
       // như phương án dự phòng (dù đang ở mức thấp, vẫn còn hơn không có gì).
+      if (tanmySeries.length === 0) tanmyLyDo = `Tân Mỹ: ${tanmySeries.lyDo || 'không có số liệu'}`;
+      else if (tanmyValues.length < 10) tanmyLyDo = `Tân Mỹ chỉ có ${tanmyValues.length} số liệu trong 48 giờ qua (cần ít nhất 10; số liệu mới nhất lúc ${gioVN(tanmySeries[tanmySeries.length - 1].t)})`;
+      else if (tanmyStd < 0.2) tanmyLyDo = `Tân Mỹ dao động quá nhỏ trong 48 giờ qua (độ lệch chuẩn ${tanmyStd.toFixed(2)}m, dưới 0.2m — nghi máy đứng hoặc kỳ triều kém)`;
+      else tanmyLyDo = `Tân Mỹ thiếu số liệu cách đây 8 giờ (quanh ${gioVN(current.t - 8 * 3600000)})`;
     }
     // ============ HẾT NHÁNH NGÀY THƯỜNG — TỪ ĐÂY LÀ MÔ HÌNH LŨ (CŨ) ============
 
-    const tanlamNow = findValueAt(tanlamSeries, current.t, 2 * 3600000);
-    if (dongtamNow == null || tanlamNow == null) {
-      return json({ available: false, reason: 'Thiếu số liệu Đồng Tâm hoặc Tân Lâm tại đúng mốc này', backtestMode });
+    // Đồng Tâm là trạm trên chính của Mai Hóa — thiếu thì không dự báo được (báo rõ lý do).
+    if (dongtamNow == null) {
+      return json({
+        available: false,
+        reason: `Thiếu số liệu Đồng Tâm quanh giờ đo mới nhất của Mai Hóa (${gioVN(current.t)}). ${moTaSoLieu('Đồng Tâm', dongtamSeries)}.`,
+        backtestMode,
+      });
     }
+    // Tân Lâm mất số liệu (không có giá trị trong ±2h quanh giờ đo Mai Hóa) -> BỎ QUA Tân Lâm,
+    // dùng công thức dự phòng MODEL_KHONG_TANLAM (chỉ Mai Hóa + Đồng Tâm + mưa), không báo lỗi nữa.
+    const tanlamNow = findValueAt(tanlamSeries, current.t, 2 * 3600000);
+    const khongDungTanLam = tanlamNow == null || epKhongTanLam;
+
+    const tinhMoc = (LEAD, mucMua) => {
+      const M = khongDungTanLam ? MODEL_KHONG_TANLAM[LEAD] : MODEL_THEO_MOC[LEAD];
+      const phanTanLam = khongDungTanLam ? 0 : M.tanlam * tanlamNow;
+      return M.intercept + M.maihoa * current.v + M.dongtam * dongtamNow + phanTanLam + M.daQua * rainDaQua24h + M.duBao * mucMua;
+    };
 
     const duBaoTheoMoc = {};
     const mucMuaDuBao = {};
@@ -299,8 +360,7 @@ export default async (request) => {
         const rainGoc = sumWindow(forecastHourly, LEAD);
         const rainSauHieuChinh = rainGoc != null ? rainGoc * heSoHieuChinh : null;
         mucMuaDuBao[LEAD] = { goc: rainGoc != null ? Math.round(rainGoc * 10) / 10 : null, sauHieuChinh: rainSauHieuChinh != null ? Math.round(rainSauHieuChinh * 10) / 10 : null };
-        const M = MODEL_THEO_MOC[LEAD];
-        duBaoTheoMoc[LEAD] = M.intercept + M.maihoa * current.v + M.dongtam * dongtamNow + M.tanlam * tanlamNow + M.daQua * rainDaQua24h + M.duBao * (rainSauHieuChinh || 0);
+        duBaoTheoMoc[LEAD] = tinhMoc(LEAD, rainSauHieuChinh || 0);
       }
     } else {
       for (const LEAD of LEADS) {
@@ -317,8 +377,7 @@ export default async (request) => {
         }
         const rainThat = sumRainInWindow(rainFByHour, endF.getTime(), LEAD);
         mucMuaDuBao[LEAD] = { goc: Math.round(rainThat * 10) / 10, sauHieuChinh: Math.round(rainThat * 10) / 10 };
-        const M = MODEL_THEO_MOC[LEAD];
-        duBaoTheoMoc[LEAD] = M.intercept + M.maihoa * current.v + M.dongtam * dongtamNow + M.tanlam * tanlamNow + M.daQua * rainDaQua24h + M.duBao * rainThat;
+        duBaoTheoMoc[LEAD] = tinhMoc(LEAD, rainThat);
       }
     }
 
@@ -332,7 +391,16 @@ export default async (request) => {
       thoiDiemHienTai: current.t,
       maihoaHienTai: Math.round(current.v * 100) / 100,
       dongtamHienTai: Math.round(dongtamNow * 100) / 100,
-      tanlamHienTai: Math.round(tanlamNow * 100) / 100,
+      tanlamHienTai: tanlamNow != null ? Math.round(tanlamNow * 100) / 100 : null,
+      khongDungTanLam,
+      // số liệu Tân Lâm cuối cùng còn lấy được (kể cả cũ) và lý do thiếu — để khung hiển thị báo cho người xem
+      tanlamMoiNhat: tanlamSeries.length > 0
+        ? { t: tanlamSeries[tanlamSeries.length - 1].t, v: Math.round(tanlamSeries[tanlamSeries.length - 1].v * 100) / 100 }
+        : null,
+      tanlamLyDo: tanlamNow == null ? (tanlamSeries.lyDo || 'không có số liệu quanh giờ đo Mai Hóa') : null,
+      // Mai Hóa dưới BĐ I: công thức lũ ngoài vùng xây dựng, kết quả thường thấp hơn thực tế
+      mucNuocThap: current.v < BDI_MAIHOA_M,
+      tanmyLyDo,
       rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
       heSoHieuChinh,
       mucMuaDuBao,

@@ -97,8 +97,23 @@ export default function MaiHoaForecast({ onClose }) {
               <div className="dongtam-forecast-hiennay">
                 Mai Hóa hiện tại ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
                 {' | '}Đồng Tâm: <b>{data.dongtamHienTai}m</b>
-                {' | '}Tân Lâm: <b>{data.tanlamHienTai}m</b>
+                {' | '}Tân Lâm: {data.tanlamHienTai != null ? <b>{data.tanlamHienTai}m</b> : <b style={{ color: '#FFB74D' }}>mất số liệu</b>}
               </div>
+
+              {data.khongDungTanLam && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFE082', background: 'rgba(249,168,37,0.14)', border: '1px solid rgba(249,168,37,0.6)' }}>
+                  ⚠️ {data.tanlamHienTai == null ? 'Tân Lâm đang mất số liệu' : 'Đang chạy thử không dùng Tân Lâm'}
+                  {data.tanlamHienTai == null && data.tanlamMoiNhat ? ` (số liệu cuối ${data.tanlamMoiNhat.v}m lúc ${formatTimeVN(data.tanlamMoiNhat.t)})` : ''}
+                  {data.tanlamHienTai == null && !data.tanlamMoiNhat && data.tanlamLyDo ? ` (${data.tanlamLyDo})` : ''}
+                  {' '}— dự báo dưới đây tính bằng công thức dự phòng không dùng Tân Lâm (chỉ dùng mực nước Mai Hóa, Đồng Tâm và mưa lưu vực).
+                </div>
+              )}
+              {data.mucNuocThap && (
+                <div className="maihoa-forecast-note" style={{ marginTop: 10, fontSize: 12, color: '#FFCDD2', background: 'rgba(211,47,47,0.16)', border: '1px solid rgba(239,83,80,0.7)' }}>
+                  ⚠️ Mai Hóa đang dưới báo động I (3m): công thức lũ không phù hợp với mực nước thấp (còn chịu ảnh hưởng triều), kết quả thường THẤP hơn thực tế khoảng 0,7 đến 1m. Chỉ tham khảo.
+                  {data.tanmyLyDo ? <><br />Mô hình ngày thường (Tân Mỹ) chưa dùng được: {data.tanmyLyDo}.</> : null}
+                </div>
+              )}
 
               <table className="dongtam-forecast-table">
                 <thead>
@@ -144,8 +159,10 @@ export default function MaiHoaForecast({ onClose }) {
               </div>
 
               <div className="maihoa-forecast-note">
-                📊 Phương trình riêng cho từng mốc, xây từ 212 mẫu giờ mùa lũ (2010-2025) — đạt chuẩn sai số ±1m: 91.5% (+6h), 76% (+12h), 74.5% (+18h), 81.6% (+24h).
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                {data.khongDungTanLam
+                  ? '📊 Công thức dự phòng không dùng Tân Lâm, học lại từ cùng 212 mẫu giờ mùa lũ (2010-2025). Kiểm chứng chéo theo năm (ngoài mẫu) — đạt chuẩn sai số ±1m: 91.5% (+6h), 70.3% (+12h), 67.5% (+18h), 78.8% (+24h); sai số trung bình ngang công thức có Tân Lâm khi so cùng cách ngoài mẫu.'
+                  : '📊 Phương trình riêng cho từng mốc, xây từ 212 mẫu giờ mùa lũ (2010-2025) — đạt chuẩn sai số ±1m: 91.5% (+6h), 76% (+12h), 74.5% (+18h), 81.6% (+24h).'}
+                {' '}Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
               </div>
             </>
           )}
