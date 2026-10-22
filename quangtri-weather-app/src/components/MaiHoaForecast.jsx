@@ -215,7 +215,7 @@ export default function MaiHoaForecast({ onClose }) {
                 {[6, 12, 18, 24].map((h) => (
                   <div className="maihoa-forecast-row" key={h}>
                     <span>Mưa dự báo +{h}h (ECMWF→HC):</span>
-                    <b>{data.mucMuaDuBao[h].goc}mm → {data.mucMuaDuBao[h].sauHieuChinh}mm</b>
+                    <b>{data.mucMuaDuBao[h].goc != null ? `${data.mucMuaDuBao[h].goc}mm → ${data.mucMuaDuBao[h].sauHieuChinh}mm` : 'không có'}</b>
                   </div>
                 ))}
               </div>

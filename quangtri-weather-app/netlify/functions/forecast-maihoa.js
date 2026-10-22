@@ -229,6 +229,13 @@ function findValueAt(series, targetT, toleranceMs = 90 * 60 * 1000) {
   return best && bestDiff <= toleranceMs ? best.v : null;
 }
 
+// Mưa thực đo tích lũy 6/12/18/24 giờ TRƯỚC giờ phát tin (mm, trung bình các trạm lưu vực)
+function mucMuaDaQua(rainByHour, endT) {
+  const o = {};
+  for (const L of LEADS) o[L] = Math.round(sumRainInWindow(rainByHour, endT, L) * 10) / 10;
+  return o;
+}
+
 function sumRainInWindow(rainByHour, endT, hours) {
   let sum = 0;
   for (let h = 0; h < hours; h++) {
@@ -237,44 +244,6 @@ function sumRainInWindow(rainByHour, endT, hours) {
     if (vals && vals.length > 0) sum += vals.reduce((a, b) => a + b, 0) / vals.length;
   }
   return sum;
-}
-
-async function fetchForecastRainHourly() {
-  const results = await Promise.all(RAIN_STATIONS.map(async (s) => {
-    try {
-      const url = `${OPENMETEO_FORECAST_URL}?latitude=${s.lat}&longitude=${s.lng}`
-        + `&hourly=precipitation&forecast_days=2&timezone=Asia%2FBangkok&models=ecmwf_ifs`;
-      const res = await fetchWithTimeout(url, 8000);
-      if (!res.ok) return null;
-      const js = await res.json();
-      return js?.hourly?.precipitation || null;
-    } catch {
-      return null;
-    }
-  }));
-  const valid = results.filter(Boolean);
-  if (valid.length === 0) return null;
-  const hoursCount = Math.min(...valid.map((v) => v.length));
-  const avgHourly = [];
-  for (let h = 0; h < hoursCount; h++) {
-    avgHourly.push(valid.reduce((a, v) => a + (v[h] || 0), 0) / valid.length);
-  }
-  return avgHourly;
-}
-
-function sumWindow(arr, hours) {
-  if (!arr) return null;
-  return arr.slice(0, hours).reduce((a, b) => a + b, 0);
-}
-
-// Mưa "dự báo" khi kiểm nghiệm quá khứ — dùng đúng mưa thật xảy ra SAU mốc
-// asof (giả lập dự báo hoàn hảo, đúng kỹ thuật đã dùng để huấn luyện).
-async function fetchRainRangeSmart(station, start, end) {
-  if (end < NEON_CUTOFF && station.neonColumn) {
-    return fetchNeonSeries(station.neonColumn, start, end);
-  }
-  const full = await fetchKttvSeries(station, '1', end);
-  return full.filter((p) => p.t >= start.getTime() && p.t <= end.getTime());
 }
 
 function nhanDienDinh(hienTaiV, duBaoTheoMoc) {
@@ -323,7 +292,7 @@ function trieuDieuHoa(tMs) {
 }
 
 // Sóng mưa dự báo ECMWF CÓ NHÃN GIỜ (Open-Meteo: chuỗi giờ bắt đầu từ 00h hôm nay, nhãn T = mưa của giờ trước T).
-// Chỉ nhánh hàm điều hòa dùng; nhánh lũ cũ vẫn dùng fetchForecastRainHourly/sumWindow như trước.
+// Dùng chung cho cả nhánh hàm điều hòa và nhánh lũ.
 async function fetchForecastRainTimed() {
   const results = await Promise.all(RAIN_STATIONS.map(async (s) => {
     try {
@@ -360,6 +329,46 @@ async function fetchMuaKhoang(station, tBd, tKt) {
   return full.filter((p) => p.t >= tBd && p.t <= tKt);
 }
 
+// Mưa dự báo theo từng hạn: tổng mưa các giờ T+1..T+L (T = giờ phát tin), đã nhân hệ số hiệu chỉnh khi chạy thật.
+// Chạy thật: phiên ECMWF mới nhất của Open-Meteo, lấy theo NHÃN GIỜ. Kiểm nghiệm: mưa thật xảy ra sau T (dự báo hoàn hảo).
+async function muaDuBaoTheoHan(Tc, backtestMode, heSoHieuChinh) {
+  const muaTheoHan = {};
+  const mucMuaDuBao = {};
+  let thieuMuaDuBao = false;
+  if (!backtestMode) {
+    const fc = await fetchForecastRainTimed();
+    for (const L of LEADS) {
+      let tong = 0; let du = fc != null;
+      for (let j = 1; j <= L && du; j++) {
+        const v = fc.values[Tc + j - fc.gio0];
+        if (v == null || !Number.isFinite(v)) du = false; else tong += v;
+      }
+      if (du) {
+        muaTheoHan[L] = tong * heSoHieuChinh;
+        mucMuaDuBao[L] = { goc: Math.round(tong * 10) / 10, sauHieuChinh: Math.round(tong * heSoHieuChinh * 10) / 10 };
+      } else {
+        thieuMuaDuBao = true; muaTheoHan[L] = 0; mucMuaDuBao[L] = { goc: null, sauHieuChinh: null };
+      }
+    }
+  } else {
+    const arr = await Promise.all(RAIN_STATIONS.map((s) => fetchMuaKhoang(s, Tc * 3600000 + 1, (Tc + 24) * 3600000)));
+    const theoGio = new Map();
+    for (const series of arr) {
+      for (const p of series) {
+        const b = Math.floor(p.t / 3600000) * 3600000;
+        if (!theoGio.has(b)) theoGio.set(b, []);
+        theoGio.get(b).push(p.v);
+      }
+    }
+    for (const L of LEADS) {
+      const that = sumRainInWindow(theoGio, (Tc + L) * 3600000, L);
+      muaTheoHan[L] = that;
+      mucMuaDuBao[L] = { goc: Math.round(that * 10) / 10, sauHieuChinh: Math.round(that * 10) / 10 };
+    }
+  }
+  return { muaTheoHan, mucMuaDuBao, thieuMuaDuBao };
+}
+
 // Dự báo ngày thường bằng hàm điều hòa. Trả { ok:true, ... } hoặc { ok:false, lyDo } (khi đó nhánh lũ làm phương án dự phòng).
 async function duBaoDieuHoa({ maihoaSeries, current, rainDaQua24h, backtestMode, heSoHieuChinh }) {
   const Tc = Math.round(current.t / 3600000); // chỉ số giờ phát tin
@@ -389,40 +398,7 @@ async function duBaoDieuHoa({ maihoaSeries, current, rainDaQua24h, backtestMode,
   const tang = dayDu ? 'day_du' : 'rut_gon';
 
   // mưa dự báo trong từng hạn (mm, đã nhân hệ số hiệu chỉnh khi chạy thật)
-  const mucMuaDuBao = {};
-  let thieuMuaDuBao = false;
-  const muaTheoHan = {};
-  if (!backtestMode) {
-    const fc = await fetchForecastRainTimed();
-    for (const L of LEADS) {
-      let tong = 0; let du = fc != null;
-      for (let j = 1; j <= L && du; j++) {
-        const v = fc.values[Tc + j - fc.gio0];
-        if (v == null || !Number.isFinite(v)) du = false; else tong += v;
-      }
-      if (du) {
-        muaTheoHan[L] = tong * heSoHieuChinh;
-        mucMuaDuBao[L] = { goc: Math.round(tong * 10) / 10, sauHieuChinh: Math.round(tong * heSoHieuChinh * 10) / 10 };
-      } else {
-        thieuMuaDuBao = true; muaTheoHan[L] = 0; mucMuaDuBao[L] = { goc: null, sauHieuChinh: null };
-      }
-    }
-  } else {
-    const arr = await Promise.all(RAIN_STATIONS.map((s) => fetchMuaKhoang(s, Tc * 3600000 + 1, (Tc + 24) * 3600000)));
-    const theoGio = new Map();
-    for (const series of arr) {
-      for (const p of series) {
-        const b = Math.floor(p.t / 3600000) * 3600000;
-        if (!theoGio.has(b)) theoGio.set(b, []);
-        theoGio.get(b).push(p.v);
-      }
-    }
-    for (const L of LEADS) {
-      const that = sumRainInWindow(theoGio, (Tc + L) * 3600000, L); // mưa thật t+1..t+L (dự báo hoàn hảo)
-      muaTheoHan[L] = that;
-      mucMuaDuBao[L] = { goc: Math.round(that * 10) / 10, sauHieuChinh: Math.round(that * 10) / 10 };
-    }
-  }
+  const { muaTheoHan, mucMuaDuBao, thieuMuaDuBao } = await muaDuBaoTheoHan(Tc, backtestMode, heSoHieuChinh);
 
   const duBaoRaw = {};
   const phanDuMoc = [r0];
@@ -529,6 +505,7 @@ export default async (request) => {
           tang: dh.tang,
           doLechTrieu: dh.doLechTrieu,
           rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
+          mucMuaDaQua: mucMuaDaQua(rainByHour, current.t),
           heSoHieuChinh,
           mucMuaDuBao: dh.mucMuaDuBao,
           thieuMuaDuBao: dh.thieuMuaDuBao,
@@ -565,33 +542,10 @@ export default async (request) => {
     };
 
     const duBaoTheoMoc = {};
-    const mucMuaDuBao = {};
-    if (!backtestMode) {
-      const forecastHourly = await fetchForecastRainHourly();
-      for (const LEAD of LEADS) {
-        const rainGoc = sumWindow(forecastHourly, LEAD);
-        const rainSauHieuChinh = rainGoc != null ? rainGoc * heSoHieuChinh : null;
-        mucMuaDuBao[LEAD] = { goc: rainGoc != null ? Math.round(rainGoc * 10) / 10 : null, sauHieuChinh: rainSauHieuChinh != null ? Math.round(rainSauHieuChinh * 10) / 10 : null };
-        duBaoTheoMoc[LEAD] = tinhMoc(LEAD, rainSauHieuChinh || 0);
-      }
-    } else {
-      for (const LEAD of LEADS) {
-        const startF = new Date(current.t);
-        const endF = new Date(current.t + LEAD * 3600000);
-        const rainFArr = await Promise.all(RAIN_STATIONS.map((s) => fetchRainRangeSmart(s, startF, endF)));
-        const rainFByHour = new Map();
-        for (const series of rainFArr) {
-          for (const p of series) {
-            const bucket = Math.floor(p.t / 3600000) * 3600000;
-            if (!rainFByHour.has(bucket)) rainFByHour.set(bucket, []);
-            rainFByHour.get(bucket).push(p.v);
-          }
-        }
-        const rainThat = sumRainInWindow(rainFByHour, endF.getTime(), LEAD);
-        mucMuaDuBao[LEAD] = { goc: Math.round(rainThat * 10) / 10, sauHieuChinh: Math.round(rainThat * 10) / 10 };
-        duBaoTheoMoc[LEAD] = tinhMoc(LEAD, rainThat);
-      }
-    }
+    // mưa dự báo T+1..T+L tính từ giờ phát tin (T = giờ đo mới nhất của Mai Hóa), cùng cách tính với nhánh hàm điều hòa
+    const mh = await muaDuBaoTheoHan(Math.round(current.t / 3600000), backtestMode, heSoHieuChinh);
+    const mucMuaDuBao = mh.mucMuaDuBao;
+    for (const LEAD of LEADS) duBaoTheoMoc[LEAD] = tinhMoc(LEAD, mh.muaTheoHan[LEAD] || 0);
 
     const dinh = nhanDienDinh(current.v, duBaoTheoMoc);
 
@@ -614,6 +568,7 @@ export default async (request) => {
       mucNuocThap: current.v < BDI_MAIHOA_M,
       dieuHoaLyDo,
       rainDaQua24h: Math.round(rainDaQua24h * 10) / 10,
+      mucMuaDaQua: mucMuaDaQua(rainByHour, current.t),
       heSoHieuChinh,
       mucMuaDuBao,
       duBaoTheoMoc: Object.fromEntries(LEADS.map((h) => [h, Math.round(duBaoTheoMoc[h] * 100) / 100])),
