@@ -98,7 +98,7 @@ export default function DongHaForecast({ onClose, tram = 'dongha' }) {
                     nguong={t.nguong}
                   />
 
-                  {t.nhanDinhDinh && (
+                  {t.cheDo === 'lu' && t.nhanDinhDinh && (
                     <div className="dongtam-forecast-dinh">
                       {t.nhanDinhDinh.coDinh ? (
                         <>🔴 Dự kiến đạt <b>ĐỈNH {t.nhanDinhDinh.giaTriDinh.toFixed(2)}m</b> trong khoảng {formatTimeVN(t.thoiDiemHienTai + t.nhanDinhDinh.gioTruoc * 3600000)} đến {formatTimeVN(t.thoiDiemHienTai + t.nhanDinhDinh.gioDinh * 3600000)}</>
