@@ -18,9 +18,10 @@ export default function DuBaoChart({ hienTaiT, hienTaiV, duBaoTheoMoc, nguong, d
       { h: 0, t: hienTaiT, gio: formatGio(hienTaiT), v: hienTaiV },
       ...[6, 12, 18, 24].map((h) => ({ h, t: hienTaiT + h * 3600000, gio: formatGio(hienTaiT + h * 3600000), v: duBaoTheoMoc[h] })),
     ];
-  const nhanTruc = (v) => `${Math.round(v * 100) / 100}m`.replace('-', '−'); // dấu trừ đúng (mực nước triều hay âm)
+  // chỉ mô hình triều (có duongCong) đổi cách ghi nhãn: dấu trừ đúng, làm tròn 2 số lẻ; các khung khác giữ nguyên như cũ
+  const nhanTruc = duongCong ? (v) => `${Math.round(v * 100) / 100}m`.replace('-', '−') : (v) => `${v}m`;
   // trục tung của mô hình triều: biên làm tròn tới 0,5m (hoặc 1m nếu dải rộng) để vạch chia dễ đọc
-  let yDomain = ['auto', 'auto'];
+  let yDomain; // mặc định của recharts (các khung khác giữ nguyên)
   let yTicks;
   if (duongCong) {
     const vs = data.map((p) => p.v);
@@ -34,12 +35,12 @@ export default function DuBaoChart({ hienTaiT, hienTaiV, duBaoTheoMoc, nguong, d
   const ticks = duongCong ? data.filter((p) => p.h % 6 === 0).map((p) => p.gio) : undefined;
   const veCham = (props) => {
     const { cx, cy, payload, index } = props;
-    if (duongCong && payload.h % 6 !== 0) return <g key={`d${index}`} />;
-    return <circle key={`d${index}`} cx={cx} cy={cy} r={4} fill="#1565C0" stroke="#90CAF9" strokeWidth={1} />;
+    if (payload.h % 6 !== 0) return <g key={`d${index}`} />;
+    return <circle key={`d${index}`} cx={cx} cy={cy} r={4} fill="#1565C0" {...(duongCong ? { stroke: '#90CAF9', strokeWidth: 1 } : {})} />;
   };
 
   return (
-    <div style={{ width: '100%', height: 220, background: '#0D1B2A', borderRadius: 8, padding: '10px 4px 4px' }}>
+    <div className="dubao-chart" style={{ width: '100%', height: 220, background: '#0D1B2A', borderRadius: 8, padding: '10px 4px 4px' }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={duongCong ? { top: 15, right: 30, left: -4, bottom: 5 } : { top: 5, right: 10, left: -10, bottom: 5 }}>
           <defs>
@@ -50,7 +51,7 @@ export default function DuBaoChart({ hienTaiT, hienTaiV, duBaoTheoMoc, nguong, d
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
           <XAxis dataKey="gio" stroke="#90CAF9" tick={{ fontSize: 11 }} ticks={ticks} interval={duongCong ? 0 : 'preserveEnd'} />
-          <YAxis stroke="#90CAF9" tick={{ fontSize: 11 }} tickFormatter={nhanTruc} width={52} domain={yDomain} ticks={yTicks} />
+          <YAxis stroke="#90CAF9" tick={{ fontSize: 11 }} tickFormatter={nhanTruc} width={duongCong ? 52 : 45} domain={yDomain} ticks={yTicks} />
           <Tooltip
             contentStyle={{ background: '#0D1B2A', border: '1px solid #90CAF9', borderRadius: 6 }}
             labelStyle={{ color: '#90CAF9' }}
@@ -60,7 +61,7 @@ export default function DuBaoChart({ hienTaiT, hienTaiV, duBaoTheoMoc, nguong, d
           {nguong?.bd1 && <ReferenceLine y={nguong.bd1} stroke="#F9A825" strokeDasharray="4 4" label={{ value: 'BĐ I', fill: '#F9A825', fontSize: 10, position: 'insideTopLeft' }} />}
           {nguong?.bd2 && <ReferenceLine y={nguong.bd2} stroke="#EF6C00" strokeDasharray="4 4" label={{ value: 'BĐ II', fill: '#EF6C00', fontSize: 10, position: 'insideTopLeft' }} />}
           {nguong?.bd3 && <ReferenceLine y={nguong.bd3} stroke="#D32F2F" strokeDasharray="4 4" label={{ value: 'BĐ III', fill: '#D32F2F', fontSize: 10, position: 'insideTopLeft' }} />}
-          <Area type="monotone" dataKey="v" stroke="#1565C0" strokeWidth={2} fill="url(#duBaoMucNuocFill)" dot={veCham} />
+          <Area type="monotone" dataKey="v" stroke="#1565C0" strokeWidth={2} fill="url(#duBaoMucNuocFill)" dot={duongCong ? veCham : { r: 4, fill: '#1565C0' }} />
           {duongCong && (diemCuc || []).map((d) => {
             const diem = data.find((p) => p.t === d.t);
             return diem ? (

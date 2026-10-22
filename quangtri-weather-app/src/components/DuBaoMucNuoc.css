@@ -71,6 +71,14 @@
   .dubao-co-thanh-chon .maihoa-forecast-panel {
     border-radius: 0;
   }
+
+  /* Biểu đồ dự báo: tràn hết bề ngang khung (bù phần đệm 18px hai bên của thân khung) */
+  .dubao-co-thanh-chon .dubao-chart {
+    width: auto !important;
+    margin-left: -18px;
+    margin-right: -18px;
+    border-radius: 0 !important;
+  }
 }
 
 /* ---- Thanh chọn trạm ---- */
