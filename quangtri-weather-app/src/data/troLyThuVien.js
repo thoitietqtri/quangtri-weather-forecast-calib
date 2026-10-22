@@ -38,7 +38,7 @@ export const HUONG_DAN = [
   { k: ['radar'], a: '📡 Tick "Ảnh radar" để phủ ảnh radar tổ hợp lên bản đồ, tự làm mới 10 phút/lần; bỏ tick là dừng.' },
   { k: ['định vị', 'vị trí của tôi', 'gps'], a: '📍 Nút định vị (trên bản đồ) đưa bản đồ tới vị trí của anh/chị — cần cho phép truy cập vị trí. Nút 🏠 đưa về toàn tỉnh Quảng Trị.' },
   { k: ['menu', 'chức năng', 'bảng', 'biểu đồ', 'thời đoạn'], a: '☰ Menu (góc trên trái) có: mưa thực đo theo thời đoạn/giờ, đồ thị mưa, mực nước thực đo, biểu đồ mực nước, mực nước hiện hành (cột), bảng dự báo mưa/nhiệt/gió và dự báo mực nước khi có lũ.' },
-  { k: ['mai hóa', 'đồng tâm', 'dự báo mực nước', 'đỉnh lũ'], a: '🌊 Dự báo mực nước khi có lũ: Menu → "Dự báo Mực nước (khi có lũ)" → Sông Gianh → Đồng Tâm hoặc Mai Hóa. Các trạm khác đang xây dựng.' },
+  { k: ['mai hóa', 'đồng tâm', 'dự báo mực nước', 'đỉnh lũ'], a: '🌊 Dự báo mực nước 6, 12, 18, 24 giờ tới: Menu → "Dự báo Mực nước" → chọn sông → chọn trạm. Sông Gianh: Đồng Tâm, Mai Hóa · Sông Nhật Lệ: Kiến Giang, Lệ Thủy · Sông Bến Hải: Gia Vòng, Hiền Lương · Sông Thạch Hãn: Đakrông, Đông Hà, Thạch Hãn. Riêng Đồng Hới đang xây dựng.' },
   { k: ['cài đặt', 'cài app', 'install', 'màn hình chính'], a: '📲 Dùng nút cài đặt ở thanh công cụ (hoặc "Thêm vào màn hình chính" của trình duyệt) để cài app như ứng dụng điện thoại.' },
   { k: ['màu nhiệt', 'màu xã', 'mạng sông', 'lớp'], a: '🎛️ Các ô tick dưới thanh chọn xã: Trạm mưa, Trạm mực nước, Mạng lưới sông, Màu nhiệt độ xã, Ảnh radar — bật/tắt từng lớp trên bản đồ.' },
   { k: ['giọng nói', 'nói', 'micro', 'đọc to'], a: '🎤 Bấm nút micro cạnh ô nhập để nói câu hỏi bằng tiếng Việt; trợ lý sẽ đọc to câu trả lời. Nút 🔊 trên đầu khung chat để bật/tắt đọc to mọi câu trả lời. Cần trình duyệt Chrome/Edge (hoặc Safari mới) và cho phép dùng micro.' },
@@ -54,7 +54,7 @@ export const MO_TA_MUA = [
   { duoi: Infinity, text: 'Có mưa to đến rất to, cần đề phòng lũ quét, sạt lở đất ở vùng núi, ngập lụt ở vùng trũng thấp.' },
 ];
 
-// ---- Dự báo mực nước 6/12/18/24h (lấy từ hàm Netlify giống menu "Dự báo Mực nước (khi có lũ)") ----
+// ---- Dự báo mực nước 6/12/18/24h (lấy từ hàm Netlify giống menu "Dự báo Mực nước 6/12/18/24h tới") ----
 // nguong = bd1/bd2/bd3 (m) — GIỮ KHỚP với MaiHoaForecast.jsx / DongTamForecast.jsx.
 // doTinCay = % mẫu kiểm nghiệm đạt sai số ±1m theo từng mốc (lấy từ ghi chú trong 2 màn hình dự báo).
 export const TRAM_DU_BAO_MUC_NUOC = [

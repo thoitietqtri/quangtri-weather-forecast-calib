@@ -21,7 +21,7 @@ import ThachHanForecast from './ThachHanForecast';
 import DongHaForecast from './DongHaForecast';
 import BenHaiForecast from './BenHaiForecast';
 
-// Cấu trúc menu "Dự báo Mực nước (khi có lũ)" — theo từng lưu vực sông.
+// Cấu trúc menu "Dự báo Mực nước 6/12/18/24h tới" — theo từng lưu vực sông.
 // ready:true là trạm đã có chức năng dự báo thật (hiện chỉ Mai Hóa); các
 // trạm còn lại hiện "chưa xây dựng" khi bấm vào, chờ mở rộng dần sau này.
 const LUU_VUC_TRAM = [
@@ -600,7 +600,7 @@ function MapComponent() {
             <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}>📊 Mực nước hiện hành (cột)</button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
             <button onClick={() => setShowMucNuocLuMenu((v) => !v)}>
-              🌊 Dự báo Mực nước (khi có lũ) {showMucNuocLuMenu ? '▲' : '▼'}
+              🌊 Dự báo Mực nước 6/12/18/24h tới {showMucNuocLuMenu ? '▲' : '▼'}
             </button>
             {showMucNuocLuMenu && (
               <div className="menu-submenu-cap2">
