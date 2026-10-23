@@ -165,7 +165,7 @@ export default function BenHaiForecast({ onClose, tram = 'giavong' }) {
                   ? 'Gia Vòng khi có lũ (từ 3m): đạt sai số cho phép khoảng 93–95% (+6…+24h); khi mực nước từ BĐ I (5m) trở lên khoảng 79–83%. Mô hình chính dùng mưa Vĩnh Ô (số liệu từ 03/2019). Lưu ý đỉnh lũ: các đợt lũ từ 2019, dự báo phát hành trước đỉnh 6–12h đạt sai số cho phép của đỉnh (±1m) khoảng 70% với đỉnh từ 3m, nhưng chỉ khoảng 27% với đỉnh từ BĐ I trở lên (thường thấp hơn thực tế 1,6–1,8m, nhất là khi nước lên nhanh từ dưới 3m).'
                   : 'Hiền Lương: ngày thường (triều) đạt sai số cho phép khoảng 98–99%; khi có lũ khoảng 94–96%; khi mực nước từ BĐ I (1m) trở lên khoảng 87–90% (số liệu mực nước từ 08/2016). Đỉnh lũ từ 1m trở lên: dự báo phát hành trước đỉnh 6/12/24h đạt sai số cho phép (±0,29m) khoảng 86/68/46%.'}{' '}
                 Kiểm nghiệm dùng mưa thực tế thay mưa dự báo nên thực tế vận hành có thể thấp hơn.
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}

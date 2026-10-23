@@ -149,7 +149,7 @@ export default function MaiHoaForecast({ onClose }) {
               </div>
 
               <div className="maihoa-forecast-note">
-                📊 Mô hình ngày thường: hàm điều hòa thủy triều dựng từ chính số liệu Mai Hóa 2020-2025, hiệu chỉnh theo mực nước thực đo 24 giờ gần nhất và mưa lưu vực. Sai số trung bình (kiểm chứng ngoài mẫu): +6h 0.08m, +12h 0.09m, +18h 0.10m, +24h 0.10m. Chỉ dùng khi Mai Hóa dưới 3m và Đồng Tâm dưới 5.6m — khi có lũ hệ thống tự chuyển sang mô hình lũ (quan hệ với Đồng Tâm và mưa lưu vực), vì lũ phá vỡ quy luật triều. Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                📊 Mô hình ngày thường: hàm điều hòa thủy triều dựng từ chính số liệu Mai Hóa 2020-2025, hiệu chỉnh theo mực nước thực đo 24 giờ gần nhất và mưa lưu vực. Sai số trung bình (kiểm chứng ngoài mẫu): +6h 0.08m, +12h 0.09m, +18h 0.10m, +24h 0.10m. Chỉ dùng khi Mai Hóa dưới 3m và Đồng Tâm dưới 5.6m — khi có lũ hệ thống tự chuyển sang mô hình lũ (quan hệ với Đồng Tâm và mưa lưu vực), vì lũ phá vỡ quy luật triều. Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}
@@ -224,7 +224,7 @@ export default function MaiHoaForecast({ onClose }) {
                 {data.khongDungTanLam
                   ? '📊 Công thức dự phòng không dùng Tân Lâm, học lại từ cùng 212 mẫu giờ mùa lũ (2010-2025). Kiểm chứng chéo theo năm (ngoài mẫu) — đạt chuẩn sai số ±1m: 91.5% (+6h), 70.3% (+12h), 67.5% (+18h), 78.8% (+24h); sai số trung bình ngang công thức có Tân Lâm khi so cùng cách ngoài mẫu.'
                   : '📊 Phương trình riêng cho từng mốc, xây từ 212 mẫu giờ mùa lũ (2010-2025) — đạt chuẩn sai số ±1m: 91.5% (+6h), 76% (+12h), 74.5% (+18h), 81.6% (+24h).'}
-                {' '}Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                {' '}Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}

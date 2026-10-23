@@ -141,7 +141,7 @@ export default function NhatLeForecast({ onClose, tram = 'lethuy' }) {
                 📊 Phương trình riêng cho từng mốc, kiểm nghiệm theo từng năm (mùa lũ). Tỉ lệ đạt sai số cho phép:{' '}
                 {tram === 'lethuy' ? 'Lệ Thủy khoảng 88–96%.' : 'Kiến Giang khoảng 50–70%.'}{' '}
                 Kiểm nghiệm dùng mưa thực tế thay mưa dự báo nên thực tế vận hành có thể thấp hơn.
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}

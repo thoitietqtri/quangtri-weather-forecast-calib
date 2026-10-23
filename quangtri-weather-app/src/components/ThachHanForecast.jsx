@@ -145,7 +145,7 @@ export default function ThachHanForecast({ onClose, tram = 'thachhan' }) {
                   ? 'Thạch Hãn khi có lũ: đạt sai số cho phép khoảng 94–98% (+6…+24h), đỉnh lũ khoảng 78% (đỉnh thường bị dự báo thấp hơn thực tế); dùng mực nước Đakrông (truyền về sau ~8–9 giờ).'
                   : 'Đakrông: sai số trung bình khoảng 0.4–0.5m ở các mốc (trạm chưa có sai số cho phép chính thức).'}{' '}
                 Kiểm nghiệm dùng mưa thực tế thay mưa dự báo nên thực tế vận hành có thể thấp hơn.
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}

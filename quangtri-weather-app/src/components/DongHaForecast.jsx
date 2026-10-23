@@ -129,7 +129,7 @@ export default function DongHaForecast({ onClose, tram = 'dongha' }) {
               <div className="dongtam-forecast-note">
                 📊 Phương trình riêng cho từng mốc, kiểm nghiệm bỏ-từng-năm (2006-2026). Khi có lũ: đạt sai số cho phép khoảng 89–94% (+6…+24h); đỉnh lũ khoảng 60% (đỉnh thường bị dự báo thấp hơn thực tế ~0.3m); ngày thường (triều) ~99%.{' '}
                 Kiểm nghiệm dùng mưa thực tế thay mưa dự báo nên thực tế vận hành có thể thấp hơn.
-                Đây là tham khảo hỗ trợ, không thay thế đánh giá chuyên môn của dự báo viên.
+                Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}
