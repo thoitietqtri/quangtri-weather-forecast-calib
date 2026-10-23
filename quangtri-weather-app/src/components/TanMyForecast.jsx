@@ -63,13 +63,13 @@ export default function TanMyForecast({ onClose }) {
               <div className="dongtam-forecast-hiennay">
                 {uocDH ? (
                   <>
-                    Tân Mỹ: <b style={{ color: '#FFB74D' }}>không có số liệu quan trắc</b> | Tân Mỹ ước từ Đồng Hới ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.tanmyUocHienTai}m</b>
+                    Tân Mỹ: <b style={{ color: '#FFB74D' }}>không có số liệu quan trắc</b> | Tân Mỹ ước từ Đồng Hới — phương án 2 ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.tanmyUocHienTai}m</b>
                     {data.donghoiHienTai != null ? ` (Đồng Hới ${data.donghoiHienTai}m)` : ''} | Mai Hóa: <b>{data.maihoaHienTai}m</b>
                     {data.maihoaHienTai >= data.nguongLuMaiHoa ? ` (từ báo động II ${data.nguongLuMaiHoa}m)` : ` (dưới báo động II ${data.nguongLuMaiHoa}m)`}
                   </>
                 ) : khongTM ? (
                   <>
-                    Tân Mỹ: <b style={{ color: '#FFB74D' }}>không có số liệu quan trắc</b> | Mai Hóa ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
+                    Tân Mỹ: <b style={{ color: '#FFB74D' }}>không có số liệu quan trắc</b> | Mai Hóa ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b> — phương án 3 (chỉ triều, mùa vụ, Mai Hóa và mưa)
                     {data.maihoaHienTai >= data.nguongLuMaiHoa ? ` (từ báo động II ${data.nguongLuMaiHoa}m)` : ` (dưới báo động II ${data.nguongLuMaiHoa}m)`}
                   </>
                 ) : (
@@ -83,16 +83,6 @@ export default function TanMyForecast({ onClose }) {
                 )}
               </div>
 
-              {uocDH && (
-                <div className="maihoa-forecast-note" style={CANH_BAO}>
-                  ⚠️ Phương án 2 — Tân Mỹ không có số liệu quan trắc ({data.lyDoKhongTanMy}). Mực nước Tân Mỹ hiện tại được ƯỚC từ mực nước thực đo Đồng Hới (hai trạm cùng chế độ bán nhật triều) và Mai Hóa, rồi coi là thực đo để dự báo như phương án 1. Sai số lớn hơn phương án 1: khoảng 0,14m ngày thường, khoảng 0,3m khi có lũ (Mai Hóa từ báo động II).
-                </div>
-              )}
-              {khongTM && (
-                <div className="maihoa-forecast-note" style={CANH_BAO}>
-                  ⚠️ Phương án 3 — không có số liệu Tân Mỹ ({data.lyDoKhongTanMy}) và cũng không dùng được Đồng Hới ({data.lyDoKhongDongHoi}). Mực nước được ước tính từ thủy triều điều hòa, mùa vụ, mực nước Mai Hóa và mưa lưu vực nên sai số lớn (khoảng 0,25m ngày thường, 0,3 đến 0,4m khi có lũ). Chỉ dùng để tham khảo xu thế và giờ triều.
-                </div>
-              )}
               {data.thieuMaiHoa && (
                 <div className="maihoa-forecast-note" style={CANH_BAO}>
                   ⚠️ Mai Hóa đang mất số liệu nên chưa kiểm tra được ngưỡng lũ. Kết quả tính bằng mô hình triều; nếu Mai Hóa đang cao (từ báo động II) thì cần xem lại khi có số liệu.
