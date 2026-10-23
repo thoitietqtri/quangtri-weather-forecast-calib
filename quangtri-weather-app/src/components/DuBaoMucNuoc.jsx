@@ -3,6 +3,7 @@ import MaiHoaForecast from './MaiHoaForecast';
 import DongTamForecast from './DongTamForecast';
 import NhatLeForecast from './NhatLeForecast';
 import DongHoiForecast from './DongHoiForecast';
+import TanMyForecast from './TanMyForecast';
 import ThachHanForecast from './ThachHanForecast';
 import DongHaForecast from './DongHaForecast';
 import BenHaiForecast from './BenHaiForecast';
@@ -19,6 +20,7 @@ const LUU_VUC_TRAM = [
   { song: 'Sông Gianh', trams: [
     { id: 'dongtam', ten: 'Đồng Tâm', matram: '555300', ready: true },
     { id: 'maihoa', ten: 'Mai Hóa', matram: '555400', ready: true },
+    { id: 'tanmy', ten: 'Tân Mỹ', matram: '555800', ready: true },
   ] },
   { song: 'Sông Nhật Lệ', trams: [
     { id: 'kiengiang', ten: 'Kiến Giang', matram: '555500', ready: true },
@@ -60,6 +62,7 @@ function KhungTram({ id, onClose }) {
     case 'kiengiang':
     case 'lethuy': return <NhatLeForecast tram={id} onClose={onClose} />;
     case 'donghoi': return <DongHoiForecast onClose={onClose} />;
+    case 'tanmy': return <TanMyForecast onClose={onClose} />;
     case 'dakrong':
     case 'thachhan': return <ThachHanForecast tram={id} onClose={onClose} />;
     case 'dongha': return <DongHaForecast onClose={onClose} />;
