@@ -32,6 +32,7 @@ export default function TanMyForecast({ onClose }) {
 
   const lu = data && data.cheDo === 'lu_mai_hoa';
   const khongTM = data && data.available && data.phuongAn === 'khong_tanmy';
+  const uocDH = data && data.available && data.phuongAn === 'uoc_tu_donghoi';
 
   return (
     <div className="maihoa-forecast-overlay" onClick={onClose}>
@@ -60,7 +61,13 @@ export default function TanMyForecast({ onClose }) {
           {data && data.available && (
             <>
               <div className="dongtam-forecast-hiennay">
-                {khongTM ? (
+                {uocDH ? (
+                  <>
+                    Tân Mỹ: <b style={{ color: '#FFB74D' }}>không có số liệu quan trắc</b> | Tân Mỹ ước từ Đồng Hới ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.tanmyUocHienTai}m</b>
+                    {data.donghoiHienTai != null ? ` (Đồng Hới ${data.donghoiHienTai}m)` : ''} | Mai Hóa: <b>{data.maihoaHienTai}m</b>
+                    {data.maihoaHienTai >= data.nguongLuMaiHoa ? ` (từ báo động II ${data.nguongLuMaiHoa}m)` : ` (dưới báo động II ${data.nguongLuMaiHoa}m)`}
+                  </>
+                ) : khongTM ? (
                   <>
                     Tân Mỹ: <b style={{ color: '#FFB74D' }}>không có số liệu quan trắc</b> | Mai Hóa ({formatTimeVN(data.thoiDiemHienTai)}): <b>{data.maihoaHienTai}m</b>
                     {data.maihoaHienTai >= data.nguongLuMaiHoa ? ` (từ báo động II ${data.nguongLuMaiHoa}m)` : ` (dưới báo động II ${data.nguongLuMaiHoa}m)`}
@@ -76,9 +83,14 @@ export default function TanMyForecast({ onClose }) {
                 )}
               </div>
 
+              {uocDH && (
+                <div className="maihoa-forecast-note" style={CANH_BAO}>
+                  ⚠️ Phương án 2 — Tân Mỹ không có số liệu quan trắc ({data.lyDoKhongTanMy}). Mực nước Tân Mỹ hiện tại được ƯỚC từ mực nước thực đo Đồng Hới (hai trạm cùng chế độ bán nhật triều) và Mai Hóa, rồi coi là thực đo để dự báo như phương án 1. Sai số lớn hơn phương án 1: khoảng 0,14m ngày thường, khoảng 0,3m khi có lũ (Mai Hóa từ báo động II).
+                </div>
+              )}
               {khongTM && (
                 <div className="maihoa-forecast-note" style={CANH_BAO}>
-                  ⚠️ Phương án 2 — KHÔNG có số liệu quan trắc Tân Mỹ ({data.lyDoKhongTanMy}). Mực nước được ước tính từ thủy triều điều hòa, mùa vụ, mực nước Mai Hóa và mưa lưu vực nên sai số lớn hơn nhiều (khoảng 0,25m ngày thường, 0,3 đến 0,4m khi có lũ) vì không biết mực nền thực tế của Tân Mỹ. Chỉ dùng để tham khảo xu thế và giờ triều.
+                  ⚠️ Phương án 3 — không có số liệu Tân Mỹ ({data.lyDoKhongTanMy}) và cũng không dùng được Đồng Hới ({data.lyDoKhongDongHoi}). Mực nước được ước tính từ thủy triều điều hòa, mùa vụ, mực nước Mai Hóa và mưa lưu vực nên sai số lớn (khoảng 0,25m ngày thường, 0,3 đến 0,4m khi có lũ). Chỉ dùng để tham khảo xu thế và giờ triều.
                 </div>
               )}
               {data.thieuMaiHoa && (
@@ -143,7 +155,7 @@ export default function TanMyForecast({ onClose }) {
               </div>
 
               <div className="maihoa-forecast-note">
-                📊 Mô hình triều (phương án 1, có số liệu Tân Mỹ): hàm điều hòa thủy triều dựng từ chính số liệu Tân Mỹ các năm đo tốt (2011 đến 2025, bỏ 2015 và 2016 do cảm biến lỗi), hiệu chỉnh theo mực nước thực đo 24 giờ gần nhất và mưa lưu vực Mai Hóa. Khi Mai Hóa từ báo động II (5,0m) trở lên, thêm hiệu chỉnh theo mực nước và cường suất lên, xuống của Mai Hóa. Sai số trung bình (kiểm chứng ngoài mẫu, mưa dự báo đúng): ngày thường khoảng 0,07 đến 0,08m, khi có lũ khoảng 0,11 đến 0,15m (mẫu lũ ít nên kém chắc chắn hơn); mưa dự báo sai thì kém hơn. Khi Tân Mỹ không có số liệu quan trắc, hệ thống tự chuyển sang phương án 2 (sai số lớn hơn như đã nêu ở trên). Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
+                📊 Mô hình triều (phương án 1, có số liệu Tân Mỹ): hàm điều hòa thủy triều dựng từ chính số liệu Tân Mỹ các năm đo tốt (2011 đến 2025, bỏ 2015 và 2016 do cảm biến lỗi), hiệu chỉnh theo mực nước thực đo 24 giờ gần nhất và mưa lưu vực Mai Hóa. Khi Mai Hóa từ báo động II (5,0m) trở lên, thêm hiệu chỉnh theo mực nước và cường suất lên, xuống của Mai Hóa. Sai số trung bình (kiểm chứng ngoài mẫu, mưa dự báo đúng): ngày thường khoảng 0,07 đến 0,08m, khi có lũ khoảng 0,12 đến 0,14m (mẫu lũ ít nên kém chắc chắn hơn); mưa dự báo sai thì kém hơn. Khi Tân Mỹ không có số liệu quan trắc, hệ thống tự chuyển sang phương án 2 (ước Tân Mỹ từ Đồng Hới và Mai Hóa), và nếu Đồng Hới cũng không có thì dùng phương án 3; sai số lớn hơn như đã nêu ở trên. Đây là thông tin tham khảo, không thay thế bản tin dự báo chính thức của Đài KTTV tỉnh Quảng Trị.
               </div>
             </>
           )}

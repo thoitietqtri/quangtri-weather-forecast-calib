@@ -8,11 +8,15 @@
 //   - LŨ: Mai Hóa từ BĐ II (5,0m) trở lên: cộng hiệu chỉnh tuyến tính theo mực nước Mai Hóa và cường suất lên/xuống 6 giờ của Mai Hóa
 //     (mẫu lũ nhỏ, chỉ khoảng 240 giờ, nên chỉ hiệu chỉnh 3 tham số mỗi hạn để tránh quá khớp).
 // Mưa: TB 4 trạm lưu vực Mai Hóa; mưa dự báo = ECMWF IFS (Open-Meteo) CÓ NHÃN GIỜ, tính từ giờ phát tin (T+1..T+L) nhân hệ số hiệu chỉnh.
-// Kiểm chứng chéo bỏ-một-năm (mưa dự báo hoàn hảo): ngày thường sai số TB 0,070/0,074/0,075/0,074m, lũ 0,106/0,132/0,130/0,145m cho +6/+12/+18/+24h.
+// Kiểm chứng chéo bỏ-một-năm (mưa dự báo hoàn hảo): ngày thường sai số TB 0,070/0,074/0,075/0,073m, lũ 0,116/0,137/0,131/0,122m cho +6/+12/+18/+24h.
 // Tính lại hệ số mỗi năm một lần: tinh-he-so-tanmy.py (gói tanmy-dieu-hoa, không nằm trong repo).
-// HAI PHƯƠNG ÁN: (1) có số liệu quan trắc Tân Mỹ (như trên); (2) KHÔNG có số liệu Tân Mỹ (hỏng máy, hoặc ?khongTanMy=1):
-//   chỉ dùng triều điều hòa + mùa vụ + mực nước Mai Hóa + mưa lưu vực. Vì không biết mực nền hiện tại của Tân Mỹ (đổi theo năm/mùa)
-//   nên sai số lớn hơn nhiều: ngày thường ~0,25m, lũ ~0,32-0,42m (kiểm chứng bỏ-một-năm). Chỉ mang tính tham khảo.
+// BA PHƯƠNG ÁN, tự chọn theo số liệu đang có:
+//   (1) có số liệu quan trắc Tân Mỹ (như trên);
+//   (2) Tân Mỹ hỏng/mất số liệu: ƯỚC Tân Mỹ từ mực nước thực đo Đồng Hới (+ Mai Hóa) bằng hồi quy các năm 2019-2025, rồi coi số ước là
+//       thực đo để chạy như phương án 1. Sai số dự báo ~0,14m ngày thường, ~0,3m lũ (kiểm chứng bỏ-một-năm);
+//   (3) cả Tân Mỹ lẫn Đồng Hới đều mất: triều điều hòa + mùa vụ + Mai Hóa + mưa, sai số ~0,25m ngày thường, ~0,3-0,4m lũ.
+//   ?khongTanMy=1 ép bỏ Tân Mỹ; ?khongDongHoi=1 ép bỏ Đồng Hới (chỉ để thử).
+// Nhãn giờ: số liệu huấn luyện Tân Mỹ lấy từ Neon có nhãn UTC đã đổi về giờ VN (+7h) cho khớp KTTV/Mai Hóa/mưa.
 // Số liệu lỗi (ngoài -1,6 đến 3,0m, hoặc từ 8 giờ liên tiếp không đổi) bị loại như khi huấn luyện.
 
 const KTTV_BASE_URL = 'http://203.209.181.170:2018/API_TTB/JSON/solieu.php';
@@ -23,6 +27,7 @@ const NGUONG_LU_MAI_HOA = 5.0; // BĐ II Mai Hóa
 const NGUONG = { bd1: 1.1, bd2: 1.3, bd3: 1.5 }; // BĐ Tân Mỹ
 
 const TANMY = { matram: '555800', ten_table: 'mucnuoc_oday' };
+const DONGHOI = { matram: '557600', ten_table: 'mucnuoc_oday' };
 const MAIHOA = { matram: '555400', ten_table: 'mucnuoc_oday' };
 const RAIN_STATIONS = [
   { matram: '559100', ten_table: 'mua_oday_domua', lat: 17.8086, lng: 105.969 },
@@ -34,44 +39,44 @@ const RAIN_STATIONS = [
 // ===== HÀM ĐIỀU HÒA: hằng số và hệ số sinh từ tinh-he-so-tanmy.py (he-so-tanmy.json) =====
 // Gốc thời gian: 00h 01/01/2000 giờ VN.
 const PHAN_TRIEU = [
-  { ten: 'Q1', w: 13.3986609, a: 0.004647482307868787, b: -0.06243577548479699 },
-  { ten: 'O1', w: 13.9430356, a: -0.2785558539103192, b: 0.02286464119295086 },
-  { ten: 'P1', w: 14.9589314, a: 0.06513139775852332, b: 0.00776854942780461 },
-  { ten: 'K1', w: 15.0410686, a: 0.19656894312869982, b: -0.0304998382916018 },
-  { ten: 'N2', w: 28.4397295, a: -0.01628396242518389, b: 0.031327396304807756 },
-  { ten: 'M2', w: 28.9841042, a: 0.1804828256700295, b: 0.05718817539593583 },
-  { ten: 'S2', w: 30.0, a: -0.04818007874951229, b: -0.02089973439135741 },
-  { ten: 'K2', w: 30.0821373, a: 0.02972990500939814, b: 0.01708344661819644 },
-  { ten: 'M4', w: 57.9682084, a: -0.001772644122731337, b: 0.003675334702729671 },
-  { ten: 'MS4', w: 58.9841042, a: 0.0014530760785774503, b: -0.0012959235258616863 },
-  { ten: 'MN4', w: 57.4238337, a: -0.0011522799657494652, b: -0.0009421022423423538 },
-  { ten: 'M6', w: 86.9523127, a: -0.004490750941234361, b: 0.0004684692467348026 },
+  { ten: 'Q1', w: 13.3986609, a: 0.06202835441721894, b: 0.008893740910182659 },
+  { ten: 'O1', w: 13.9430356, a: 0.01413373195329617, b: -0.2791998319698424 },
+  { ten: 'P1', w: 14.9589314, a: -0.024085049489941748, b: 0.06095270706714199 },
+  { ten: 'K1', w: 15.0410686, a: -0.02235497309653335, b: 0.19768593352781255 },
+  { ten: 'N2', w: 28.4397295, a: 0.025671028058174204, b: -0.02425391587593367 },
+  { ten: 'M2', w: 28.9841042, a: -0.14404222438508896, b: -0.12293236359631579 },
+  { ten: 'S2', w: 30.0, a: 0.0313270353308695, b: 0.04227910731191443 },
+  { ten: 'K2', w: 30.0821373, a: -0.016938341511835067, b: -0.029819980367169405 },
+  { ten: 'M4', w: 57.9682084, a: -0.003870285863633123, b: 0.001247501585785733 },
+  { ten: 'MS4', w: 58.9841042, a: 0.001938621368909911, b: 0.0003981704206526609 },
+  { ten: 'MN4', w: 57.4238337, a: -0.00021779663851317059, b: -0.0014331081049441148 },
+  { ten: 'M6', w: 86.9523127, a: 0.0020708704009484865, b: 0.0040041275201520305 },
 ];
 // thuong_*: hồi quy theo DAC_TRUNG; lu_*: hiệu chỉnh cộng thêm theo [MH, dMH6] khi Mai Hóa >= BĐ II
 const HE_SO = {
   thuong_day_du: {
-    6: { intercept: 0.0038037856390157653, Hf: 1.0038025899072593, zt: 2.878189240535878, r0: 0.35084997958737146, r3: -0.4278451709812099, r6: -0.4478845054430762, r12: -0.7972092151668582, r24: -0.5814445297772586, qm: -0.0004321441357695843, sm: 0.0019859472423912495 },
-    12: { intercept: 0.0059925690182482385, Hf: 1.0044458401222203, zt: 0.5710831340372292, r0: 0.30618750864706284, r3: -0.01209831839309574, r6: -0.21613581158102288, r12: 0.6225842251147184, r24: -0.30981601832555844, qm: -0.0008351820339183877, sm: 0.0018061645672665817 },
-    18: { intercept: 0.006888936313471639, Hf: 1.003625656306172, zt: 0.24611848176659204, r0: 0.19135422936626342, r3: -0.253128649288336, r6: 0.8473267063539053, r12: 0.02717410446292344, r24: -0.10521511235784296, qm: -0.00109477027672746, sm: 0.001639635488878846 },
-    24: { intercept: 0.00781747255676954, Hf: 1.0014972539034943, zt: 0.060967274680463666, r0: 0.6392383040812921, r3: 0.3138944384178268, r6: -0.07212346009182459, r12: 0.03069367149072222, r24: -0.021567146180251767, qm: -0.0011600531345860468, sm: 0.001212890792572529 },
+    6: { intercept: 0.002535599456808374, Hf: 1.0033177033850895, zt: 2.863228038906733, r0: 0.3478242493104387, r3: -0.42425607064593795, r6: -0.44470378577250885, r12: -0.7925332022786999, r24: -0.5787196810033811, qm: -0.0002850631140200165, sm: 0.002365728200626713 },
+    12: { intercept: 0.004150704906902643, Hf: 1.0033998486341302, zt: 0.549942633313802, r0: 0.30820434647581996, r3: -0.009404088137515986, r6: -0.20830119599042404, r12: 0.6269888023914078, r24: -0.3098487510288267, qm: -0.0006904780936551969, sm: 0.002175332015337401 },
+    18: { intercept: 0.00451792627387927, Hf: 1.0029963288135015, zt: 0.23084117820569744, r0: 0.19755596499784367, r3: -0.2501249306283376, r6: 0.8525430837920883, r12: 0.0292891308113808, r24: -0.11016533584561704, qm: -0.0009959777732847703, sm: 0.002031730184794968 },
+    24: { intercept: 0.005169205713311383, Hf: 1.001721245590694, zt: 0.054153818128231085, r0: 0.6450105547486561, r3: 0.3147779476166831, r6: -0.06945184842412785, r12: 0.032463011629284236, r24: -0.028404065376305868, qm: -0.0011793853653021742, sm: 0.0016443957334748 },
   },
   thuong_rut_gon: {
-    6: { intercept: 0.00252045478407466, Hf: 1.0059645433226978, zt: 0.8865515726773928, r0: 0.08686422802669444, qm: -0.0003634525149169757, sm: 0.0022369884630866694 },
-    12: { intercept: 0.003983593573543838, Hf: 1.0074879470503009, zt: 0.9738719279584767, r0: -0.011558709073728997, qm: -0.0007792405989342499, sm: 0.002176751963566045 },
-    18: { intercept: 0.005040778965258568, Hf: 1.0079603975353542, zt: 1.0337876280201292, r0: -0.0817812993769097, qm: -0.0011654706465705775, sm: 0.0021316445438592244 },
-    24: { intercept: 0.007515615390319535, Hf: 1.0008143952813426, zt: 0.16785275852003428, r0: 0.783317552926506, qm: -0.0011401068455739768, sm: 0.0012319888038852939 },
+    6: { intercept: 0.0007061359066776248, Hf: 1.0049384150345702, zt: 0.885925791036484, r0: 0.08310658368591031, qm: -0.00023851529296034827, sm: 0.003024659674353174 },
+    12: { intercept: 0.0015862376480702423, Hf: 1.0060172843514614, zt: 0.9673410069298448, r0: -0.009883188359164538, qm: -0.0004675014250916673, sm: 0.00240011540476085 },
+    18: { intercept: 0.0021905838695362085, Hf: 1.0070474247845052, zt: 1.0215849536016195, r0: -0.07504853284547666, qm: -0.0007823929036037909, sm: 0.0022948891264084805 },
+    24: { intercept: 0.0046981277763179004, Hf: 1.001058555214054, zt: 0.16304087583328414, r0: 0.7855991581027109, qm: -0.0011172705713667335, sm: 0.0016495261892691968 },
   },
   lu_day_du: {
-    6: { intercept: 0.013343073644214136, MH: -0.011918557386257087, dMH6: 0.07188725070309936 },
-    12: { intercept: 0.19404879367941838, MH: -0.04299287262060066, dMH6: 0.0548940228603262 },
-    18: { intercept: 0.36681957308857427, MH: -0.07121005889565062, dMH6: 0.030564527813642616 },
-    24: { intercept: 0.5088022743652407, MH: -0.08944700094378709, dMH6: 0.00408712039709254 },
+    6: { intercept: -0.041688904063387114, MH: 0.002563070032236354, dMH6: 0.07173611790977429 },
+    12: { intercept: -0.04670394223145832, MH: -0.0021561942880736875, dMH6: 0.11641262835876277 },
+    18: { intercept: 0.1128535776624993, MH: -0.03141051725654214, dMH6: 0.10098508360796353 },
+    24: { intercept: 0.3149039012627523, MH: -0.06298337468462903, dMH6: 0.0549656773663019 },
   },
   lu_rut_gon: {
-    6: { intercept: -0.027226351035526543, MH: -0.009631558900128836, dMH6: 0.054661528851591264 },
-    12: { intercept: 0.2056995184357312, MH: -0.048679916507907636, dMH6: 0.07013844188603167 },
-    18: { intercept: 0.3241305180104356, MH: -0.06818749864047215, dMH6: 0.05876581249067237 },
-    24: { intercept: 0.5093821378124512, MH: -0.09001434643586757, dMH6: 0.003610863606566715 },
+    6: { intercept: 0.03566650212658911, MH: -0.0134914096747246, dMH6: 0.07595246764708485 },
+    12: { intercept: 0.03775048833070891, MH: -0.020555588788167864, dMH6: 0.0890883593072373 },
+    18: { intercept: 0.13613904739938665, MH: -0.04068759318262563, dMH6: 0.09760806100269662 },
+    24: { intercept: 0.28175109750942695, MH: -0.058766234617100295, dMH6: 0.03451141816915806 },
   },
 };
 const DAC_TRUNG = {
@@ -81,11 +86,13 @@ const DAC_TRUNG = {
 };
 // PHƯƠNG ÁN 2 (không có số liệu Tân Mỹ): triều điều hòa + mùa vụ + Mai Hóa + mưa
 const HE_SO_KHONG_TM = {
-  6: { intercept: 0.04159916750684755, Hf: 1.0256053778171723, sin1: -0.050463997872336984, cos1: 0.02896185851233565, sin2: -0.06478724079953353, cos2: -0.020688621246345573, MH: 0.2279400586097246, dMH6: -0.06256359507931054, MH2: -0.01967427318134511, lnMH: -0.03313857387920814, qm: 0.00015376388832263524, sm: 0.004326007774247563 },
-  12: { intercept: 0.037241279112528405, Hf: 0.8566996739922689, sin1: -0.04036421221017015, cos1: 0.021321463849735493, sin2: -0.059602294795079974, cos2: -0.016490639251543777, MH: 0.2805704702111197, dMH6: -0.12039723459699005, MH2: -0.028571168427352845, lnMH: -0.03084589195607486, qm: -0.0003805276953255427, sm: 0.0033364496311920296 },
-  18: { intercept: 0.10222884332970109, Hf: 0.8678993301978224, sin1: -0.04463518788159602, cos1: 0.02370501977018179, sin2: -0.061994136470605095, cos2: -0.019211067728050667, MH: 0.1835054796153335, dMH6: -0.04282371442903453, MH2: -0.015974427831960836, lnMH: -0.00200441444412781, qm: -0.0005915988632792999, sm: 0.0027440903007674767 },
-  24: { intercept: 0.022655610935226018, Hf: 1.0517308032634538, sin1: -0.04918165302104968, cos1: 0.029179819466593634, sin2: -0.06351715416799009, cos2: -0.02095925915892183, MH: 0.24344055280923804, dMH6: -0.06597305558755394, MH2: -0.024559435543531183, lnMH: -0.0408995089387248, qm: -0.0005408818245555511, sm: 0.002404128199549404 },
+  6: { intercept: 0.024863798687717747, Hf: 1.0741773536779156, sin1: -0.04383110469447914, cos1: 0.02409213073412075, sin2: -0.06206173350153824, cos2: -0.01645006621137781, MH: 0.278840550006828, dMH6: -0.08397789629413906, MH2: -0.023964489098200235, lnMH: -0.038710167012398634, qm: -0.00011339726883177153, sm: 0.004030961653565717 },
+  12: { intercept: 0.04246880088880735, Hf: 1.0438345078041986, sin1: -0.046695439342455625, cos1: 0.02737755262053711, sin2: -0.06354175615414197, cos2: -0.01856306587612974, MH: 0.23582418281294437, dMH6: -0.07163863529147502, MH2: -0.020261801717695416, lnMH: -0.03107946910897036, qm: -5.1233012579459185e-05, sm: 0.0028690466804442132 },
+  18: { intercept: 0.04598547492558126, Hf: 0.8468001413319463, sin1: -0.03993583208935904, cos1: 0.0227899773356639, sin2: -0.06017410274102697, cos2: -0.015877246031595443, MH: 0.25912982763305276, dMH6: -0.1326595968194283, MH2: -0.025548873614462467, lnMH: -0.02629260234543573, qm: -0.00029452143681599766, sm: 0.00258098356149111 },
+  24: { intercept: 0.10015746771673219, Hf: 0.7824051211394241, sin1: -0.034021516381181616, cos1: 0.016159222059319793, sin2: -0.057281139505786824, cos2: -0.014190080714658887, MH: 0.23537099579712586, dMH6: -0.04255937704262535, MH2: -0.023199229833524973, lnMH: 0.0013471906530877285, qm: -0.0009285946789633183, sm: 0.0022679190970718065 },
 };
+// ƯỚC Tân Mỹ từ Đồng Hới (hồi quy 2019-2025): TM = a + b1*DH(t) + b2*DH(t-1) + b3*MH(t) + b4*min(MH,8)^2
+const ANH_XA_DONGHOI = { intercept: -0.06258828794460769, DH: 0.9965772462758623, DH1: -0.12790490847063127, MH: 0.07106993805182439, MH2: -0.018216620485291247 };
 const DAC_TRUNG_KHONG_TM = ["Hf", "sin1", "cos1", "sin2", "cos2", "MH", "dMH6", "MH2", "lnMH", "qm", "sm"];
 const T0_DIEU_HOA_MS = Date.UTC(2000, 0, 1) - 7 * 3600000; // 00h 01/01/2000 giờ VN, ms UTC thật
 const RAD = Math.PI / 180;
@@ -132,8 +139,8 @@ async function fetchKttvSeries(station, tinhtong) {
 }
 
 // Loại số liệu mực nước lỗi như lúc huấn luyện: ngoài khoảng hợp lý, hoặc >= 8 giờ liên tiếp không đổi (máy treo).
-function loaiLoi(series) {
-  const ok = series.map((p) => p.v >= -1.6 && p.v <= 3.0);
+function loaiLoi(series, cao = 3.0) {
+  const ok = series.map((p) => p.v >= -1.6 && p.v <= cao);
   let i = 0;
   while (i < series.length) {
     let j = i;
@@ -258,61 +265,92 @@ export default async (request) => {
     const heSoParam = parseFloat(url.searchParams.get('hesoHieuChinh'));
     const heSoHieuChinh = Number.isFinite(heSoParam) && heSoParam > 0 ? heSoParam : 1.0;
     const epKhongTanMy = url.searchParams.get('khongTanMy') === '1'; // ép dùng phương án 2 (thử)
+    const epKhongDongHoi = url.searchParams.get('khongDongHoi') === '1'; // ép bỏ phương án 2 (thử)
     const epKhongMaiHoa = url.searchParams.get('khongMaiHoa') === '1'; // chỉ để thử/so sánh
 
-    const [tmRaw, mhRaw, ...rainArr] = await Promise.all([
+    const [tmRaw, mhRaw, dhRaw, ...rainArr] = await Promise.all([
       fetchKttvSeries(TANMY, '0'),
       fetchKttvSeries(MAIHOA, '0'),
+      fetchKttvSeries(DONGHOI, '0'),
       ...RAIN_STATIONS.map((s) => fetchKttvSeries(s, '1')),
     ]);
     const tmSeries = loaiLoi(tmRaw); const mhSeries = mhRaw.filter((p) => p.v > -1 && p.v < 15);
+    const dhSeries = loaiLoi(dhRaw, 4);
+    const mh = theoGioMap(mhSeries);
+    const dh = theoGioMap(dhSeries);
+    const mhTai = (k) => (epKhongMaiHoa ? null : (mh.get(k) ?? mh.get(k - 1) ?? mh.get(k + 1) ?? null));
 
-    // Chọn phương án: 1 = có số liệu Tân Mỹ đủ dùng; 2 = không có (hỏng máy / cũ / thiếu)
-    let lyDoKhongTM = epKhongTanMy ? 'chế độ thử: bỏ qua số liệu Tân Mỹ' : null;
-    let current = null; let Tc = null; let tm = null;
-    let r0 = null; let zt = 0; let r3 = null; let r6 = null; let r12 = null; let r24 = null; let dayDu = false;
+    // Từ chuỗi "thực đo" (hoặc ước) của Tân Mỹ tính phần dư so với triều điều hòa
+    const tinhPhanDu = (tmMap, Tc) => {
+      const phanDu = (lag) => { const v = tmMap.get(Tc - lag); return v == null ? null : v - trieuDieuHoa((Tc - lag) * 3600000); };
+      const r0 = phanDu(0);
+      if (r0 == null) return { loi: `chưa có số liệu đúng giờ ${gioVN(Tc * 3600000)}` };
+      const cuaSo = [];
+      for (let k = 0; k < 24; k++) { const r = phanDu(k); if (r != null) cuaSo.push(r); }
+      if (cuaSo.length < 12) return { loi: `chỉ có ${cuaSo.length}/24 số liệu giờ trong 24 giờ qua (cần ít nhất 12)` };
+      const zt = cuaSo.reduce((x, y) => x + y, 0) / cuaSo.length;
+      const r3 = phanDu(3); const r6 = phanDu(6); const r12 = phanDu(12); const r24 = phanDu(24);
+      return { r0, zt, r3, r6, r12, r24, dayDu: [r3, r6, r12, r24].every((v) => v != null) };
+    };
+    const hienHanh = (series, loiRong) => {
+      if (series.length === 0) return { loi: series.lyDo || loiRong };
+      const cur = series[series.length - 1]; const T1 = Math.round(cur.t / 3600000);
+      if (Math.abs(cur.t - T1 * 3600000) > 30 * 60000 || Date.now() - cur.t > 6 * 3600000) {
+        return { loi: `số liệu hợp lệ mới nhất là lúc ${gioVN(cur.t)}, đã cũ hoặc lệch giờ` };
+      }
+      return { cur, Tc: T1 };
+    };
+
+    // Phương án 1: có số liệu quan trắc Tân Mỹ
+    let phuongAn = 'co_tanmy'; let lyDoKhongTM = epKhongTanMy ? 'chế độ thử: bỏ qua số liệu Tân Mỹ' : null;
+    let Tc = null; let current = null; let pd = null;
     if (!lyDoKhongTM) {
-      if (tmSeries.length === 0) lyDoKhongTM = tmSeries.lyDo || tmRaw.lyDo || 'không có số liệu Tân Mỹ';
+      const h1 = hienHanh(tmSeries, 'không có số liệu Tân Mỹ');
+      if (h1.loi) lyDoKhongTM = h1.loi;
       else {
-        current = tmSeries[tmSeries.length - 1];
-        const T1 = Math.round(current.t / 3600000);
-        if (Math.abs(current.t - T1 * 3600000) > 30 * 60000 || Date.now() - current.t > 6 * 3600000) {
-          const nghiLoi = tmRaw.length > 0 && tmRaw[tmRaw.length - 1].t > current.t;
-          lyDoKhongTM = `số liệu Tân Mỹ hợp lệ mới nhất là lúc ${gioVN(current.t)}, đã cũ hoặc lệch giờ${nghiLoi ? ' (các số liệu sau đó nghi là lỗi cảm biến nên bị loại)' : ''}`;
-        } else {
-          Tc = T1; tm = theoGioMap(tmSeries);
-          const phanDu = (lag) => { const v = tm.get(Tc - lag); return v == null ? null : v - trieuDieuHoa((Tc - lag) * 3600000); };
-          r0 = phanDu(0);
-          const cuaSo = [];
-          for (let k = 0; k < 24; k++) { const r = phanDu(k); if (r != null) cuaSo.push(r); }
-          if (r0 == null) lyDoKhongTM = `Tân Mỹ chưa có số liệu đúng giờ ${gioVN(Tc * 3600000)}`;
-          else if (cuaSo.length < 12) lyDoKhongTM = `Tân Mỹ chỉ có ${cuaSo.length}/24 số liệu giờ trong 24 giờ qua (cần ít nhất 12)`;
-          else {
-            zt = cuaSo.reduce((a, b) => a + b, 0) / cuaSo.length;
-            r3 = phanDu(3); r6 = phanDu(6); r12 = phanDu(12); r24 = phanDu(24);
-            dayDu = [r3, r6, r12, r24].every((v) => v != null);
-          }
-        }
+        const p1 = tinhPhanDu(theoGioMap(tmSeries), h1.Tc);
+        if (p1.loi) lyDoKhongTM = `Tân Mỹ ${p1.loi}`;
+        else { Tc = h1.Tc; current = h1.cur; pd = p1; }
       }
     }
-    const coTM = !lyDoKhongTM;
-    const tang = dayDu ? 'day_du' : 'rut_gon';
-    const mh = theoGioMap(mhSeries);
-    if (!coTM) {
-      // Phương án 2: giờ phát tin theo số liệu Mai Hóa mới nhất
+    // Phương án 2: ước Tân Mỹ từ Đồng Hới (+ Mai Hóa), coi là thực đo
+    let lyDoKhongDH = null; let tmUoc = null;
+    if (!pd) {
+      phuongAn = 'uoc_tu_donghoi';
+      const h2 = epKhongDongHoi ? { loi: 'chế độ thử: bỏ qua số liệu Đồng Hới' } : hienHanh(dhSeries, 'không có số liệu Đồng Hới');
+      if (h2.loi) lyDoKhongDH = `Đồng Hới: ${h2.loi}`;
+      else {
+        tmUoc = new Map();
+        for (let k = 0; k <= 30; k++) {
+          const t = h2.Tc - k; const d0 = dh.get(t); const d1 = dh.get(t - 1); const m0 = mhTai(t);
+          if (d0 == null || d1 == null || m0 == null) continue;
+          const A = ANH_XA_DONGHOI;
+          tmUoc.set(t, A.intercept + A.DH * d0 + A.DH1 * d1 + A.MH * m0 + A.MH2 * Math.min(m0, 8) ** 2);
+        }
+        const p2 = tinhPhanDu(tmUoc, h2.Tc);
+        if (p2.loi) lyDoKhongDH = `ước Tân Mỹ từ Đồng Hới ${p2.loi}`;
+        else { Tc = h2.Tc; pd = p2; current = { v: tmUoc.get(Tc) }; }
+      }
+    }
+    // Phương án 3 (dự phòng cuối): không có Tân Mỹ lẫn Đồng Hới — chỉ triều + mùa vụ + Mai Hóa + mưa
+    if (!pd) {
+      phuongAn = 'khong_tanmy';
       if (mhSeries.length === 0) {
-        return json({ available: false, reason: `Không có số liệu Tân Mỹ (${lyDoKhongTM}) và cũng không lấy được mực nước Mai Hóa nên không dự báo được` });
+        return json({ available: false, reason: `Không có số liệu Tân Mỹ (${lyDoKhongTM}), Đồng Hới (${lyDoKhongDH}) và cũng không lấy được mực nước Mai Hóa nên không dự báo được` });
       }
       const cm = mhSeries[mhSeries.length - 1];
       Tc = Math.round(cm.t / 3600000);
       if (Math.abs(cm.t - Tc * 3600000) > 30 * 60000 || Date.now() - cm.t > 6 * 3600000) {
-        return json({ available: false, reason: `Không có số liệu Tân Mỹ (${lyDoKhongTM}); số liệu Mai Hóa mới nhất là lúc ${gioVN(cm.t)}, đã cũ hoặc lệch giờ — không dự báo.` });
+        return json({ available: false, reason: `Không có số liệu Tân Mỹ (${lyDoKhongTM}) và Đồng Hới (${lyDoKhongDH}); số liệu Mai Hóa mới nhất là lúc ${gioVN(cm.t)}, đã cũ hoặc lệch giờ — không dự báo.` });
       }
     }
-    const mhNow = epKhongMaiHoa ? null : (mh.get(Tc) ?? mh.get(Tc - 1) ?? null);
+    const coTM = phuongAn !== 'khong_tanmy'; // có "chuỗi Tân Mỹ" (thực đo hoặc ước) để lấy phần dư
+    const { r0 = null, zt = 0, r3 = null, r6 = null, r12 = null, r24 = null, dayDu = false } = pd || {};
+    const tang = dayDu ? 'day_du' : 'rut_gon';
+    const mhNow = mhTai(Tc);
     const mh6 = epKhongMaiHoa ? null : (mh.get(Tc - 6) ?? mh.get(Tc - 7) ?? null);
     if (!coTM && (mhNow == null || mh6 == null)) {
-      return json({ available: false, reason: `Không có số liệu Tân Mỹ (${lyDoKhongTM}) và Mai Hóa thiếu số liệu hiện tại hoặc 6 giờ trước nên không dự báo được` });
+      return json({ available: false, reason: `Không có số liệu Tân Mỹ (${lyDoKhongTM}) và Đồng Hới (${lyDoKhongDH}); Mai Hóa thiếu số liệu hiện tại hoặc 6 giờ trước nên không dự báo được` });
     }
     const cheLu = coTM && mhNow != null && mh6 != null && mhNow >= NGUONG_LU_MAI_HOA;
     const luMaiHoa = mhNow != null && mhNow >= NGUONG_LU_MAI_HOA;
@@ -379,13 +417,16 @@ export default async (request) => {
 
     return json({
       available: true,
-      phuongAn: coTM ? 'co_tanmy' : 'khong_tanmy',
+      phuongAn,
       lyDoKhongTanMy: lyDoKhongTM,
+      lyDoKhongDongHoi: lyDoKhongDH,
+      donghoiHienTai: phuongAn === 'uoc_tu_donghoi' ? (dh.get(Tc) != null ? r2(dh.get(Tc)) : null) : null,
       cheDo: !coTM ? 'khong_tanmy' : (cheLu ? 'lu_mai_hoa' : 'dieu_hoa'),
       luMaiHoa,
       tang: coTM ? tang : null,
       thoiDiemHienTai: Tc * 3600000,
-      tanmyHienTai: coTM ? r2(current.v) : null,
+      tanmyHienTai: phuongAn === 'co_tanmy' ? r2(current.v) : null,
+      tanmyUocHienTai: phuongAn === 'uoc_tu_donghoi' ? r2(current.v) : null,
       maihoaHienTai: mhNow != null ? r2(mhNow) : null,
       thieuMaiHoa: mhNow == null,
       nguongLuMaiHoa: NGUONG_LU_MAI_HOA,
@@ -399,7 +440,7 @@ export default async (request) => {
       duongTrieu: duongTrieu.map((p) => ({ h: p.h, v: r2(p.v) })),
       trieuCao: diem(cao),
       trieuThap: diem(thap),
-      nhanDinhDinh: nhanDienDinh(coTM ? r2(current.v) : r2(duongTrieu[0].v), duBaoTheoMoc),
+      nhanDinhDinh: nhanDienDinh(r2(coTM ? current.v : duongTrieu[0].v), duBaoTheoMoc),
     });
   } catch (e) {
     return json({ available: false, reason: `Lỗi: ${e.message}` });
