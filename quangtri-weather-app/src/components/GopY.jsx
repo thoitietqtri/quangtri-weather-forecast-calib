@@ -5,8 +5,6 @@ import './GopY.css';
 // Phần xem góp ý (quản trị) chỉ mở được khi nhập mật khẩu: bấm "🔒 Quản trị" cuối khung góp ý, hoặc mở địa chỉ app kèm #quan-tri-gop-y.
 const API = '/.netlify/functions/feedback';
 const HASH_QUAN_TRI = '#quan-tri-gop-y';
-const MUC = ['Dự báo thời tiết xã/phường', 'Mưa thực đo', 'Mực nước thực đo', 'Dự báo mực nước các trạm', 'Radar', 'Trợ lý', 'Giao diện / cài app', 'Khác'];
-const LOAI = ['Sai số / số liệu', 'Lỗi hiển thị', 'Đề xuất tính năng', 'Khác'];
 const KHOA_MK = 'gopy.matkhau';
 
 const luu = (k, v) => { try { if (v == null) window.sessionStorage.removeItem(k); else window.sessionStorage.setItem(k, v); } catch { /* bỏ qua */ } };
@@ -21,8 +19,6 @@ async function goi(body, matKhau) {
 }
 
 function KhungGui({ nguCanh, onDong, moQuanTri }) {
-  const [muc, setMuc] = useState(MUC[0]);
-  const [loai, setLoai] = useState(LOAI[0]);
   const [noiDung, setNoiDung] = useState('');
   const [lienHe, setLienHe] = useState('');
   const [website, setWebsite] = useState(''); // ô ẩn chặn bot
@@ -35,7 +31,7 @@ function KhungGui({ nguCanh, onDong, moQuanTri }) {
     if (noiDung.trim().length < 5) { setLoi('Anh/chị vui lòng viết nội dung góp ý (ít nhất 5 ký tự).'); return; }
     setDangGui(true);
     try {
-      const j = await goi({ act: 'gui', muc, loai, noiDung, lienHe, nguCanh, website });
+      const j = await goi({ act: 'gui', noiDung, lienHe, nguCanh, website });
       if (j.ok) { setXong(true); setNoiDung(''); } else setLoi(j.loi || 'Không gửi được, mời thử lại.');
     } catch (e) { setLoi(e.message); }
     setDangGui(false);
@@ -59,12 +55,6 @@ function KhungGui({ nguCanh, onDong, moQuanTri }) {
           </div>
         ) : (
           <>
-            <label className="gopy-lb">Góp ý về nội dung/chức năng
-              <select value={muc} onChange={(e) => setMuc(e.target.value)}>{MUC.map((m) => <option key={m}>{m}</option>)}</select>
-            </label>
-            <label className="gopy-lb">Loại góp ý
-              <select value={loai} onChange={(e) => setLoai(e.target.value)}>{LOAI.map((m) => <option key={m}>{m}</option>)}</select>
-            </label>
             <label className="gopy-lb">Nội dung góp ý
               <textarea rows={6} maxLength={1000} value={noiDung} onChange={(e) => setNoiDung(e.target.value)} placeholder="Anh/chị mô tả điều cần góp ý (càng cụ thể càng tốt)…" />
               <span className="gopy-dem">{noiDung.length}/1000</span>
@@ -90,8 +80,6 @@ function KhungQuanTri({ onDong }) {
   const [phien, setPhien] = useState(null); // { matKhau, vaiTro, danhSach, tong }
   const [loi, setLoi] = useState('');
   const [dang, setDang] = useState(false);
-  const [locMuc, setLocMuc] = useState('');
-  const [locLoai, setLocLoai] = useState('');
   const [locTT, setLocTT] = useState('');
   const [xacNhanXoa, setXacNhanXoa] = useState('');
   const [ghiChuNhap, setGhiChuNhap] = useState({});
@@ -125,7 +113,7 @@ function KhungQuanTri({ onDong }) {
   };
   const dangXuat = () => { luu(KHOA_MK, null); setPhien(null); setMk(''); };
 
-  const ds = phien ? phien.danhSach.filter((g) => (!locMuc || g.muc === locMuc) && (!locLoai || g.loai === locLoai) && (!locTT || g.trangThai === locTT)) : [];
+  const ds = phien ? phien.danhSach.filter((g) => (!locTT || g.trangThai === locTT)) : [];
   const admin = phien && phien.vaiTro === 'admin';
 
   return (
@@ -149,8 +137,6 @@ function KhungQuanTri({ onDong }) {
         ) : (
           <>
             <div className="gopy-loc">
-              <select value={locMuc} onChange={(e) => setLocMuc(e.target.value)}><option value="">Tất cả mục</option>{MUC.map((m) => <option key={m}>{m}</option>)}</select>
-              <select value={locLoai} onChange={(e) => setLocLoai(e.target.value)}><option value="">Tất cả loại</option>{LOAI.map((m) => <option key={m}>{m}</option>)}</select>
               <select value={locTT} onChange={(e) => setLocTT(e.target.value)}><option value="">Mọi trạng thái</option><option value="moi">Mới</option><option value="daxuly">Đã xử lý</option></select>
             </div>
             <div className="gopy-hang">
@@ -159,14 +145,14 @@ function KhungQuanTri({ onDong }) {
               <span className="gopy-dem">Hiện {ds.length}/{phien.danhSach.length}</span>
             </div>
             {loi && <div className="gopy-loi">⚠️ {loi}</div>}
-            {ds.length === 0 && <div className="gopy-trong">Chưa có góp ý nào khớp bộ lọc.</div>}
+            {ds.length === 0 && <div className="gopy-trong">Chưa có góp ý nào.</div>}
             {ds.map((g) => (
               <div key={g.id} className={`gopy-the${g.trangThai === 'daxuly' ? ' gopy-the--xong' : ''}`}>
                 <div className="gopy-the-dau">
-                  <b>{g.muc}</b><span className="gopy-chip">{g.loai}</span>
+                  <b>{g.thoiGian}</b>
                   <span className={`gopy-chip ${g.trangThai === 'daxuly' ? 'gopy-chip--xanh' : 'gopy-chip--cam'}`}>{g.trangThai === 'daxuly' ? 'Đã xử lý' : 'Mới'}</span>
                 </div>
-                <div className="gopy-the-gio">{g.thoiGian} · {g.thietBi}{g.nguCanh ? ` · ${g.nguCanh}` : ''}</div>
+                <div className="gopy-the-gio">{g.thietBi}{g.nguCanh ? ` · đang xem: ${g.nguCanh}` : ''}</div>
                 <div className="gopy-the-nd">{g.noiDung}</div>
                 {g.lienHe && <div className="gopy-the-lh">📞 Liên hệ: {g.lienHe}</div>}
                 {admin ? (

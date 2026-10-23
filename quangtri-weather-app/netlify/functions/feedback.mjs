@@ -8,7 +8,7 @@
 // Cả hai đặt trong Netlify > Site configuration > Environment variables, KHÔNG nằm trong code.
 //
 // Tất cả hành động dùng POST, body JSON { act, ... }:
-//   act=gui      (ai cũng gửi được)  { muc, loai, noiDung, lienHe, nguCanh, website }  — "website" là ô ẩn chặn bot, phải để trống
+//   act=gui      (ai cũng gửi được)  { noiDung, lienHe, nguCanh, website }  — "website" là ô ẩn chặn bot, phải để trống
 //   act=xem      (mật khẩu)          trả danh sách góp ý mới nhất trước
 //   act=capnhat  (admin)             { id, trangThai: 'moi'|'daxuly', ghiChu }
 //   act=xoa      (admin)             { id }
@@ -20,8 +20,6 @@
 import { getStore } from '@netlify/blobs';
 import { createHash, timingSafeEqual, randomBytes } from 'node:crypto';
 
-const MUC = ['Dự báo thời tiết xã/phường', 'Mưa thực đo', 'Mực nước thực đo', 'Dự báo mực nước các trạm', 'Radar', 'Trợ lý', 'Giao diện / cài app', 'Khác'];
-const LOAI = ['Sai số / số liệu', 'Lỗi hiển thị', 'Đề xuất tính năng', 'Khác'];
 const MAX_NOIDUNG = 1000;
 const MAX_NGAY = 5;
 const MAX_SAI_MK = 10;
@@ -78,10 +76,8 @@ export default async (request) => {
       if (n > MAX_NGAY) return json({ ok: false, loi: `Hôm nay đã gửi đủ ${MAX_NGAY} góp ý, mời anh/chị gửi tiếp vào ngày mai.` }, 429);
       const t = vnNow();
       const id = `${t.toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}-${randomBytes(3).toString('hex')}`;
-      const muc = MUC.includes(body.muc) ? body.muc : 'Khác';
-      const loai = LOAI.includes(body.loai) ? body.loai : 'Khác';
       await store.setJSON(`gy:${id}`, {
-        id, thoiGian: t.toISOString().slice(0, 19).replace('T', ' '), muc, loai, noiDung,
+        id, thoiGian: t.toISOString().slice(0, 19).replace('T', ' '), noiDung,
         lienHe: cat(body.lienHe, 100), nguCanh: cat(body.nguCanh, 300), thietBi: loaiThietBi(request.headers.get('user-agent')),
         trangThai: 'moi', ghiChu: '',
       });
@@ -99,7 +95,7 @@ export default async (request) => {
       const { blobs } = await store.list({ prefix: 'gy:' });
       const keys = blobs.map((b) => b.key).sort().reverse().slice(0, 500);
       const ds = (await Promise.all(keys.map((k) => store.get(k, { type: 'json' })))).filter(Boolean);
-      return json({ ok: true, vaiTro: vt, tong: blobs.length, danhSach: ds, muc: MUC, loai: LOAI });
+      return json({ ok: true, vaiTro: vt, tong: blobs.length, danhSach: ds });
     }
     if (vt !== 'admin') return json({ ok: false, loi: 'Mật khẩu này chỉ được xem, không được sửa hoặc xóa.' }, 403);
     const id = cat(body.id, 40);
