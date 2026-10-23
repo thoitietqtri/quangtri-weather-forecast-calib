@@ -18,6 +18,7 @@ import DuBaoMucNuoc from './DuBaoMucNuoc';
 import VisitCounter from './VisitCounter';
 import InstallButton from './InstallButton';
 import TroLyAI from './TroLyAI';
+import GopY from './GopY';
 
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
@@ -221,6 +222,7 @@ function MapComponent() {
   const [showRain, setShowRain] = useState(true);
   const [showRainTable, setShowRainTable] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showGopY, setShowGopY] = useState(false); // khung "Góp ý cho admin"
   const [showForecastTable, setShowForecastTable] = useState(false);
   const [mucNuocStations, setMucNuocStations] = useState([]);
   const [showMucNuoc, setShowMucNuoc] = useState(true);
@@ -592,10 +594,16 @@ function MapComponent() {
             <button onClick={() => { setShowDuBaoMucNuoc(true); setShowMenu(false); }}>
               🌊 Dự báo Mực nước 6/12/18/24h tới
             </button>
+            <button onClick={() => { setShowGopY(true); setShowMenu(false); }}>💬 Góp ý cho admin</button>
           </div>
         </div>
       )}
 
+      <GopY
+        mo={showGopY}
+        onDong={() => setShowGopY(false)}
+        nguCanh={[selectedName && `xã/phường ${selectedName}`, showRadar && 'ảnh radar', showRainTable && 'mưa thực đo theo thời đoạn', showRainHourlyTable && 'mưa thực đo theo giờ', showMucNuocTable && 'mực nước thực đo', showMucNuocChart && 'biểu đồ mực nước', showForecastTable && 'dự báo mưa/nhiệt/gió', showDuBaoMucNuoc && 'dự báo mực nước các trạm'].filter(Boolean).join(', ')}
+      />
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
       {showDuBaoMucNuoc && <DuBaoMucNuoc mauTheoMaTram={mauCapBaoDongTheoMaTram(mucNuocStations)} onClose={() => setShowDuBaoMucNuoc(false)} />}
       {showRainHourlyTable && <RainHourlyTable stations={rainHourlyStations} onClose={() => setShowRainHourlyTable(false)} />}

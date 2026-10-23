@@ -1,0 +1,38 @@
+.gopy-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.gopy-panel { width: 100%; max-width: 560px; max-height: 92vh; background: #13202e; color: #e6eef7; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; overflow: hidden; }
+.gopy-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.gopy-header h3 { margin: 0; font-size: 17px; }
+.gopy-sub { font-size: 12px; color: #9fb3c8; margin-top: 3px; }
+.gopy-close { background: #c62828; color: #fff; border: 0; border-radius: 50%; width: 34px; height: 34px; font-size: 16px; cursor: pointer; flex: none; }
+.gopy-body { padding: 12px 14px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.gopy-lb { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #b8c8d8; }
+.gopy-panel select, .gopy-panel input[type='text'], .gopy-panel input[type='password'], .gopy-panel textarea { width: 100%; box-sizing: border-box; background: #0c1722; color: #e6eef7; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 8px; padding: 9px 10px; font-size: 15px; font-family: inherit; }
+.gopy-panel textarea { resize: vertical; }
+.gopy-dem { font-size: 11px; color: #8aa0b5; }
+.gopy-an { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; opacity: 0; }
+.gopy-ngucanh { font-size: 12px; color: #8aa0b5; }
+.gopy-loi { font-size: 13px; color: #ffcc80; background: rgba(249, 168, 37, 0.14); border: 1px solid rgba(249, 168, 37, 0.6); border-radius: 8px; padding: 8px 10px; }
+.gopy-btn { background: #2e7d32; color: #fff; border: 0; border-radius: 8px; padding: 11px 14px; font-size: 15px; cursor: pointer; }
+.gopy-btn:disabled { opacity: 0.55; cursor: default; }
+.gopy-btn--phu { background: #37506a; }
+.gopy-btn--do { background: #b3261e; }
+.gopy-btn--nho { padding: 7px 10px; font-size: 13px; }
+.gopy-quantri { align-self: center; background: none; border: 0; color: #6f869b; font-size: 12px; cursor: pointer; padding: 6px; }
+.gopy-ok { display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+.gopy-loc { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.gopy-hang { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gopy-trong { text-align: center; color: #8aa0b5; padding: 20px 0; }
+.gopy-the { background: #0c1722; border: 1px solid rgba(255, 255, 255, 0.14); border-left: 4px solid #f9a825; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.gopy-the--xong { border-left-color: #43a047; opacity: 0.85; }
+.gopy-the-dau { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; }
+.gopy-chip { font-size: 11px; background: #27384a; border-radius: 10px; padding: 2px 8px; color: #cfe0f0; }
+.gopy-chip--xanh { background: #1b5e20; }
+.gopy-chip--cam { background: #8a5a00; }
+.gopy-the-gio { font-size: 11px; color: #8aa0b5; }
+.gopy-the-nd { white-space: pre-wrap; word-break: break-word; font-size: 14px; }
+.gopy-the-lh { font-size: 12px; color: #9fd0ff; }
+@media (max-width: 768px) {
+  .gopy-overlay { padding: 0; align-items: stretch; }
+  .gopy-panel { max-width: none; max-height: none; height: 100%; border-radius: 0; border: 0; padding-top: env(safe-area-inset-top, 0); }
+  .gopy-body { padding-bottom: 76px; } /* chừa chỗ cho nhãn "Powered by Netlify" */
+}
