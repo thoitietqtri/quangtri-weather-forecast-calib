@@ -4,6 +4,7 @@ import DongTamForecast from './DongTamForecast';
 import NhatLeForecast from './NhatLeForecast';
 import DongHoiForecast from './DongHoiForecast';
 import TanMyForecast from './TanMyForecast';
+import CuaVietForecast from './CuaVietForecast';
 import ThachHanForecast from './ThachHanForecast';
 import DongHaForecast from './DongHaForecast';
 import BenHaiForecast from './BenHaiForecast';
@@ -35,6 +36,7 @@ const LUU_VUC_TRAM = [
     { id: 'dakrong', ten: 'Đakrông', matram: '554500', ready: true },
     { id: 'dongha', ten: 'Đông Hà', matram: '554700', ready: true },
     { id: 'thachhan', ten: 'Thạch Hãn', matram: '554600', ready: true },
+    { id: 'cuaviet', ten: 'Cửa Việt', matram: '554800', ready: true },
   ] },
 ];
 
@@ -63,6 +65,7 @@ function KhungTram({ id, onClose }) {
     case 'lethuy': return <NhatLeForecast tram={id} onClose={onClose} />;
     case 'donghoi': return <DongHoiForecast onClose={onClose} />;
     case 'tanmy': return <TanMyForecast onClose={onClose} />;
+    case 'cuaviet': return <CuaVietForecast onClose={onClose} />;
     case 'dakrong':
     case 'thachhan': return <ThachHanForecast tram={id} onClose={onClose} />;
     case 'dongha': return <DongHaForecast onClose={onClose} />;
