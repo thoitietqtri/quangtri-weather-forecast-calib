@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import MaiHoaForecast from './MaiHoaForecast';
 import DongTamForecast from './DongTamForecast';
 import NhatLeForecast from './NhatLeForecast';
+import DongHoiForecast from './DongHoiForecast';
 import ThachHanForecast from './ThachHanForecast';
 import DongHaForecast from './DongHaForecast';
 import BenHaiForecast from './BenHaiForecast';
@@ -22,7 +23,7 @@ const LUU_VUC_TRAM = [
   { song: 'Sông Nhật Lệ', trams: [
     { id: 'kiengiang', ten: 'Kiến Giang', matram: '555500', ready: true },
     { id: 'lethuy', ten: 'Lệ Thủy', matram: '556100', ready: true },
-    { id: 'donghoi', ten: 'Đồng Hới', matram: '557600', ready: false },
+    { id: 'donghoi', ten: 'Đồng Hới', matram: '557600', ready: true },
   ] },
   { song: 'Sông Bến Hải', trams: [
     { id: 'giavong', ten: 'Gia Vòng', matram: '554900', ready: true },
@@ -58,6 +59,7 @@ function KhungTram({ id, onClose }) {
     case 'maihoa': return <MaiHoaForecast onClose={onClose} />;
     case 'kiengiang':
     case 'lethuy': return <NhatLeForecast tram={id} onClose={onClose} />;
+    case 'donghoi': return <DongHoiForecast onClose={onClose} />;
     case 'dakrong':
     case 'thachhan': return <ThachHanForecast tram={id} onClose={onClose} />;
     case 'dongha': return <DongHaForecast onClose={onClose} />;
