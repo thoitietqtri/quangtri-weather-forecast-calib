@@ -79,6 +79,12 @@
     margin-right: -18px;
     border-radius: 0 !important;
   }
+
+  /* Chừa chỗ cuối thân khung để nhãn Netlify nổi ở góc dưới không che chữ cuối cùng khi cuộn hết */
+  .dubao-co-thanh-chon .dongtam-forecast-body,
+  .dubao-co-thanh-chon .maihoa-forecast-body {
+    padding-bottom: 76px;
+  }
 }
 
 /* ---- Thanh chọn trạm ---- */
