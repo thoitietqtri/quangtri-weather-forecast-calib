@@ -77,7 +77,7 @@ export default function ThachHanForecast({ onClose, tram = 'thachhan' }) {
               {duoiNguong && (
                 <div className="dongtam-forecast-empty">
                   ✅ Hiện chưa có lũ ({cfg.ten} dưới {cfg.nguongMoHinh}m).{' '}
-                  {tram === 'thachhan' ? 'Thạch Hãn chịu ảnh hưởng triều: dự báo dùng mô hình triều, không dùng mưa.' : 'Dự báo dùng mô hình riêng cho mực nước thấp.'}
+                  {tram === 'thachhan' ? 'Thạch Hãn chịu ảnh hưởng triều: dự báo dùng hàm điều hòa triều của trạm, mực nước thực đo gần nhất và mưa.' : 'Dự báo dùng mô hình riêng cho mực nước thấp.'}
                 </div>
               )}
 
