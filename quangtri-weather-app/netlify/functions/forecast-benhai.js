@@ -7,8 +7,8 @@
 //       Mô hình chính dùng mưa Vĩnh Ô (thượng nguồn; huấn luyện 03/2019-2026). Thiếu Vĩnh Ô thì dùng mô hình dự phòng theo mưa tại Gia Vòng (2011-2026).
 //     Dưới 3.0 m: cùng dạng phương trình, huấn luyện riêng cho nước thấp (mưa tại Gia Vòng).
 //   Hiền Lương (chịu triều):
-//     Ngày thường (Gia Vòng < 3.0 m và Hiền Lương < 1.0 m): điều hòa triều 9 thành phần (M2, S2, K1, O1, N2, K2, P1, Q1, M4) tại thời điểm dự báo
-//       + mực nước Hiền Lương + cường suất 6h + mực nước Cửa Việt (554800, trạm triều).
+//     Ngày thường (Gia Vòng < 3.0 m và Hiền Lương < 1.0 m): hàm điều hòa 12 phân triều của chính Hiền Lương + phần dư thực đo gần nhất
+//       (xem khối "NGÀY THƯỜNG" bên dưới). Thiếu số liệu thì dùng hồi quy cũ: điều hòa 9 phân triều + mực nước Hiền Lương + cường suất 6h + Cửa Việt (554800).
 //     Có lũ: thêm mực nước + cường suất Gia Vòng, mưa TB (Gia Vòng, Hiền Lương) và mưa Vĩnh Ô đã qua 6/24/48h, mưa dự báo đến mốc.
 //       Thiếu Vĩnh Ô thì bỏ phần mưa Vĩnh Ô.
 // Mưa dự báo = ECMWF IFS (Open-Meteo) x hệ số hiệu chỉnh.
@@ -89,6 +89,130 @@ const MODEL_HL_LU_V = {
 // Pha gốc của các thành phần triều (giờ VN, 00:00 01/01/2013) và chu kỳ (giờ)
 const T0_VN = Date.UTC(2013, 0, 1, 0, 0, 0);
 const TIDE_PERIODS = [12.4206, 12.0, 23.9345, 25.8193, 12.6583, 11.9672, 24.0659, 26.8684, 6.2103];
+
+
+// ===== NGÀY THƯỜNG (chịu triều): HÀM ĐIỀU HÒA CỦA CHÍNH HIỀN LƯƠNG =====
+// Hằng số và hệ số sinh từ tinh-he-so-dongha-hienluong.py (he-so-dongha-hienluong.json). Gốc thời gian: 00h 01/01/2000 giờ VN.
+// Mực nước dự báo = triều điều hòa tại thời điểm dự báo + hồi quy theo phần dư thực đo gần nhất (giờ 0/3/6/12/24, TB 24 giờ) + mưa lưu vực
+// (qm: mưa 24 giờ đã qua; sm: mưa dự báo đến mốc, đã nhân hệ số hiệu chỉnh).
+// Ngày thường = Hiền Lương dưới 1,0 m và Gia Vòng dưới 3,0 m. Mưa lưu vực = trung bình Gia Vòng và Hiền Lương. Không dùng Cửa Việt (kiểm nghiệm cho thấy thêm Cửa Việt không cải thiện).
+// Thiếu số liệu mực nước thì tự hạ xuống tầng rút gọn; thiếu phần dư, thiếu mưa đã qua (dưới 19/24 giờ) hoặc mưa dự báo thì dùng mô hình hồi quy cũ.
+const PHAN_TRIEU_NT = [
+  { ten: 'Q1', w: 13.3986609, a: 0.0396126319498779, b: 0.0009566797482125785 },
+  { ten: 'O1', w: 13.9430356, a: 0.007269395485186025, b: -0.15819135522998432 },
+  { ten: 'P1', w: 14.9589314, a: -0.01034667971238482, b: 0.023504754725834184 },
+  { ten: 'K1', w: 15.0410686, a: -0.01523217973932356, b: 0.06864900469218632 },
+  { ten: 'N2', w: 28.4397295, a: 0.029686875770569002, b: -0.03302386404353962 },
+  { ten: 'M2', w: 28.9841042, a: -0.17147515745708142, b: -0.13237214134494227 },
+  { ten: 'S2', w: 30.0, a: 0.0366737564805619, b: 0.03858960052596837 },
+  { ten: 'K2', w: 30.0821373, a: -0.013477123663544767, b: -0.024258575502211187 },
+  { ten: 'M4', w: 57.9682084, a: 0.007131177122051972, b: -0.00013809401068116996 },
+  { ten: 'MS4', w: 58.9841042, a: -0.004124146947012582, b: -0.0007439858921240931 },
+  { ten: 'MN4', w: 57.4238337, a: 6.899746682804487e-05, b: 0.002847993345036843 },
+  { ten: 'M6', w: 86.9523127, a: 0.002773607155791491, b: 0.0004040145073741794 },
+];
+const HE_SO_NT = {
+  day_du: {
+    6: { intercept: -0.0004167224673741487, Hf: 1.0012163448528806, zt: 2.212473870351731, r0: 0.323697074699618, r3: -0.2516068419756724, r6: -0.24684835777144895, r12: -0.6450234472264443, r24: -0.4509529063066544, qm: 0.0005272216339133471, sm: 0.002574415642973073 },
+    12: { intercept: -0.0008226463706828067, Hf: 0.998342802975679, zt: 0.48309241199606395, r0: 0.4112810613773353, r3: 0.04713540046857425, r6: -0.1960747875294193, r12: 0.4659624819920836, r24: -0.29414817228960016, qm: 0.0003593011285521183, sm: 0.0030047789042317594 },
+    18: { intercept: -0.0014183867956994774, Hf: 0.9997351310899569, zt: 0.4494919419237106, r0: 0.3210094932097451, r3: -0.3220002726704341, r6: 0.6911826032744622, r12: -0.03387477219899454, r24: -0.21401984376385078, qm: 0.00018422850385924825, sm: 0.0031162026057431646 },
+    24: { intercept: -0.0014305750023018537, Hf: 0.9968627259154168, zt: 0.06775278608723853, r0: 0.6679253447079304, r3: 0.29079024043127716, r6: -0.04532213372287298, r12: 0.0278653028794709, r24: -0.12244855495703616, qm: -0.00017607122827030926, sm: 0.002894199331122165 },
+  },
+  rut_gon: {
+    6: { intercept: -0.0015110999642005598, Hf: 0.9966034921829694, zt: 0.7815361345642368, r0: 0.15085707104910545, qm: 0.0007463484209267805, sm: 0.0028513952850475486 },
+    12: { intercept: -0.0023503827100551577, Hf: 0.9953511414990803, zt: 0.5744847190077071, r0: 0.339673458134344, qm: 0.0006221738493607564, sm: 0.003028296467592912 },
+    18: { intercept: -0.0032021583514253993, Hf: 0.9962074284182427, zt: 0.8176983217485176, r0: 0.05857711816974093, qm: 0.0004870955807320167, sm: 0.003275663604406901 },
+    24: { intercept: -0.0022822305206617235, Hf: 0.9981273194718088, zt: 0.133678897306583, r0: 0.7475982413834263, qm: -5.251907571870077e-05, sm: 0.0029399349614249487 },
+  },
+};
+const DAC_TRUNG_NT = {
+  day_du: ['Hf', 'zt', 'r0', 'r3', 'r6', 'r12', 'r24', 'qm', 'sm'],
+  rut_gon: ['Hf', 'zt', 'r0', 'qm', 'sm'],
+};
+const T0_DIEU_HOA_MS = Date.UTC(2000, 0, 1) - 7 * 3600000; // 00h 01/01/2000 giờ VN, ms UTC thật
+const RAD = Math.PI / 180;
+
+// (f, u[rad]) hiệu chỉnh nút (Schureman rút gọn)
+function heSoNut(h, ten) {
+  const d = (h - 19) / 24;
+  const N = (125.0445479 - 0.0529539222 * d) * RAD;
+  const c1 = Math.cos(N); const c2 = Math.cos(2 * N); const c3 = Math.cos(3 * N);
+  const s1 = Math.sin(N); const s2 = Math.sin(2 * N); const s3 = Math.sin(3 * N);
+  const m2 = () => [1.0004 - 0.0373 * c1 + 0.0002 * c2, -2.14 * s1 * RAD];
+  switch (ten) {
+    case 'M2': case 'N2': case 'MS4': return m2();
+    case 'O1': case 'Q1': return [1.0089 + 0.1871 * c1 - 0.0147 * c2 + 0.0014 * c3, (10.80 * s1 - 1.34 * s2 + 0.19 * s3) * RAD];
+    case 'K1': return [1.0060 + 0.1150 * c1 - 0.0088 * c2 + 0.0006 * c3, (-8.86 * s1 + 0.68 * s2 - 0.07 * s3) * RAD];
+    case 'K2': return [1.0241 + 0.2863 * c1 + 0.0083 * c2 - 0.0015 * c3, (-17.74 * s1 + 0.68 * s2 - 0.04 * s3) * RAD];
+    case 'M4': case 'MN4': { const [f, u] = m2(); return [f * f, 2 * u]; }
+    case 'M6': { const [f, u] = m2(); return [f * f * f, 3 * u]; }
+    default: return [1, 0];
+  }
+}
+// Thủy triều điều hòa tại Hiền Lương (m, quanh mực nền) tại thời điểm tMs (ms UTC thật)
+function trieuDieuHoa(tMs) {
+  const h = (tMs - T0_DIEU_HOA_MS) / 3600000;
+  let tong = 0;
+  for (const c of PHAN_TRIEU_NT) {
+    const [f, u] = heSoNut(h, c.ten);
+    const x = c.w * RAD * h + u;
+    tong += f * (c.a * Math.cos(x) + c.b * Math.sin(x));
+  }
+  return tong;
+}
+// Bỏ số liệu lỗi: ngoài khoảng hợp lý và đoạn >= 8 giờ liên tiếp không đổi (máy treo) — giống lúc huấn luyện
+function loaiLoiNT(series, cao = 4) {
+  const ok = series.map((p) => p.v >= -1.6 && p.v <= cao);
+  let i = 0;
+  while (i < series.length) {
+    let j = i;
+    while (j + 1 < series.length && series[j + 1].v === series[i].v) j++;
+    if (j - i + 1 >= 8) for (let k = i; k <= j; k++) ok[k] = false;
+    i = j + 1;
+  }
+  return series.filter((_, k) => ok[k]);
+}
+function theoGioMap(series) {
+  const m = new Map(); const lech = new Map();
+  for (const p of series) {
+    const k = Math.round(p.t / 3600000);
+    const d = Math.abs(p.t - k * 3600000);
+    if (!lech.has(k) || d < lech.get(k)) { m.set(k, p.v); lech.set(k, d); }
+  }
+  return m;
+}
+// Phần dư thực đo so với triều điều hòa tại giờ phát tin Tc (chỉ số giờ UTC thật). null nếu chưa đủ số liệu.
+function phanDuTram(series) {
+  const sach = loaiLoiNT(series);
+  if (sach.length === 0) return null;
+  const last = sach[sach.length - 1];
+  const Tc = Math.round(last.t / 3600000);
+  if (Math.abs(last.t - Tc * 3600000) > 30 * 60000) return null;
+  const m = theoGioMap(sach);
+  const pd = (lag) => { const v = m.get(Tc - lag); return v == null ? null : v - trieuDieuHoa((Tc - lag) * 3600000); };
+  const r0 = pd(0);
+  if (r0 == null) return null;
+  const cuaSo = [];
+  for (let k = 0; k < 24; k++) { const r = pd(k); if (r != null) cuaSo.push(r); }
+  if (cuaSo.length < 12) return null;
+  return { Tc, r0, r3: pd(3), r6: pd(6), r12: pd(12), r24: pd(24), zt: cuaSo.reduce((a, b) => a + b, 0) / cuaSo.length };
+}
+// Mưa lưu vực 24 giờ đã qua đến giờ Tc: qm = tổng (mm); du = false nếu thiếu quá 20% số giờ có số liệu (mô hình được huấn luyện trên mẫu đủ mưa)
+function mua24NT(byHour, Tc) {
+  let n = 0;
+  for (let h = 0; h < 24; h++) { const v = byHour.get((Tc - h) * 3600000); if (v && v.length) n++; }
+  return { qm: sumRainPast(byHour, Tc * 3600000, 24), du: n >= 19 };
+}
+// Dự báo ngày thường theo hàm điều hòa; sm = mưa dự báo đến mốc L (mm, đã nhân hệ số). Trả { y, moHinh } hoặc null nếu thiếu mưa
+function duBaoNgayThuongDieuHoa(d, L, sm) {
+  if (!d.du || sm == null) return null;
+  const tang = [d.r3, d.r6, d.r12, d.r24].every((v) => v != null) ? 'day_du' : 'rut_gon';
+  const c = HE_SO_NT[tang][L];
+  const x = { Hf: trieuDieuHoa((d.Tc + L) * 3600000), zt: d.zt, r0: d.r0, r3: d.r3, r6: d.r6, r12: d.r12, r24: d.r24, qm: d.qm, sm };
+  let y = c.intercept;
+  for (const ten of DAC_TRUNG_NT[tang]) y += c[ten] * x[ten];
+  return { y, moHinh: `dieu_hoa_${tang}` };
+}
 
 const vnNow = () => new Date(Date.now() + 7 * 3600 * 1000);
 const fmtVN = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
@@ -252,6 +376,7 @@ function duBaoHienLuong(hl, gv, cv, ctx, heSo) {
   const coCV = cv != null;
   const out = {};
   let moHinh = 'nen';
+  let moHinhNT = null;
   if (lu) {
     if (!gv) return { loi: 'Có lũ nhưng thiếu mực nước Gia Vòng' };
     if (!ctx.fcM) return { loi: 'Không lấy được mưa dự báo ECMWF' };
@@ -263,12 +388,20 @@ function duBaoHienLuong(hl, gv, cv, ctx, heSo) {
       out[L] = r2(dot((dungV ? MODEL_HL_LU_V : MODEL_HL_LU)[L], x));
     }
   } else {
-    for (const L of LEADS) {
-      const x = [1, hl.v, hl.r6, ...(coCV ? [cv] : []), ...tideTerms(hl.t + L * 3600000)];
-      out[L] = r2(dot((coCV ? MODEL_HL_NT : MODEL_HL_NT_NOCV)[L], x));
+    // ngày thường: hàm điều hòa của Hiền Lương + phần dư thực đo gần nhất + mưa; thiếu phần dư hoặc mưa thì dùng mô hình hồi quy cũ
+    const dh = ctx.dhc ? LEADS.map((L) => duBaoNgayThuongDieuHoa(ctx.dhc, L, ctx.fcM ? sum(ctx.fcM, L) * heSo : null)) : null;
+    if (dh && dh.every(Boolean)) {
+      LEADS.forEach((L, k) => { out[L] = r2(dh[k].y); });
+      moHinhNT = dh[0].moHinh;
+    } else {
+      for (const L of LEADS) {
+        const x = [1, hl.v, hl.r6, ...(coCV ? [cv] : []), ...tideTerms(hl.t + L * 3600000)];
+        out[L] = r2(dot((coCV ? MODEL_HL_NT : MODEL_HL_NT_NOCV)[L], x));
+      }
+      moHinhNT = 'hoi_quy_cu';
     }
   }
-  return { duBaoTheoMoc: out, cheDo: lu ? 'lu' : 'ngay_thuong', moHinh, rainDaQua24h: ctx.rainM.h24, nhanDinhDinh: nhanDienDinh(hl.v, out) };
+  return { duBaoTheoMoc: out, cheDo: lu ? 'lu' : 'ngay_thuong', moHinh, ...(lu ? {} : { moHinhNT }), rainDaQua24h: ctx.rainM.h24, nhanDinhDinh: nhanDienDinh(hl.v, out) };
 }
 
 export default async (request) => {
@@ -310,7 +443,9 @@ export default async (request) => {
       const fcGv = fcAfter(fcHourly.gv, hl.t); const fcHl = fcAfter(fcHourly.hl, hl.t);
       const fcM = fcGv && fcHl ? fcGv.map((v, i) => (v + fcHl[i]) / 2) : null;
       const voOk = rainCoverageOk(rainBy.vo, hl.t, WIN_HL);
-      const r = duBaoHienLuong(hl, gvAtHl, cvPt, { rainM, fcM, voOk, rainV: pastRain([rainBy.vo], hl.t), fcV: fcAfter(fcHourly.vo, hl.t) }, heSoHieuChinh);
+      const dhc = phanDuTram(hlSeries); // phần dư so với triều điều hòa + mưa 24 giờ qua (null -> dùng mô hình cũ)
+      if (dhc) Object.assign(dhc, mua24NT(rainBasinByHour([rainBy.gv, rainBy.hl]), dhc.Tc));
+      const r = duBaoHienLuong(hl, gvAtHl, cvPt, { rainM, fcM, voOk, dhc, rainV: pastRain([rainBy.vo], hl.t), fcV: fcAfter(fcHourly.vo, hl.t) }, heSoHieuChinh);
       if (r.loi) out.loi.hienluong = r.loi;
       else out.tram.hienluong = {
         thoiDiemHienTai: hl.t, hienTai: r2(hl.v), tocDo6h: Math.round(hl.r6 * 1000) / 1000,

@@ -69,7 +69,7 @@ export default function DongHaForecast({ onClose, tram = 'dongha' }) {
 
               {duoiNguong && (
                 <div className="dongtam-forecast-empty">
-                  ✅ Hiện chưa có lũ ({cfg.ten} dưới {cfg.nguongMoHinh}m).{' '}Đông Hà chịu ảnh hưởng triều: dự báo dùng mô hình triều + Cửa Việt.
+                  ✅ Hiện chưa có lũ ({cfg.ten} dưới {cfg.nguongMoHinh}m).{' '}Đông Hà chịu ảnh hưởng triều: dự báo dùng hàm điều hòa triều của trạm, mực nước thực đo gần nhất và mưa.
                 </div>
               )}
 

@@ -79,7 +79,7 @@ export default function BenHaiForecast({ onClose, tram = 'giavong' }) {
                 <div className="dongtam-forecast-empty">
                   ✅ Hiện chưa có lũ.{' '}
                   {tram === 'hienluong'
-                    ? 'Hiền Lương chịu ảnh hưởng triều: dự báo dùng mô hình triều + mực nước Cửa Việt, không dùng mưa.'
+                    ? 'Hiền Lương chịu ảnh hưởng triều: dự báo dùng hàm điều hòa triều của trạm, mực nước thực đo gần nhất và mưa.'
                     : `Gia Vòng dưới ${cfg.nguongMoHinh}m: dự báo dùng mô hình riêng cho mực nước thấp.`}
                 </div>
               )}
