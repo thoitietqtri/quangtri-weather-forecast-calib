@@ -280,7 +280,7 @@ function lamSachDeDoc(t) {
     .replace(/(\d)\s*mm\b/g, '$1 milimét')
     .replace(/°C/g, ' độ C')
     .replace(/m\/s/g, ' mét trên giây')
-    .replace(/(\d{1,2})\/(\d{1,2})/g, '$1 tháng $2')
+    .replace(/(?:ngày\s+)?(?<![\d/])(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?(?![\d/])/g, (_, d, m, y) => `ngày ${+d <= 10 ? 'mùng ' : ''}${+d} tháng ${+m}${y ? ` năm ${y}` : ''}`) // 03/10 -> ngày mùng 3 tháng 10; ngày 1 đến 10 đọc "mùng"
     .replace(/(\d)\s*[–-]\s*(\d)/g, '$1 đến $2')
     .replace(/(\d+)h\b/g, '$1 giờ')
     .replace(/(\d)\.(\d)/g, '$1 phẩy $2')
