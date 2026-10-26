@@ -20,6 +20,27 @@ import InstallButton from './InstallButton';
 import TroLyAI from './TroLyAI';
 import GopY from './GopY';
 
+// Icon nét mảnh cho menu (SVG nhúng, dạng đường viền, theo màu chữ)
+const MENU_ICON = {
+  mua: <><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2" /><path d="M8 14v6" /><path d="M12 16v6" /><path d="M16 14v6" /></>,
+  dongho: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>,
+  cot: <><rect x="3" y="14" width="4" height="7" rx="1" /><rect x="10" y="9" width="4" height="12" rx="1" /><rect x="17" y="3" width="4" height="18" rx="1" /></>,
+  duong: <><path d="M3 3v16a2 2 0 0 0 2 2h16" /><path d="m7 15 4-4 3 3 6-6" /><path d="M16 8h4v4" /></>,
+  giot: <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" />,
+  dongHoDo: <><circle cx="12" cy="12" r="9.5" strokeDasharray="2 3.2" /><circle cx="12" cy="12" r="2" /><path d="m13.4 10.6 3-3" /></>,
+  mayNang: <><path d="M12 2v2" /><path d="m4.9 4.9 1.4 1.4" /><path d="M20 12h2" /><path d="m19.1 4.9-1.4 1.4" /><path d="M15.9 12.7a4 4 0 0 0-5.9-4.2" /><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6z" /></>,
+  song: <><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /></>,
+  hoi: <><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></>,
+};
+function MenuIcon({ ten }) {
+  return (
+    <svg className="menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {MENU_ICON[ten]}
+    </svg>
+  );
+}
+
 function getCanhBao(tmax, tmin, wind, rain) {
   const warnings = [];
   if (tmax >= 38) warnings.push({ text: '🔥 Cảnh báo nắng nóng gay gắt', color: '#cc0000' });
@@ -583,18 +604,18 @@ function MapComponent() {
       {showMenu && (
         <div className="hamburger-menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="hamburger-menu-panel" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo theo thời đoạn</button>
-            <button onClick={() => { setShowRainHourlyTable(true); setShowMenu(false); }}>🌧️ Mưa thực đo theo giờ</button>
-            <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}>📊 Biểu đồ mưa theo giờ</button>
-            <button onClick={() => { setShowMuaThoiDoan(true); setShowMenu(false); }}>📊 Đồ thị mưa theo thời đoạn</button>
-            <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}>📈 Mực nước thực đo</button>
-            <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}>📉 Biểu đồ mực nước</button>
-            <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}>📊 Mực nước hiện hành (cột)</button>
-            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}>📅 Dự báo các yếu tố: Mưa/Nhiệt/Gió</button>
+            <button onClick={() => { setShowRainTable(true); setShowMenu(false); }}><MenuIcon ten="mua" /><span>Mưa thực đo theo thời đoạn</span></button>
+            <button onClick={() => { setShowRainHourlyTable(true); setShowMenu(false); }}><MenuIcon ten="dongho" /><span>Mưa thực đo theo giờ</span></button>
+            <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}><MenuIcon ten="cot" /><span>Biểu đồ mưa theo giờ</span></button>
+            <button onClick={() => { setShowMuaThoiDoan(true); setShowMenu(false); }}><MenuIcon ten="duong" /><span>Đồ thị mưa theo thời đoạn</span></button>
+            <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}><MenuIcon ten="giot" /><span>Mực nước thực đo</span></button>
+            <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}><MenuIcon ten="cot" /><span>Biểu đồ mực nước</span></button>
+            <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}><MenuIcon ten="dongHoDo" /><span>Mực nước hiện hành (cột)</span></button>
+            <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}><MenuIcon ten="mayNang" /><span>Dự báo các yếu tố: Mưa/Nhiệt/Gió</span></button>
             <button onClick={() => { setShowDuBaoMucNuoc(true); setShowMenu(false); }}>
-              🌊 Dự báo Mực nước 6/12/18/24h tới
+              <MenuIcon ten="song" /><span>Dự báo Mực nước 6/12/18/24h tới</span>
             </button>
-            <button onClick={() => { setShowGopY(true); setShowMenu(false); }}>💬 Góp ý cho admin</button>
+            <button onClick={() => { setShowGopY(true); setShowMenu(false); }}><MenuIcon ten="hoi" /><span>Góp ý cho admin</span></button>
           </div>
         </div>
       )}
