@@ -767,7 +767,7 @@ function MapComponent() {
                   <Popup>
                     <b>{s.name}</b><br />
                     Hiện tại: {current ?? '—'}m<br />
-                    Thay đổi 24h: {change24h == null ? '—' : (change24h > 0 ? `+${change24h}` : change24h)}m<br />
+                    Thay đổi trong 24h qua: {change24h == null ? '—' : (change24h > 0 ? `+${change24h}` : change24h)}m<br />
                     {mucNuocAlertText(current, s.alertInfo)}
                   </Popup>
                 </Marker>
