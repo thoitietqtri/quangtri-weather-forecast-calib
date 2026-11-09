@@ -570,6 +570,7 @@ function MapComponent() {
         THỜI TIẾT QUẢNG TRỊ
         <span className="app-title__icon" aria-hidden="true">⛅</span>
       </h2>
+      <div className="app-disclaimer">Hợp phần dự báo KTTV chỉ để tham khảo - Không thay thế bản tin của Đài KTTV Quảng Trị</div>
 
       <div className="toolbar">
         <div className="toolbar-row-xa-ngay">
