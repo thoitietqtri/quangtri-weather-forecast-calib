@@ -1,5 +1,5 @@
 .mtd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 12px; }
-.mtd-panel { background: #fff; border-radius: 10px; width: 100%; max-width: 1300px; max-height: 94vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.3); }
+.mtd-panel { background: #fff; border-radius: 10px; width: 100%; max-width: 2400px; max-height: 94vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.3); }
 .mtd-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #0D1B2A; color: #fff; }
 .mtd-header h3 { margin: 0; font-size: 16px; color: #fff; }
 .mtd-actions { display: flex; align-items: center; gap: 10px; }
