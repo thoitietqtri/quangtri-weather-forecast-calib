@@ -465,8 +465,11 @@ async function vfassLogin() {
 async function fetchVfassAll() {
   const sid = await vfassLogin();
   const end = vnNow();
-  const dateFrom = fmtVN(end).slice(0, 10);
-  const dateTo = dateFrom;
+  // Lấy lùi 73 giờ như VRain. Trước đây chỉ lấy "hôm nay" (from = to = hôm nay) nên sau 0h chưa có mốc giờ nào
+  // trong ngày -> chuỗi rỗng -> 3 trạm vfass biến mất khỏi bản đồ cho tới khi có mốc giờ đầu tiên.
+  const start = new Date(end.getTime() - (MAX_WINDOW_H + 1) * 3600 * 1000);
+  const dateFrom = fmtVN(start).slice(0, 10);
+  const dateTo = fmtVN(end).slice(0, 10);
   const url = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h`;
 
   const res = await fetchWithTimeout(url, {
@@ -507,7 +510,7 @@ async function fetchVfassAll() {
   // vẫn giữ nguyên theo giờ như trước).
   const gia10pGanNhat = {};
   try {
-    const url10p = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_10m`;
+    const url10p = `${VFASS_DETAILS_URL}?from=${dateTo}&to=${dateTo}&i=_10m`; // giá trị 10 phút chỉ cần trong ngày
     const res10p = await fetchWithTimeout(url10p, {
       headers: {
         accept: 'application/json, text/plain, */*',
