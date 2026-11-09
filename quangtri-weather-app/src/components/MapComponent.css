@@ -9,11 +9,10 @@
 /* Tiêu đề */
 .app-title {
   text-align: center;
-  padding: 10px;
+  padding: 10px 10px 4px;
   margin: 0;
   background: #0D1B2A;
   color: #FFFFFF;
-  border-bottom: 2px solid #060E17;
   font-size: 20px;
   font-weight: bold;
   letter-spacing: 1px;
@@ -30,10 +29,27 @@
   line-height: 1;
 }
 
+/* Dòng lưu ý dưới tiêu đề: hợp phần dự báo còn thử nghiệm */
+.app-disclaimer {
+  background: #0D1B2A;
+  color: #FF5252;
+  border-bottom: 2px solid #060E17;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance; /* nếu phải xuống dòng thì chia đều 2 dòng */
+  padding: 0 10px 6px;
+}
+
 @media (max-width: 768px) {
   .app-title {
     font-size: 13px;
-    padding: 5px;
+    padding: 5px 5px 2px;
+  }
+  .app-disclaimer {
+    font-size: 10.5px;
+    padding: 0 8px 4px;
   }
   .hamburger-btn {
     left: 6px;
