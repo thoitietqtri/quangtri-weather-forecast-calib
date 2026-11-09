@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Popup, Marker, ImageOverlay, Pane } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Popup, Marker, ImageOverlay, Pane, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './MapComponent.css';
@@ -59,6 +59,26 @@ function createLabelIcon(name) {
     html: `<div style="font-size:10px;font-weight:bold;color:#000;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;white-space:nowrap;pointer-events:none;text-align:center;">${name}</div>`,
     iconAnchor: [0, 0],
   });
+}
+
+// Khung chữ nhật của bản đồ: bao trọn địa bàn tỉnh Quảng Trị (gồm đảo Cồn Cỏ), không kéo ra ngoài khung được.
+const KHUNG_BAN_DO = [[15.8, 104.8], [18.6, 108.6]]; // [Tây Nam, Đông Bắc]
+function GioiHanBanDo() {
+  const map = useMap();
+  useEffect(() => {
+    const khung = L.latLngBounds(KHUNG_BAN_DO);
+    const capNhat = () => {
+      map.setMaxBounds(khung);
+      // Thu nhỏ tối đa tới mức chiều ngang màn hình vừa bằng chiều ngang khung (không thấy gì ngoài khung theo chiều ngang)
+      const rongKhung = map.project(khung.getNorthEast(), 0).x - map.project(khung.getSouthWest(), 0).x;
+      map.setMinZoom(Math.log2(map.getSize().x / rongKhung));
+      map.panInsideBounds(khung, { animate: false });
+    };
+    capNhat();
+    map.on('resize', capNhat);
+    return () => { map.off('resize', capNhat); };
+  }, [map]);
+  return null;
 }
 
 function createIslandIcon(name) {
@@ -255,7 +275,7 @@ function MapComponent() {
   const [showRainHourlyChart, setShowRainHourlyChart] = useState(false);
   const [showMuaThoiDoan, setShowMuaThoiDoan] = useState(false);
   const mapRef = useRef(null);
-  const QT_CENTER = [16.75, 107.1];
+  const QT_CENTER = [17.2, 106.5];
   const QT_ZOOM = 8;
   const [viTriNguoiDung, setViTriNguoiDung] = useState(null);
   const [dangDinhVi, setDangDinhVi] = useState(false);
@@ -696,7 +716,8 @@ function MapComponent() {
           selectedDate={selectedDate}
         />
         {geoData ? (
-          <MapContainer center={[16.75, 107.1]} zoom={8} className="responsive-map" ref={mapRef}>
+          <MapContainer center={QT_CENTER} zoom={QT_ZOOM} maxBoundsViscosity={1.0} className="responsive-map" ref={mapRef}>
+            <GioiHanBanDo />
             <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)' maxZoom={17} />
             {viTriNguoiDung && (
               <Marker
