@@ -153,7 +153,7 @@ export default function MuaThoiDoanChart({ stations, onClose }) {
     ? { position: 'fixed', top: 0, left: khung.w, width: khung.h, height: khung.w, maxHeight: 'none', transformOrigin: '0 0', transform: 'rotate(90deg)' }
     : undefined;
   const chieuCao = !gon ? 440 : Math.max(250, Math.min(h - 235, doc ? 520 : 440));
-  const bRongKhung = Math.max(300, w - (gon ? 14 : 64));
+  const bRongKhung = Math.max(300, Math.min(w, 2400) - (gon ? 14 : 64)); // 2400 = bề rộng tối đa của khung (mtd-panel trong CSS)
   const rongToiThieuCot = doc ? 12 : 17;
   const rongBieuDo = Math.max(bRongKhung, data.length * rongToiThieuCot + 50);
   const rongCot = (rongBieuDo - 50) / Math.max(1, data.length);
