@@ -316,6 +316,11 @@ input[type="date"] {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
+/* Tháp báo lũ: ô vuông bo góc để phân biệt với trạm mực nước (tròn) */
+.mucnuoc-marker__circle--thap {
+  border-radius: 8px;
+}
+
 .mucnuoc-marker__label {
   background: rgba(158, 158, 158, 0.92);
   color: #fff;
