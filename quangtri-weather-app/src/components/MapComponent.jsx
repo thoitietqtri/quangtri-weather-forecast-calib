@@ -185,6 +185,33 @@ function mucNuocIcon(name, current, alertInfo) {
   });
 }
 
+// Tháp báo lũ (vfass, loại flood_3m): giá trị là ĐỘ SÂU NGẬP (m), chưa có ngưỡng chính thức —
+// chỉ phân 2 mức: dưới 0,1 m coi như chưa ngập (xám-xanh), từ 0,1 m trở lên là có ngập (đỏ).
+const THAP_NGAP_MIN = 0.1;
+function thapColor(current) {
+  if (current == null) return '#9E9E9E';
+  return current >= THAP_NGAP_MIN ? '#D32F2F' : '#607D8B';
+}
+function thapIcon(name, current) {
+  const color = thapColor(current);
+  const svg = `<svg width="16" height="20" viewBox="0 0 16 20" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M8 1v18M3 5h10M4 10h8M2 15h12"/></svg>`;
+  return L.divIcon({
+    className: 'mucnuoc-marker',
+    html: `<div class="mucnuoc-marker__wrap">
+      <span class="mucnuoc-marker__circle mucnuoc-marker__circle--thap" style="background:${color}">${svg}</span>
+      <span class="mucnuoc-marker__label" style="background:${color}">${name}${current != null ? ` (${current}m)` : ''}</span>
+    </div>`,
+    iconSize: [130, 48],
+    iconAnchor: [65, 15],
+  });
+}
+// Giờ đo (giờ VN) của điểm số liệu mới nhất — t là mili-giây UTC thật.
+function gioDoVN(t) {
+  const d = new Date(t + 7 * 3600 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())} ${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}`;
+}
+
 // Màu cấp báo động HIỆN TẠI của từng trạm KTTV, khóa theo mã trạm (id "kttv_<mã>") — dùng cho
 // chấm màu trên thanh chọn trạm của cửa sổ dự báo; cùng màu với trạm trên bản đồ.
 function mauCapBaoDongTheoMaTram(stations) {
@@ -270,6 +297,8 @@ function MapComponent() {
   const [showMucNuocTable, setShowMucNuocTable] = useState(false);
   const [showMucNuocChart, setShowMucNuocChart] = useState(false);
   const [showMucNuocHienHanh, setShowMucNuocHienHanh] = useState(false);
+  const [thapBaoLu, setThapBaoLu] = useState([]); // tháp báo lũ (độ sâu ngập) — lớp riêng
+  const [showThapBaoLu, setShowThapBaoLu] = useState(true);
   const [rainHourlyStations, setRainHourlyStations] = useState([]);
   const [showRainHourlyTable, setShowRainHourlyTable] = useState(false);
   const [showRainHourlyChart, setShowRainHourlyChart] = useState(false);
@@ -380,6 +409,20 @@ function MapComponent() {
     };
     loadMucNuoc();
     const timer = setInterval(loadMucNuoc, MUCNUOC_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  // Tháp báo lũ: endpoint riêng (?loai=thap), làm mới cùng chu kỳ với trạm mực nước.
+  useEffect(() => {
+    let cancelled = false;
+    const loadThap = () => {
+      fetch('/.netlify/functions/mucnuoc?loai=thap')
+        .then((r) => r.json())
+        .then((ds) => { if (!cancelled && Array.isArray(ds)) setThapBaoLu(ds); })
+        .catch((err) => console.error('[Tháp báo lũ] Lỗi tải:', err));
+    };
+    loadThap();
+    const timer = setInterval(loadThap, MUCNUOC_REFRESH_MS);
     return () => { cancelled = true; clearInterval(timer); };
   }, []);
 
@@ -607,6 +650,10 @@ function MapComponent() {
             🌊 Trạm mực nước
           </label>
           <label className="toolbar-rain-toggle">
+            <input type="checkbox" checked={showThapBaoLu} onChange={(e) => setShowThapBaoLu(e.target.checked)} />
+            🗼 Tháp báo lũ
+          </label>
+          <label className="toolbar-rain-toggle">
             <input type="checkbox" checked={showRiver} onChange={(e) => setShowRiver(e.target.checked)} />
             🏞️ Mạng lưới sông
           </label>
@@ -769,6 +816,23 @@ function MapComponent() {
                     Hiện tại: {current ?? '—'}m<br />
                     Thay đổi trong 24h qua: {change24h == null ? '—' : (change24h > 0 ? `+${change24h}` : change24h)}m<br />
                     {mucNuocAlertText(current, s.alertInfo)}
+                  </Popup>
+                </Marker>
+              );
+            })}
+            {showThapBaoLu && thapBaoLu.map((s) => {
+              const diem = s.series[s.series.length - 1];
+              const current = diem ? diem.v : null;
+              return (
+                <Marker key={s.id} position={[s.coords.lat, s.coords.lng]} icon={thapIcon(s.name, current)}>
+                  <Popup>
+                    <b>{s.fullName || s.name}</b><br />
+                    {s.viTri && <>{s.viTri}<br /></>}
+                    Độ sâu ngập hiện tại: {current ?? '—'}m<br />
+                    {diem && <>Thời điểm đo: {gioDoVN(diem.t)}<br /></>}
+                    {current != null && (current >= THAP_NGAP_MIN
+                      ? <>🔴 Có ngập (từ {THAP_NGAP_MIN}m trở lên)</>
+                      : <>🔵 Chưa ngập (dưới {THAP_NGAP_MIN}m)</>)}
                   </Popup>
                 </Marker>
               );
