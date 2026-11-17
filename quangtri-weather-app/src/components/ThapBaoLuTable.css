@@ -5,3 +5,57 @@
   color: #555;
   line-height: 1.4;
 }
+
+/* Thân cuộn dọc chung cho bảng + biểu đồ + ghi chú (không còn khoảng trống dưới bảng) */
+.thap-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #0D1B2A;
+  display: flex;
+  flex-direction: column;
+}
+
+.thap-body .thap-table-note { color: #cfd8e3; flex: none; }
+
+/* Bảng chỉ cuộn ngang; chiều cao theo nội dung */
+.thap-body .thap-table-scroll {
+  flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.thap-chart-box {
+  flex: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.thap-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+}
+
+.thap-chart-controls label {
+  font-weight: bold;
+  font-size: 14px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.thap-chart-body {
+  height: 260px;
+  padding: 0 12px;
+}
+
+.thap-chart-empty {
+  padding: 40px;
+  text-align: center;
+  color: #cfd8e3;
+}
+
+@media (max-width: 768px) {
+  .thap-chart-controls { padding: 8px 12px; }
+  .thap-chart-body { height: 240px; padding: 0 4px; }
+}
