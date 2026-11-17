@@ -9,6 +9,7 @@ import { getRainStations } from '../services/rainfall';
 import RainTable from './RainTable';
 import ForecastTable from './ForecastTable';
 import MucNuocTable from './MucNuocTable';
+import ThapBaoLuTable from './ThapBaoLuTable';
 import MucNuocChart from './MucNuocChart';
 import MucNuocHienHanh from './MucNuocHienHanh';
 import RainHourlyTable from './RainHourlyTable';
@@ -295,6 +296,7 @@ function MapComponent() {
   const [mucNuocStations, setMucNuocStations] = useState([]);
   const [showMucNuoc, setShowMucNuoc] = useState(true);
   const [showMucNuocTable, setShowMucNuocTable] = useState(false);
+  const [showThapBaoLuTable, setShowThapBaoLuTable] = useState(false);
   const [showMucNuocChart, setShowMucNuocChart] = useState(false);
   const [showMucNuocHienHanh, setShowMucNuocHienHanh] = useState(false);
   const [thapBaoLu, setThapBaoLu] = useState([]); // tháp báo lũ (độ sâu ngập) — lớp riêng
@@ -677,6 +679,7 @@ function MapComponent() {
             <button onClick={() => { setShowRainHourlyChart(true); setShowMenu(false); }}><MenuIcon ten="cot" /><span>Biểu đồ mưa theo giờ</span></button>
             <button onClick={() => { setShowMuaThoiDoan(true); setShowMenu(false); }}><MenuIcon ten="duong" /><span>Đồ thị mưa theo thời đoạn</span></button>
             <button onClick={() => { setShowMucNuocTable(true); setShowMenu(false); }}><MenuIcon ten="giot" /><span>Mực nước thực đo</span></button>
+            <button onClick={() => { setShowThapBaoLuTable(true); setShowMenu(false); }}><MenuIcon ten="giot" /><span>Mực nước Tháp báo lũ</span></button>
             <button onClick={() => { setShowMucNuocChart(true); setShowMenu(false); }}><MenuIcon ten="cot" /><span>Biểu đồ mực nước</span></button>
             <button onClick={() => { setShowMucNuocHienHanh(true); setShowMenu(false); }}><MenuIcon ten="dongHoDo" /><span>Mực nước hiện hành (cột)</span></button>
             <button onClick={() => { setShowForecastTable(true); setShowMenu(false); }}><MenuIcon ten="mayNang" /><span>Dự báo các yếu tố: Mưa/Nhiệt/Gió</span></button>
@@ -691,7 +694,7 @@ function MapComponent() {
       <GopY
         mo={showGopY}
         onDong={() => setShowGopY(false)}
-        nguCanh={[selectedName && `xã/phường ${selectedName}`, showRadar && 'ảnh radar', showRainTable && 'mưa thực đo theo thời đoạn', showRainHourlyTable && 'mưa thực đo theo giờ', showMucNuocTable && 'mực nước thực đo', showMucNuocChart && 'biểu đồ mực nước', showForecastTable && 'dự báo mưa/nhiệt/gió', showDuBaoMucNuoc && 'dự báo mực nước các trạm'].filter(Boolean).join(', ')}
+        nguCanh={[selectedName && `xã/phường ${selectedName}`, showRadar && 'ảnh radar', showRainTable && 'mưa thực đo theo thời đoạn', showRainHourlyTable && 'mưa thực đo theo giờ', showMucNuocTable && 'mực nước thực đo', showThapBaoLuTable && 'mực nước tháp báo lũ',showMucNuocChart && 'biểu đồ mực nước', showForecastTable && 'dự báo mưa/nhiệt/gió', showDuBaoMucNuoc && 'dự báo mực nước các trạm'].filter(Boolean).join(', ')}
       />
       {showRainTable && <RainTable stations={rainStations} onClose={() => setShowRainTable(false)} />}
       {showDuBaoMucNuoc && <DuBaoMucNuoc mauTheoMaTram={mauCapBaoDongTheoMaTram(mucNuocStations)} onClose={() => setShowDuBaoMucNuoc(false)} />}
@@ -699,6 +702,7 @@ function MapComponent() {
       {showRainHourlyChart && <RainHourlyChart stations={rainHourlyStations} onClose={() => setShowRainHourlyChart(false)} />}
       {showMuaThoiDoan && <MuaThoiDoanChart stations={rainHourlyStations} onClose={() => setShowMuaThoiDoan(false)} />}
       {showMucNuocTable && <MucNuocTable stations={mucNuocStations} onClose={() => setShowMucNuocTable(false)} />}
+      {showThapBaoLuTable && <ThapBaoLuTable stations={thapBaoLu} onClose={() => setShowThapBaoLuTable(false)} />}
       {showMucNuocChart && <MucNuocChart stations={mucNuocStations} rainStations={rainHourlyStations} onClose={() => setShowMucNuocChart(false)} />}
       {showMucNuocHienHanh && <MucNuocHienHanh stations={mucNuocStations} onClose={() => setShowMucNuocHienHanh(false)} />}
       {showForecastTable && (
