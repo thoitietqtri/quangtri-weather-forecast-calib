@@ -122,7 +122,7 @@ const ALERT_THRESHOLDS = {
   'Quảng Thanh': { type: 'official', bd1: 1.2, bd2: 2.1, bd3: 2.7, luLichSu: 3.83 },
   'Trạm Thủy văn Lý Hòa': { type: 'official', bd1: 1.2, bd2: 2, bd3: 2.6 },
   'Hàm Ninh': { type: 'official', bd1: 1.2, bd2: 2, bd3: 2.6, luLichSu: 4.48 },
-  'Cầu Bến Quan': { type: 'official', bd1: 6, bd2: 7.5, bd3: 8.5, luLichSu: 13.02 }, // +2m so với gốc theo yêu cầu anh Hudson (24/09/2026, đã sửa lại từ lần trừ nhầm)
+  'Cầu Bến Quan': { type: 'official', bd1: 6, bd2: 7.5, bd3: 8.5, luLichSu: 13.02 }, // +2m so với gốc theo yêu cầu anh Hudson (24/09/2026, đã sửa chuaCoToaDoi từ lần trừ nhầm)
   'Hải Tân': { type: 'official', bd1: 1.8, bd2: 2.8, bd3: 3.4, luLichSu: 3.93 },
 
   // --- VRain (key = tên đối chiếu gốc) — ngưỡng tự quy định ---
@@ -181,7 +181,7 @@ function fetchWithTimeout(url, opts = {}, timeoutMs = 8000) {
 function parseVrainTimestamp(tRaw) {
   if (tRaw == null) return NaN;
   if (typeof tRaw === 'number') {
-    return tRaw > 10 ** 11 ? tRaw : tRaw * 1000; // ms nếu số lớn, ngược lại coi là giây
+    return tRaw > 10 ** 11 ? tRaw : tRaw * 1000; // ms nếu số lớn, ngược chuaCoToaDoi coi là giây
   }
   const s = String(tRaw).trim();
   if (/^\d{9,16}$/.test(s)) {
@@ -564,6 +564,100 @@ async function fetchVfassAll() {
   return results;
 }
 
+// ============ Tháp báo lũ (hệ thống vfass, loại flood_3m) — 17/11/2026 ============
+// Giá trị là ĐỘ SÂU NGẬP (m, thang 0–3 m), KHÁC cao trình mực nước, nên chỉ trả về
+// qua đường riêng `?loai=thap` — response mặc định của hàm này không đổi nên bảng,
+// biểu đồ và trợ lý đang dùng không bị ảnh hưởng. Toạ độ (WGS84) do anh Hudson cung cấp
+// (file Thapbaolu.txt). Trạm có `id` thì khớp theo mã; trạm chưa có `id` (chưa thấy trong
+// danh sách vfass đã xuất) khớp theo tên (`khoaTen` — đã bỏ dấu, chữ thường).
+const THAP_BAO_LU = [
+  { id: '841699625660', name: 'Tân Hóa', fullName: 'Tháp báo lũ xã Tân Hóa', viTri: 'xã Kim Phú', lat: 17.773333, lng: 106.038833 },
+  { id: null, khoaTen: 'truong long', name: 'Trường Long', fullName: 'Thôn Trường Long, Tân Gianh', viTri: 'xã Tân Gianh', lat: 17.767778, lng: 106.303472 },
+  { id: '841699625661', name: 'Duy Ninh', fullName: 'Tháp báo lũ xã Duy Ninh', viTri: 'xã Ninh Châu', lat: 17.353611, lng: 106.670833 },
+  { id: '841699625663', name: 'Kiến Giang', fullName: 'Tháp báo lũ thị trấn Kiến Giang', viTri: 'xã Lệ Thủy', lat: 17.223333, lng: 106.786389 },
+  { id: null, khoaTen: 'sa nam', name: 'Sa Nam', fullName: 'Thôn Sa Nam, Vĩnh Linh', viTri: 'xã Vĩnh Linh', lat: 17.04418, lng: 106.987485 },
+  { id: null, khoaTen: 'tien an', name: 'Tiên An', fullName: 'Tiên An, Vĩnh Thủy', viTri: 'xã Vĩnh Thủy', lat: 16.973722, lng: 107.036611 },
+  { id: '841698320029', name: 'Bến Hải', fullName: 'Tháp báo lũ Bến Hải', viTri: 'xã Bến Hải', lat: 16.980292, lng: 107.054925 },
+  { id: '841698249030', name: 'Ái Tử', fullName: 'Tháp báo lũ Ái Tử', viTri: 'xã Ái Tử', lat: 16.787931, lng: 107.147014 },
+  { id: '841699005194', name: 'Đại Thượng Hạ', fullName: 'Thôn Đại Thượng Hạ (Triệu Long)', viTri: 'xã Ái Tử', lat: 16.792194, lng: 107.160917 },
+  { id: '841699005187', name: 'Khu phố 5', fullName: 'Khu phố 5, phường 2, TX Quảng Trị', viTri: 'phường Quảng Trị', lat: 16.754528, lng: 107.196944 },
+  { id: '841699007985', name: 'Thượng Nguyên', fullName: 'Thôn Thượng Nguyên (Hải Lâm)', viTri: 'xã Hải Lăng', lat: 16.68225, lng: 107.225917 },
+  { id: '841699245312', name: 'Nam Hải Lăng', fullName: 'Tháp báo lũ Nam Hải Lăng', viTri: 'xã Nam Hải Lăng', lat: 16.684272, lng: 107.336619 },
+];
+
+function khoaTenThap(raw) {
+  return String(raw || '').replace(/Đ/g, 'D').replace(/đ/g, 'd').normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Trả về chỉ số trong THAP_BAO_LU của trạm vfass `st`, hoặc -1 nếu không phải tháp cần lấy.
+function timThapBaoLu(st) {
+  const id = String(st.id);
+  let i = THAP_BAO_LU.findIndex((t) => t.id === id);
+  if (i >= 0) return i;
+  const loai = st.waterStationType;
+  if (loai && loai !== 'flood_3m') return -1;
+  const ten = khoaTenThap(st.name);
+  return THAP_BAO_LU.findIndex((t) => !t.id && t.khoaTen && ten.includes(t.khoaTen));
+}
+
+async function fetchThapBaoLuAll() {
+  const sid = await vfassLogin();
+  const end = vnNow();
+  const start = new Date(end.getTime() - (MAX_WINDOW_H + 1) * 3600 * 1000);
+  const dateFrom = fmtVN(start).slice(0, 10);
+  const dateTo = fmtVN(end).slice(0, 10);
+  const headers = {
+    accept: 'application/json, text/plain, */*',
+    referer: `${VFASS_BASE_URL}/main/detail/vfass`,
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    'x-org-uuid': VFASS_ORG_UUID,
+    'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    cookie: `sid=${sid}`,
+  };
+  const layChuoi = async (url, chiLayMoiNhat) => {
+    const res = await fetchWithTimeout(url, { headers }, 8000);
+    if (!res.ok) throw new Error(`vfass tháp báo lũ lỗi HTTP ${res.status}`);
+    const data = await res.json();
+    const out = {}; // chỉ số tháp -> mảng {t, v}
+    const lạ = new Set(); // tên trạm loại flood_3m có trong API nhưng chưa có toạ độ — để ghi log
+    for (const ent of data.stats || []) {
+      let t = parseVrainTimestamp(ent.timePoint || ent.timestamp || ent.time || ent.date);
+      if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000;
+      for (const st of ent.stations || []) {
+        if (!st) continue;
+        const i = timThapBaoLu(st);
+        if (i < 0) { if (st.waterStationType === 'flood_3m') lạ.add(`${st.id}:${st.name}`); continue; }
+        const v = parseFloat(st.depth);
+        if (!Number.isFinite(v) || v <= -900) continue; // -999 = thiếu số liệu
+        if (!out[i]) out[i] = [];
+        out[i].push({ t, v });
+      }
+    }
+    if (!chiLayMoiNhat && lạ.size) console.log('[mucnuoc][thap] flood_3m chưa có toạ độ:', [...lạ].join(' | '));
+    return out;
+  };
+  const theoGio = await layChuoi(`${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h`, false);
+  let theo10p = {};
+  try {
+    theo10p = await layChuoi(`${VFASS_DETAILS_URL}?from=${dateTo}&to=${dateTo}&i=_10m`, true);
+  } catch (e) {
+    console.error('[mucnuoc][thap] Lỗi lấy giá trị 10 phút (không nghiêm trọng):', e.message);
+  }
+
+  const results = [];
+  THAP_BAO_LU.forEach((th, i) => {
+    const series = (theoGio[i] || []).sort((a, b) => a.t - b.t);
+    const moi = (theo10p[i] || []).sort((a, b) => a.t - b.t).pop();
+    if (moi && (series.length === 0 || moi.t >= series[series.length - 1].t)) series.push(moi);
+    if (series.length === 0) return; // chưa có số liệu (-999) -> ẩn, giống các trạm khác
+    const kq = buildStationResult(th.name, th.lat, th.lng, `thap_${th.id || th.khoaTen}`, series, null);
+    if (kq) results.push({ ...kq, loai: 'thap_bao_lu', fullName: th.fullName, viTri: th.viTri });
+  });
+  console.log(`[mucnuoc][thap] ${results.length}/${THAP_BAO_LU.length} tháp có số liệu`);
+  return results;
+}
+
 function buildStationResult(name, lat, lng, id, series, alertInfo = null) {
   if (series.length === 0) return null;
   return {
@@ -572,8 +666,16 @@ function buildStationResult(name, lat, lng, id, series, alertInfo = null) {
   };
 }
 
-export default async () => {
+export default async (req) => {
   try {
+    // Đường riêng cho tháp báo lũ (độ sâu ngập) — không lẫn vào danh sách trạm mực nước.
+    if (req && new URL(req.url).searchParams.get('loai') === 'thap') {
+      const thap = await fetchThapBaoLuAll();
+      return new Response(JSON.stringify(thap), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
     const kttvResults = await Promise.all(KTTV_STATIONS.map((s) => fetchKttvStation(s)));
     let vrainResults = [];
     try {
