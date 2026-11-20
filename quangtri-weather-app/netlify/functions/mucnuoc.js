@@ -96,7 +96,7 @@ const ALERT_THRESHOLDS = {
   '555300': { type: 'official', bd1: 7, bd2: 13, bd3: 16, luLichSu: 18.45 },        // Đông Tâm
   '555400': { type: 'official', bd1: 3, bd2: 5, bd3: 6.5, luLichSu: 9.47 },         // Mai Hóa
   '555800': { type: 'official', bd1: 1.1, bd2: 1.3, bd3: 1.5, luLichSu: 2.79 },     // Tân Mỹ
-  '557600': { type: 'official', bd1: 1, bd2: 1.5, bd3: 2, luLichSu: 2.17 },         // Đồng Hới
+  '557600': { type: 'official', bd1: 1, bd2: 1.5, bd3: 2, luLichSu: 2.64 },         // Đồng Hới
   '555500': { type: 'official', bd1: 8, bd2: 11, bd3: 13, luLichSu: 17.71 },        // Kiến Giang
   '556100': { type: 'official', bd1: 1.2, bd2: 2.2, bd3: 2.7, luLichSu: 4.88 },     // Lệ Thủy
   '555700': { type: 'official', bd1: 3.5, bd2: 5, bd3: 6.5, luLichSu: 8.98 },       // Phong Nha
@@ -149,18 +149,41 @@ function alertPriority(alertInfo) {
 
 const VRAIN_MN_BASE_URL = 'https://mucnuoc.vrain.vn';
 const VRAIN_MN_LOGIN_URL = `${VRAIN_MN_BASE_URL}/api/vwater/public/v1/login`;
-const VRAIN_MN_DETAILS_URL = `${VRAIN_MN_BASE_URL}/api/vwater/private/v1/stats/details`;
+const VRAIN_MN_DETAILS_URL = `${VRAIN_MN_BASE_URL}/d/vwater/private/v1/stats/details`;
 const VRAIN_MN_USERNAME = 'mnquangtri';
 const VRAIN_MN_PASSWORD = '123456';
 const VRAIN_MN_GROUP_ID = '182';
 
 const VFASS_BASE_URL = 'https://quangtri.vfass.vn';
 const VFASS_LOGIN_URL = `${VFASS_BASE_URL}/api/vrain/public/v1/login`;
-const VFASS_DETAILS_URL = `${VFASS_BASE_URL}/api/vwater/private/v2/stats/details`;
+const VFASS_DETAILS_URL = `${VFASS_BASE_URL}/d/vwater/private/v2/stats/details`; // từ 20/11/2026: đường dữ liệu /api/ -> /d/ (đăng nhập giữ nguyên)
 const VFASS_USERNAME = 'quangtri';
 const VFASS_PASSWORD = '123456';
 const VFASS_ORG_UUID = 'f3813533-b653-4d16-945b-8359f26d6b62';
 
+// ĐỊNH DẠNG MỚI CỦA VRAIN (từ 20/11/2026): { stations:[{id,name,...}], rows:[{t, ts, v:[...]}] }
+// (v[i] là giá trị của stations[i]; null = không có số liệu). Hàm này đổi về dạng cũ
+// [{ timePoint, ts, stations:[{id,name,depth}] }] để phần xử lý phía sau không phải sửa.
+function statsOf(data) {
+  if (data && Array.isArray(data.stats)) return data.stats; // định dạng cũ
+  const st = (data && data.stations) || [];
+  return ((data && data.rows) || []).map((r) => ({
+    timePoint: r.t,
+    ts: r.ts,
+    stations: st
+      .map((s, i) => ({ id: s.id, name: s.name, area: s.area, waterStationType: s.waterStationType, depth: (r.v || [])[i] }))
+      .filter((x) => x.depth !== null && x.depth !== undefined),
+  }));
+}
+
+// Gọi API dữ liệu vfass. Nếu đường mới /d/ trả 404 thì thử lại đường cũ /api/ (phòng khi vfass chưa đổi hết).
+async function vfassGet(url, init) {
+  const res = await fetchWithTimeout(url, init, 8000);
+  if (res.status === 404 && url.includes('/d/vwater/')) {
+    return fetchWithTimeout(url.replace('/d/vwater/', '/api/vwater/'), init, 8000);
+  }
+  return res;
+}
 function vnNow() {
   return new Date(Date.now() + 7 * 3600 * 1000);
 }
@@ -188,6 +211,9 @@ function parseVrainTimestamp(tRaw) {
     const n = Number(s);
     return n > 10 ** 11 ? n : n * 1000;
   }
+  // "2026-11-18T20:00:00" (trường "ts" của VRain từ 20/11/2026) là giờ Việt Nam, không có múi giờ.
+  const mISO = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+  if (mISO) return Date.UTC(+mISO[1], +mISO[2] - 1, +mISO[3], +mISO[4], +mISO[5], +(mISO[6] || 0)) - 7 * 3600 * 1000;
   const mHM = /^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})$/.exec(s);
   if (mHM) {
     const [, hh, mm, dd, mo] = mHM;
@@ -325,9 +351,8 @@ async function fetchVrainMnAll() {
   const start = new Date(end.getTime() - (MAX_WINDOW_H + 1) * 3600 * 1000);
   const dateFrom = fmtVN(start).slice(0, 10);
   const dateTo = fmtVN(end).slice(0, 10);
-  const url = `${VRAIN_MN_DETAILS_URL}?groupID=${VRAIN_MN_GROUP_ID}&from=${dateFrom}&to=${dateTo}&i=_1h&sid=${sid}`;
-
-  const res = await fetchWithTimeout(url, {
+  const url = `${VRAIN_MN_DETAILS_URL}?groupID=${VRAIN_MN_GROUP_ID}&from=${dateFrom}&to=${dateTo}&interval=1&sid=${sid}`; // từ 20/11/2026: đường /d/ và tham số interval=1 (1 giờ)
+  const vrMnInit = {
     headers: {
       Cookie: `sid=${sid}`,
       'accept': 'application/json, text/plain, */*',
@@ -335,9 +360,20 @@ async function fetchVrainMnAll() {
       'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
       'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     },
-  }, 8000);
+  };
+  const res = await fetchWithTimeout(url, vrMnInit, 8000);
   if (!res.ok) throw new Error(`VRain mực nước lấy dữ liệu lỗi HTTP ${res.status}`);
   const data = await res.json();
+  // VRain có thể chia trang (hiện next luôn null) — nếu next khác null thì lấy tiếp và nối các dòng.
+  let nextMn = data && data.next;
+  for (let page = 1; nextMn != null && nextMn !== '' && Array.isArray(data.rows) && page < 10; page += 1) {
+    const u = /^\d+$/.test(String(nextMn)) ? `${url}&offset=${nextMn}` : new URL(String(nextMn), VRAIN_MN_BASE_URL).href;
+    const r2 = await fetchWithTimeout(u, vrMnInit, 8000);
+    if (!r2.ok) break;
+    const d2 = await r2.json();
+    data.rows.push(...(d2.rows || []));
+    nextMn = d2.next;
+  }
 
   // Log chẩn đoán — xem cấu trúc dữ liệu thật trả về (chỉ log 1 lần rút gọn,
   // không log toàn bộ vì có thể rất dài).
@@ -347,7 +383,7 @@ async function fetchVrainMnAll() {
 
   // seriesByName: tên trạm -> mảng {t, v}
   const seriesByName = {};
-  const entries = Array.isArray(data) ? data : (data?.data || data?.stats || []);
+  const entries = Array.isArray(data) ? data : (Array.isArray(data?.rows) ? statsOf(data) : (data?.data || data?.stats || []));
   console.log('[mucnuoc][debug] Số entries (theo thời điểm) tìm được:', entries.length);
   if (entries.length > 0) {
     const first = entries[0];
@@ -357,7 +393,7 @@ async function fetchVrainMnAll() {
   }
   for (const ent of entries) {
     if (!ent || typeof ent !== 'object') continue;
-    const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+    const tRaw = ent.ts || ent.timePoint || ent.timestamp || ent.time || ent.date;
     const t = parseVrainTimestamp(tRaw);
     if (!Number.isFinite(t)) continue;
     const stations = ent.stations || ent.stationsList || [];
@@ -390,10 +426,10 @@ async function fetchVrainMnAll() {
     }, 8000);
     if (res10p.ok) {
       const data10p = await res10p.json();
-      const entries10p = Array.isArray(data10p) ? data10p : (data10p?.data || data10p?.stats || []);
+      const entries10p = Array.isArray(data10p) ? data10p : (Array.isArray(data10p?.rows) ? statsOf(data10p) : (data10p?.data || data10p?.stats || []));
       for (const ent of entries10p) {
         if (!ent || typeof ent !== 'object') continue;
-        const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+        const tRaw = ent.ts || ent.timePoint || ent.timestamp || ent.time || ent.date;
         const t = parseVrainTimestamp(tRaw);
         if (!Number.isFinite(t)) continue;
         const stations10p = ent.stations || ent.stationsList || [];
@@ -470,9 +506,9 @@ async function fetchVfassAll() {
   const start = new Date(end.getTime() - (MAX_WINDOW_H + 1) * 3600 * 1000);
   const dateFrom = fmtVN(start).slice(0, 10);
   const dateTo = fmtVN(end).slice(0, 10);
-  const url = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h`;
+  const url = `${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h&interval=1`;
 
-  const res = await fetchWithTimeout(url, {
+  const res = await vfassGet(url, {
     headers: {
       accept: 'application/json, text/plain, */*',
       referer: `${VFASS_BASE_URL}/main/detail/vfass`,
@@ -481,15 +517,15 @@ async function fetchVfassAll() {
       'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
       cookie: `sid=${sid}`,
     },
-  }, 8000);
+  });
   if (!res.ok) throw new Error(`vfass lấy dữ liệu lỗi HTTP ${res.status}`);
   const data = await res.json();
 
   const idCanLay = new Set(VFASS_STATIONS.map((s) => s.id));
   const seriesById = {};
   let dakrong2Id = null; // mã trạm thật của Dakrong 2, phát hiện được thì gán vào đây
-  for (const ent of data.stats || []) {
-    const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+  for (const ent of statsOf(data)) {
+    const tRaw = ent.ts || ent.timePoint || ent.timestamp || ent.time || ent.date;
     let t = parseVrainTimestamp(tRaw);
     if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000; // dự phòng — coi như giá trị hiện tại nếu không tìm được mốc thời gian trong dữ liệu
     for (const st of ent.stations || []) {
@@ -511,7 +547,7 @@ async function fetchVfassAll() {
   const gia10pGanNhat = {};
   try {
     const url10p = `${VFASS_DETAILS_URL}?from=${dateTo}&to=${dateTo}&i=_10m`; // giá trị 10 phút chỉ cần trong ngày
-    const res10p = await fetchWithTimeout(url10p, {
+    const res10p = await vfassGet(url10p, {
       headers: {
         accept: 'application/json, text/plain, */*',
         referer: `${VFASS_BASE_URL}/main/detail/vfass`,
@@ -520,11 +556,11 @@ async function fetchVfassAll() {
         'x-vrain-user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         cookie: `sid=${sid}`,
       },
-    }, 8000);
+    });
     if (res10p.ok) {
       const data10p = await res10p.json();
-      for (const ent of data10p.stats || []) {
-        const tRaw = ent.timePoint || ent.timestamp || ent.time || ent.date;
+      for (const ent of statsOf(data10p)) {
+        const tRaw = ent.ts || ent.timePoint || ent.timestamp || ent.time || ent.date;
         let t = parseVrainTimestamp(tRaw);
         if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000;
         for (const st of ent.stations || []) {
@@ -616,13 +652,13 @@ async function fetchThapBaoLuAll() {
     cookie: `sid=${sid}`,
   };
   const layChuoi = async (url, chiLayMoiNhat) => {
-    const res = await fetchWithTimeout(url, { headers }, 8000);
+    const res = await vfassGet(url, { headers });
     if (!res.ok) throw new Error(`vfass tháp báo lũ lỗi HTTP ${res.status}`);
     const data = await res.json();
     const out = {}; // chỉ số tháp -> mảng {t, v}
     const lạ = new Set(); // tên trạm loại flood_3m có trong API nhưng chưa có toạ độ — để ghi log
-    for (const ent of data.stats || []) {
-      let t = parseVrainTimestamp(ent.timePoint || ent.timestamp || ent.time || ent.date);
+    for (const ent of statsOf(data)) {
+      let t = parseVrainTimestamp(ent.ts || ent.timePoint || ent.timestamp || ent.time || ent.date);
       if (!Number.isFinite(t)) t = vnNow().getTime() - 7 * 3600 * 1000;
       for (const st of ent.stations || []) {
         if (!st) continue;
@@ -637,7 +673,7 @@ async function fetchThapBaoLuAll() {
     if (!chiLayMoiNhat && lạ.size) console.log('[mucnuoc][thap] flood_3m chưa có toạ độ:', [...lạ].join(' | '));
     return out;
   };
-  const theoGio = await layChuoi(`${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h`, false);
+  const theoGio = await layChuoi(`${VFASS_DETAILS_URL}?from=${dateFrom}&to=${dateTo}&i=_1h&interval=1`, false);
   let theo10p = {};
   try {
     theo10p = await layChuoi(`${VFASS_DETAILS_URL}?from=${dateTo}&to=${dateTo}&i=_10m`, true);

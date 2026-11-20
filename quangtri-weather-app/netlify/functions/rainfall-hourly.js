@@ -62,7 +62,7 @@ const KTTV_STATIONS = [
 // ============ CẤU HÌNH VRAIN — Y HỆT rainfall.js ============
 const VRAIN_BASE = 'https://www.vrain.vn';
 const VRAIN_LOGIN_URL = `${VRAIN_BASE}/api/vrain/public/v1/login`;
-const VRAIN_DETAILS_URL = `${VRAIN_BASE}/api/kttv/private/v1/organizations/details`;
+const VRAIN_DETAILS_URL = `${VRAIN_BASE}/d/kttv/private/v1/organizations/details`;
 const VRAIN_ORG_UUID = process.env.VRAIN_ORG_UUID || '74a14178-9fcd-4511-8e18-75e50dd71707';
 const VRAIN_USERNAME = process.env.VRAIN_USERNAME;
 const VRAIN_PASSWORD = process.env.VRAIN_PASSWORD;
@@ -306,19 +306,56 @@ async function vrainLogin() {
   throw new Error('không lấy được sid');
 }
 async function fetchVrainDetails(sid, fromDate, toDate) {
-  const url = `${VRAIN_DETAILS_URL}?from=${fromDate}&to=${toDate}&i=_10m`;
-  const res = await fetchWithRetry(url, {
+  const url = `${VRAIN_DETAILS_URL}?from=${fromDate}&to=${toDate}&i=_1h`;
+  const reqInit = {
     headers: {
       accept: 'application/json, text/plain, */*', referer: `${VRAIN_BASE}/home/54/dashboard`,
       'user-agent': VRAIN_USER_AGENT, 'x-org-uuid': VRAIN_ORG_UUID, 'x-vrain-user-agent': VRAIN_USER_AGENT,
       cookie: `sid=${sid}`,
     },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  };
+  const getJson = async (u) => {
+    const res = await fetchWithRetry(u, reqInit);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+  const data = await getJson(url);
+  // VRain có thể chia trang (hiện next luôn null) — nếu next khác null thì lấy tiếp và nối các dòng.
+  let next = data && data.next;
+  for (let page = 1; next != null && next !== '' && Array.isArray(data.rows) && page < 10; page += 1) {
+    const u = /^\d+$/.test(String(next)) ? `${url}&offset=${next}` : new URL(String(next), VRAIN_BASE).href;
+    const more = await getJson(u);
+    data.rows.push(...(more.rows || []));
+    next = more.next;
+  }
+  return data;
 }
+// ĐỊNH DẠNG MỚI CỦA VRAIN (từ 20/11/2026): { stations:[{id,name,...}], rows:[{t, ts, v:[...]}] }
+// (v[i] là giá trị của stations[i]; null = không có số liệu). Hàm này đổi về dạng cũ
+// [{ timePoint, ts, stations:[{id,name,depth}] }] để phần xử lý phía sau không phải sửa.
+function statsOf(data) {
+  if (data && Array.isArray(data.stats)) return data.stats; // định dạng cũ
+  const st = (data && data.stations) || [];
+  return ((data && data.rows) || []).map((r) => ({
+    timePoint: r.t,
+    ts: r.ts,
+    stations: st
+      .map((s, i) => ({ id: s.id, name: s.name, area: s.area, waterStationType: s.waterStationType, depth: (r.v || [])[i] }))
+      .filter((x) => x.depth !== null && x.depth !== undefined),
+  }));
+}
+
+// "2026-11-18T20:00:00" (giờ Việt Nam, đủ năm) → Date tuyệt đối. Ưu tiên dùng "ts" thay cho "t" (không có năm).
+function parseVrainTs(ts) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(ts || ''));
+  if (!m) return null;
+  const d = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+07:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function extractStatsList(json) {
   if (Array.isArray(json)) return json;
+  if (json && Array.isArray(json.rows)) return statsOf(json); // định dạng mới (từ 20/11/2026)
   if (json && Array.isArray(json.stats)) return json.stats;
   const queue = [json];
   while (queue.length) {
@@ -346,12 +383,12 @@ async function getVrainSeriesAll() {
   const from = vnDateStr(new Date(now.getTime() - VRAIN_DAYS_BACK * 24 * 3600 * 1000));
   const json = await fetchVrainDetails(sid, from, to);
   const stats = extractStatsList(json);
-  if (!stats.length) throw new Error('API trả về rỗng (không thấy "stats")');
+  if (!stats.length) throw new Error('API trả về rỗng (không có dòng số liệu nào)');
 
   const year = now.getFullYear();
   const byStation = new Map();
   for (const entry of stats) {
-    const t = parseVrainTimePoint(entry.timePoint, year);
+    const t = parseVrainTs(entry.ts) || parseVrainTimePoint(entry.timePoint, year);
     if (!t) continue;
     const bucket = hourBucket(t.getTime());
     for (const st of entry.stations || []) {
